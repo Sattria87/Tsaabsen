@@ -3,6 +3,10 @@
 -- File ini otomatis dieksekusi saat container MySQL pertama kali dibuat
 -- ============================================================
 
+-- Set Timezone default ke Asia/Jakarta (WIB UTC+7)
+SET GLOBAL time_zone = '+07:00';
+SET time_zone = '+07:00';
+
 CREATE DATABASE IF NOT EXISTS `absensi_wg` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE `absensi_wg`;
 

@@ -4,10 +4,10 @@ version: '3.8'
 # PROJECTWG DOCKER COMPOSE CONFIGURATION
 # Siap digunakan untuk Deployment VPS dengan Coolify / Standalone Docker Compose
 # Terdiri dari 4 Service:
-# 1. db          : MySQL 8.0 Database (Inisialisasi schema & dummy data otomatis)
-# 2. ai_service  : Python Face Recognition Service (Port 5001)
-# 3. backend     : Node.js Express REST API untuk Aplikasi Mobile Flutter (Port 3000)
-# 4. admin_web   : Flask Web TSA Admin Dashboard (Port 8085)
+# 1. db          : MySQL 8.0 Database (Port 3306 dibuka, Timezone Asia/Jakarta WIB UTC+7)
+# 2. ai_service  : Python Face Recognition Service (Port 5001, Timezone Asia/Jakarta)
+# 3. backend     : Node.js Express REST API (Port 3000 & 5000, Timezone Asia/Jakarta)
+# 4. admin_web   : Flask Web TSA Admin Dashboard (Port 8085, Timezone Asia/Jakarta)
 # ==============================================================================
 
 services:
@@ -18,6 +18,11 @@ services:
     image: mysql:8.0
     container_name: projectwg_db
     restart: always
+    # Sinkronisasi timezone MySQL server ke WIB (+07:00 / Asia/Jakarta)
+    command: 
+      - "--default-time-zone=+07:00"
+      - "--character-set-server=utf8mb4"
+      - "--collation-server=utf8mb4_unicode_ci"
     environment:
       MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-${DB_PASSWORD:-wg_secure_pass_2026}}
       MYSQL_DATABASE: ${DB_NAME:-absensi_wg}
@@ -28,7 +33,8 @@ services:
       - db_data:/var/lib/mysql
       - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/01_init.sql:ro
     ports:
-      - "${PORT_DB:-3306}:3306"
+      # Port 3306 dibuka ke host agar bisa diakses dari luar/DBeaver/Navicat
+      - "3306:3306"
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD:-${DB_PASSWORD:-wg_secure_pass_2026}}"]
       interval: 10s
@@ -51,6 +57,7 @@ services:
       db:
         condition: service_healthy
     environment:
+      - TZ=Asia/Jakarta
       - AI_HOST=0.0.0.0
       - AI_PORT=5001
       - AI_DEBUG=False
@@ -86,6 +93,7 @@ services:
       ai_service:
         condition: service_started
     environment:
+      - TZ=Asia/Jakarta
       - NODE_ENV=production
       - PORT=3000
       - DB_HOST=db
@@ -116,6 +124,7 @@ services:
       db:
         condition: service_healthy
     environment:
+      - TZ=Asia/Jakarta
       - PORT=8085
       - DB_HOST=db
       - DB_PORT=3306
