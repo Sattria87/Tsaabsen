@@ -115,27 +115,40 @@ class _SplashRouterState extends State<SplashRouter>
             children: [
               // ── LOGO / IKON ──────────────────────────────
               Container(
-                width: 90,
-                height: 90,
+                width: 100,
+                height: 100,
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.2),
-                    width: 1.5,
-                  ),
-                ),
-                child: const Icon(
-                  Icons.business_center_rounded,
-                  size: 44,
                   color: Colors.white,
+                  borderRadius: BorderRadius.circular(28),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.white.withValues(alpha: 0.15),
+                      blurRadius: 20,
+                      spreadRadius: 2,
+                    ),
+                  ],
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Image.asset(
+                    'assets/LOGO1.png',
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) {
+                      return const Icon(
+                        Icons.business_center_rounded,
+                        size: 44,
+                        color: Color(0xFF0F172A),
+                      );
+                    },
+                  ),
                 ),
               ),
               const SizedBox(height: 24),
 
               // ── NAMA APLIKASI ────────────────────────────
               const Text(
-                'ProjectWG',
+                'WG Absensi',
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 26,

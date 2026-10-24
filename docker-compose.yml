@@ -3,11 +3,12 @@ version: '3.8'
 # ==============================================================================
 # PROJECTWG DOCKER COMPOSE CONFIGURATION
 # Siap digunakan untuk Deployment VPS dengan Coolify / Standalone Docker Compose
-# Terdiri dari 4 Service:
+# Terdiri dari 5 Service:
 # 1. db          : MySQL 8.0 Database (Port 3306 dibuka, Timezone Asia/Jakarta WIB UTC+7)
 # 2. ai_service  : Python Face Recognition Service (Port 5001, Timezone Asia/Jakarta)
 # 3. backend     : Node.js Express REST API (Port 3000 & 5000, Timezone Asia/Jakarta)
 # 4. admin_web   : Flask Web TSA Admin Dashboard (Port 8085, Timezone Asia/Jakarta)
+# 5. phpmyadmin  : phpMyAdmin Web Database Manager (Port 8080)
 # ==============================================================================
 
 services:
@@ -139,6 +140,28 @@ services:
       - ./assets:/app/assets
     ports:
       - "${PORT_ADMIN:-8085}:8085"
+    networks:
+      - projectwg_network
+
+  # ----------------------------------------------------------------------------
+  # 5. PHPMYADMIN (Web Database Manager)
+  # ----------------------------------------------------------------------------
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest
+    container_name: projectwg_phpmyadmin
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - TZ=Asia/Jakarta
+      - PMA_HOST=db
+      - PMA_PORT=3306
+      - PMA_USER=root
+      - PMA_PASSWORD=${DB_ROOT_PASSWORD:-${DB_PASSWORD:-wg_secure_pass_2026}}
+      - UPLOAD_LIMIT=64M
+    ports:
+      - "${PORT_PMA:-8080}:80"
     networks:
       - projectwg_network
 
