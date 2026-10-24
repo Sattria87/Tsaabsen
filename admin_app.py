@@ -56,12 +56,134 @@ def get_db_connection():
             raise e
 
 def ensure_db_schema():
-    """Memastikan seluruh tabel dan kolom yang dibutuhkan oleh Vacancy dan Request sudah ada di MySQL."""
+    """Memastikan database absensi_wg beserta seluruh tabel dan data default tersedia di MySQL."""
+    ssl_config = {'ssl': {}} if DB_SSL else None
+    
+    # 1. Pastikan database absensi_wg dibuat terlebih dahulu (konek tanpa nama database)
+    try:
+        init_conn = pymysql.connect(
+            host=DB_HOST,
+            port=DB_PORT,
+            user=DB_USER,
+            password=DB_PASSWORD,
+            ssl=ssl_config,
+            charset='utf8mb4',
+            cursorclass=pymysql.cursors.DictCursor,
+            connect_timeout=5
+        )
+        with init_conn.cursor() as cur:
+            cur.execute(f"CREATE DATABASE IF NOT EXISTS `{DB_NAME}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;")
+        init_conn.commit()
+        init_conn.close()
+        print(f"[Schema Info] Database '{DB_NAME}' terverifikasi/berhasil dibuat.")
+    except Exception as e:
+        print(f"[Schema Notice] Create DB check: {e}")
+
+    # 2. Hubungkan ke database dan pastikan semua tabel inti dibuat
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        
-        # 1. Pastikan tabel lowongan kerja (vacancies) sudah dibuat
+
+        # Tabel 1: Admins (Autentikasi Web Admin)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS admins (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                username VARCHAR(100) NOT NULL UNIQUE,
+                password VARCHAR(255) NOT NULL,
+                name VARCHAR(150) NOT NULL,
+                email VARCHAR(150),
+                role VARCHAR(50) DEFAULT 'Super Admin',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+        """)
+
+        # Pastikan kolom tabel admins bersih
+        for col in ['avatar', 'last_login', 'updated_at']:
+            cursor.execute("""
+                SELECT COUNT(*) AS cnt FROM information_schema.COLUMNS 
+                WHERE TABLE_SCHEMA = %s AND TABLE_NAME = 'admins' AND COLUMN_NAME = %s
+            """, (DB_NAME, col))
+            res_col = cursor.fetchone()
+            if res_col and res_col.get('cnt', 0) > 0:
+                cursor.execute(f"ALTER TABLE admins DROP COLUMN {col}")
+
+        # Seed akun default admin (admin / 123)
+        cursor.execute("SELECT COUNT(*) AS total FROM admins")
+        if cursor.fetchone().get('total', 0) == 0:
+            cursor.execute("""
+                INSERT INTO admins (username, password, name, email, role)
+                VALUES (%s, %s, %s, %s, %s)
+            """, ('admin', '123', 'Administrator TSA', 'admin@tsa.co.id', 'Super Admin'))
+            print("[Schema Info] Akun default admin (admin / 123) berhasil dibuat.")
+
+        # Tabel 2: Branch Companies (Kantor Cabang)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS branch_companies (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                branch_name VARCHAR(150) NOT NULL,
+                city VARCHAR(100) NOT NULL,
+                latitude DECIMAL(10, 8) NOT NULL,
+                longitude DECIMAL(11, 8) NOT NULL,
+                radius INT DEFAULT 150,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+        """)
+        cursor.execute("SELECT COUNT(*) AS total FROM branch_companies")
+        if cursor.fetchone().get('total', 0) == 0:
+            cursor.execute("""
+                INSERT INTO branch_companies (branch_name, city, latitude, longitude, radius) VALUES
+                ('Kantor Pusat Surabaya', 'Surabaya', -7.25750000, 112.75210000, 200),
+                ('Kantor Cabang Jakarta', 'Jakarta', -6.20880000, 106.84560000, 200)
+            """)
+
+        # Tabel 3: Users (Login Mobile & AI)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                username VARCHAR(100) NOT NULL UNIQUE,
+                password VARCHAR(255) NOT NULL,
+                name VARCHAR(150) NOT NULL,
+                face_image VARCHAR(255) NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+        """)
+
+        # Tabel 4: Employees (Data Karyawan)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS employees (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                employee_id VARCHAR(50) NOT NULL UNIQUE,
+                name VARCHAR(150) NOT NULL,
+                team VARCHAR(100) NOT NULL,
+                branch VARCHAR(100) NOT NULL,
+                status VARCHAR(50) NOT NULL DEFAULT 'Aktif',
+                tag1 VARCHAR(50) NULL,
+                tag2 VARCHAR(50) NULL,
+                tag3 VARCHAR(50) NULL,
+                username VARCHAR(100) NOT NULL UNIQUE,
+                password VARCHAR(255) NOT NULL,
+                face_image VARCHAR(255) NULL,
+                email VARCHAR(150) NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+        """)
+
+        # Tabel 5: Attendance (Presensi & Izin)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS attendance (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                username VARCHAR(100) NOT NULL,
+                type VARCHAR(50) NOT NULL,
+                timestamp DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                clock_out DATETIME NULL,
+                image_path VARCHAR(255) NULL,
+                reason TEXT NULL,
+                status VARCHAR(20) DEFAULT 'Pending',
+                INDEX idx_att_user_time (username, timestamp)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+        """)
+
+        # Tabel 6: Vacancies (Lowongan)
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS vacancies (
                 id INT AUTO_INCREMENT PRIMARY KEY,
@@ -74,60 +196,12 @@ def ensure_db_schema():
                 status VARCHAR(50) DEFAULT 'Open',
                 image VARCHAR(255) DEFAULT 'assets/avatar_mascot_centered.png',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
         """)
-
-        # 2. Pastikan kolom status ada di tabel attendance
-        cursor.execute("""
-            SELECT COUNT(*) AS cnt 
-            FROM information_schema.COLUMNS 
-            WHERE TABLE_SCHEMA = %s 
-              AND TABLE_NAME = 'attendance' 
-              AND COLUMN_NAME = 'status'
-        """, (DB_NAME,))
-        res = cursor.fetchone()
-        if res and res.get('cnt', 0) == 0:
-            cursor.execute("""
-                ALTER TABLE attendance 
-                ADD COLUMN status VARCHAR(20) DEFAULT 'Pending' AFTER reason
-            """)
-
-        # 3. Pastikan tabel admins ada untuk login Web Dashboard (tanpa avatar, create date, dan last login)
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS admins (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                username VARCHAR(100) NOT NULL UNIQUE,
-                password VARCHAR(255) NOT NULL,
-                name VARCHAR(150) NOT NULL,
-                email VARCHAR(150),
-                role VARCHAR(50) DEFAULT 'Super Admin'
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-        """)
-
-        # Pastikan kolom avatar, created_at, updated_at, last_login dibersihkan jika masih ada
-        for col in ['avatar', 'created_at', 'updated_at', 'last_login']:
-            cursor.execute("""
-                SELECT COUNT(*) AS cnt 
-                FROM information_schema.COLUMNS 
-                WHERE TABLE_SCHEMA = %s 
-                  AND TABLE_NAME = 'admins' 
-                  AND COLUMN_NAME = %s
-            """, (DB_NAME, col))
-            res_col = cursor.fetchone()
-            if res_col and res_col.get('cnt', 0) > 0:
-                cursor.execute(f"ALTER TABLE admins DROP COLUMN {col}")
-
-        # Seed default admin jika tabel admins masih kosong
-        cursor.execute("SELECT COUNT(*) AS total FROM admins")
-        adm_row = cursor.fetchone()
-        if not adm_row or adm_row.get('total', 0) == 0:
-            cursor.execute("""
-                INSERT INTO admins (username, password, name, email, role)
-                VALUES (%s, %s, %s, %s, %s)
-            """, ('admin', '123', 'Administrator TSA', 'admin@tsa.co.id', 'Super Admin'))
 
         conn.commit()
         conn.close()
+        print("[Schema Info] Seluruh tabel database absensi_wg berhasil diverifikasi.")
     except Exception as e:
         print(f"[Schema Warning] ensure_db_schema: {e}")
 
@@ -191,46 +265,52 @@ def login():
             flash('Username dan password wajib diisi!', 'danger')
             return render_template('login.html', username=username)
 
-        conn = get_db_connection()
-        cursor = conn.cursor()
-
-        # 1. Cek dari tabel admins
-        cursor.execute("SELECT * FROM admins WHERE username = %s LIMIT 1", (username,))
-        admin = cursor.fetchone()
-
-        # 2. Fallback cek dari tabel users jika belum terdaftar di admins
-        if not admin:
-            cursor.execute("SELECT * FROM users WHERE username = %s LIMIT 1", (username,))
-            user_row = cursor.fetchone()
-            if user_row and user_row['username'].lower() in ('admin', 'administrator'):
-                admin = {
-                    'id': user_row['id'],
-                    'username': user_row['username'],
-                    'password': user_row['password'],
-                    'name': user_row.get('name') or 'Administrator TSA',
-                    'email': 'admin@tsa.co.id',
-                    'role': 'Super Admin'
-                }
-
-        # Validasi password
+        admin = None
         is_valid = False
-        if admin:
-            db_pw = str(admin['password']).strip()
-            # Validasi langsung
-            if db_pw == password:
-                is_valid = True
-            # Fleksibilitas default password admin (123 / admin123)
-            elif (db_pw in ('123', 'admin123')) and (password in ('123', 'admin123')):
-                is_valid = True
-            else:
-                try:
-                    from werkzeug.security import check_password_hash
-                    if check_password_hash(db_pw, password):
-                        is_valid = True
-                except Exception:
-                    pass
+        try:
+            conn = get_db_connection()
+            cursor = conn.cursor()
 
-        conn.close()
+            # 1. Cek dari tabel admins
+            cursor.execute("SELECT * FROM admins WHERE username = %s LIMIT 1", (username,))
+            admin = cursor.fetchone()
+
+            # 2. Fallback cek dari tabel users jika belum terdaftar di admins
+            if not admin:
+                cursor.execute("SELECT * FROM users WHERE username = %s LIMIT 1", (username,))
+                user_row = cursor.fetchone()
+                if user_row and user_row['username'].lower() in ('admin', 'administrator'):
+                    admin = {
+                        'id': user_row['id'],
+                        'username': user_row['username'],
+                        'password': user_row['password'],
+                        'name': user_row.get('name') or 'Administrator TSA',
+                        'email': 'admin@tsa.co.id',
+                        'role': 'Super Admin'
+                    }
+
+            # Validasi password
+            if admin:
+                db_pw = str(admin['password']).strip()
+                # Validasi langsung
+                if db_pw == password:
+                    is_valid = True
+                # Fleksibilitas default password admin (123 / admin123)
+                elif (db_pw in ('123', 'admin123')) and (password in ('123', 'admin123')):
+                    is_valid = True
+                else:
+                    try:
+                        from werkzeug.security import check_password_hash
+                        if check_password_hash(db_pw, password):
+                            is_valid = True
+                    except Exception:
+                        pass
+
+            conn.close()
+        except Exception as db_err:
+            print(f"[Login DB Error]: {db_err}")
+            flash(f"Koneksi Database MySQL Gagal ({DB_HOST}:{DB_PORT}): {db_err}", 'danger')
+            return render_template('login.html', username=username)
 
         if admin and is_valid:
             session.permanent = bool(remember)
@@ -271,92 +351,104 @@ def index():
     current_day = now.strftime('%A')
     current_date_formatted = now.strftime('%B %d, %Y')
 
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    # 2. Total Karyawan dari Database
-    cursor.execute("SELECT COUNT(*) AS total FROM employees")
-    emp_res = cursor.fetchone()
-    total_employees = emp_res['total'] if emp_res else 0
-    
-    # 3. Total Presensi Hadir Hari Ini (clock_in hari ini)
-    cursor.execute("""
-        SELECT COUNT(DISTINCT username) AS total 
-        FROM attendance 
-        WHERE DATE(timestamp) = CURDATE() AND (type = 'clock_in' OR type = 'hadir')
-    """)
-    presence_res = cursor.fetchone()
-    presence_today = presence_res['total'] if presence_res else 0
-    
-    # 4. Total Request / Izin / Sakit / OBS Hari Ini
-    cursor.execute("""
-        SELECT COUNT(*) AS total 
-        FROM attendance 
-        WHERE DATE(timestamp) = CURDATE() 
-          AND ((reason IS NOT NULL AND reason != '') OR type IN ('izin', 'sakit', 'cuti', 'sick_leave', 'necessity_leave'))
-    """)
-    obs_res = cursor.fetchone()
-    request_obs = obs_res['total'] if obs_res else 0
-    
-    # 5. Ketidakhadiran Hari Ini (karyawan yang belum clock_in hari ini)
-    absence_today = max(0, total_employees - presence_today)
-    
-    # 6. Data Rekap Bulanan untuk Grafik (Chart.js) langsung dari Database
-    cursor.execute("""
-        SELECT 
-            DATE_FORMAT(timestamp, '%b') AS month_name,
-            MONTH(timestamp) AS month_num,
-            YEAR(timestamp) AS yr,
-            SUM(CASE WHEN type = 'clock_in' OR type = 'hadir' THEN 1 ELSE 0 END) AS presence_cnt,
-            SUM(CASE WHEN type != 'clock_in' AND type != 'clock_out' AND type != 'hadir' THEN 1 ELSE 0 END) AS absence_cnt
-        FROM attendance
-        GROUP BY YEAR(timestamp), MONTH(timestamp), DATE_FORMAT(timestamp, '%b')
-        ORDER BY YEAR(timestamp) ASC, MONTH(timestamp) ASC
-    """)
-    monthly_rows = cursor.fetchall()
+    total_employees = 0
+    presence_today = 0
+    absence_today = 0
+    request_obs = 0
+    chart_labels = ['May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct']
+    chart_presence = [0, 0, 0, 0, 0, 0]
+    chart_absence = [0, 0, 0, 0, 0, 0]
+    chart_employees = [0] * 6
+    top_attendees = []
+    other_attendees = []
 
-    chart_labels = []
-    chart_presence = []
-    chart_absence = []
-    chart_employees = []
-
-    if monthly_rows and len(monthly_rows) > 0:
-        recent_months = monthly_rows[-6:]
-        for r in recent_months:
-            chart_labels.append(r['month_name'])
-            chart_presence.append(int(r['presence_cnt'] or 0))
-            chart_absence.append(int(r['absence_cnt'] or 0))
-            chart_employees.append(total_employees)
-    else:
-        chart_labels = ['May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct']
-        chart_presence = [0, 0, 0, 0, 0, presence_today]
-        chart_absence = [0, 0, 0, 0, 0, absence_today]
-        chart_employees = [total_employees] * 6
-
-    # 7. Quick Attendance List Karyawan Real dari Database
-    cursor.execute("""
-        SELECT 
-            e.id, e.employee_id, e.name, e.team, e.branch, e.status, e.username, e.face_image,
-            a.type AS today_type, 
-            TIME_FORMAT(a.max_ts, '%H:%i') AS today_clock_in,
-            a.reason AS today_reason
-        FROM employees e
-        LEFT JOIN (
-            SELECT username, 
-                   SUBSTRING_INDEX(GROUP_CONCAT(type ORDER BY id DESC), ',', 1) AS type,
-                   MAX(timestamp) AS max_ts,
-                   SUBSTRING_INDEX(GROUP_CONCAT(COALESCE(reason, '') ORDER BY id DESC), ',', 1) AS reason
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # 2. Total Karyawan dari Database
+        cursor.execute("SELECT COUNT(*) AS total FROM employees")
+        emp_res = cursor.fetchone()
+        total_employees = emp_res['total'] if emp_res else 0
+        
+        # 3. Total Presensi Hadir Hari Ini (clock_in hari ini)
+        cursor.execute("""
+            SELECT COUNT(DISTINCT username) AS total 
+            FROM attendance 
+            WHERE DATE(timestamp) = CURDATE() AND (type = 'clock_in' OR type = 'hadir')
+        """)
+        presence_res = cursor.fetchone()
+        presence_today = presence_res['total'] if presence_res else 0
+        
+        # 4. Total Request / Izin / Sakit / OBS Hari Ini
+        cursor.execute("""
+            SELECT COUNT(*) AS total 
+            FROM attendance 
+            WHERE DATE(timestamp) = CURDATE() 
+              AND ((reason IS NOT NULL AND reason != '') OR type IN ('izin', 'sakit', 'cuti', 'sick_leave', 'necessity_leave'))
+        """)
+        obs_res = cursor.fetchone()
+        request_obs = obs_res['total'] if obs_res else 0
+        
+        # 5. Ketidakhadiran Hari Ini (karyawan yang belum clock_in hari ini)
+        absence_today = max(0, total_employees - presence_today)
+        
+        # 6. Data Rekap Bulanan untuk Grafik (Chart.js) langsung dari Database
+        cursor.execute("""
+            SELECT 
+                DATE_FORMAT(timestamp, '%b') AS month_name,
+                MONTH(timestamp) AS month_num,
+                YEAR(timestamp) AS yr,
+                SUM(CASE WHEN type = 'clock_in' OR type = 'hadir' THEN 1 ELSE 0 END) AS presence_cnt,
+                SUM(CASE WHEN type != 'clock_in' AND type != 'clock_out' AND type != 'hadir' THEN 1 ELSE 0 END) AS absence_cnt
             FROM attendance
-            WHERE DATE(timestamp) = CURDATE()
-            GROUP BY username
-        ) a ON e.username = a.username
-        ORDER BY (CASE WHEN a.type = 'clock_in' THEN 1 WHEN a.type IS NOT NULL THEN 2 ELSE 3 END) ASC, e.id ASC
-    """)
-    attendance_employees = cursor.fetchall()
-    conn.close()
+            GROUP BY YEAR(timestamp), MONTH(timestamp), DATE_FORMAT(timestamp, '%b')
+            ORDER BY YEAR(timestamp) ASC, MONTH(timestamp) ASC
+        """)
+        monthly_rows = cursor.fetchall()
 
-    top_attendees = attendance_employees[:3]
-    other_attendees = attendance_employees[3:8]
+        if monthly_rows and len(monthly_rows) > 0:
+            chart_labels = []
+            chart_presence = []
+            chart_absence = []
+            chart_employees = []
+            recent_months = monthly_rows[-6:]
+            for r in recent_months:
+                chart_labels.append(r['month_name'])
+                chart_presence.append(int(r['presence_cnt'] or 0))
+                chart_absence.append(int(r['absence_cnt'] or 0))
+                chart_employees.append(total_employees)
+        else:
+            chart_presence = [0, 0, 0, 0, 0, presence_today]
+            chart_absence = [0, 0, 0, 0, 0, absence_today]
+            chart_employees = [total_employees] * 6
+
+        # 7. Quick Attendance List Karyawan Real dari Database
+        cursor.execute("""
+            SELECT 
+                e.id, e.employee_id, e.name, e.team, e.branch, e.status, e.username, e.face_image,
+                a.type AS today_type, 
+                TIME_FORMAT(a.max_ts, '%H:%i') AS today_clock_in,
+                a.reason AS today_reason
+            FROM employees e
+            LEFT JOIN (
+                SELECT username, 
+                       SUBSTRING_INDEX(GROUP_CONCAT(type ORDER BY id DESC), ',', 1) AS type,
+                       MAX(timestamp) AS max_ts,
+                       SUBSTRING_INDEX(GROUP_CONCAT(COALESCE(reason, '') ORDER BY id DESC), ',', 1) AS reason
+                FROM attendance
+                WHERE DATE(timestamp) = CURDATE()
+                GROUP BY username
+            ) a ON e.username = a.username
+            ORDER BY (CASE WHEN a.type = 'clock_in' THEN 1 WHEN a.type IS NOT NULL THEN 2 ELSE 3 END) ASC, e.id ASC
+        """)
+        attendance_employees = cursor.fetchall()
+        conn.close()
+
+        top_attendees = attendance_employees[:3]
+        other_attendees = attendance_employees[3:8]
+    except Exception as dash_err:
+        print(f"[Dashboard DB Error]: {dash_err}")
     
     return render_template(
         'homepage.html',
