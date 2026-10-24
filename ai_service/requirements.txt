@@ -1,0 +1,21 @@
+# Dependensi Utama AI Service (ProjectWG)
+flask>=2.3.0
+flask-cors>=4.0.0
+numpy>=1.24.0
+opencv-python>=4.8.0
+pillow>=10.0.0
+pymysql>=1.1.0
+cryptography>=41.0.0
+python-dotenv>=1.0.0
+requests>=2.31.0
+
+# 🌟 Model AI Face Recognition Terbaik (Standar Industri Enterprise)
+# InsightFace (ArcFace 512D + SCRFD Detector via ONNX Runtime)
+insightface>=0.7.3
+onnxruntime>=1.16.0
+
+# Server Produksi (Linux / VPS)
+gunicorn>=21.2.0
+
+# Legacy Fallback (Opsional)
+face-recognition>=1.3.0; sys_platform != "win32"

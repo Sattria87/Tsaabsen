@@ -1,0 +1,963 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Request - Data Pengajuan Izin / Sakit</title>
+    <!-- Google Font: Plus Jakarta Sans -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+    <style>
+        :root {
+            --bg-canvas: #f8f9fa;
+            --sidebar-width: 260px;
+            --text-dark: #121826;
+            --text-muted: #8c97a8;
+            --menu-bg-inactive: #d9dbdf;
+            --menu-bg-active: #131b3e;
+            --btn-blue: #0066ff;
+            --card-shadow: 0 8px 24px rgba(17, 24, 39, 0.05);
+            --card-border: 1px solid rgba(226, 232, 240, 0.9);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--bg-canvas);
+            color: var(--text-dark);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* ================= SIDEBAR ================= */
+        .sidebar {
+            width: var(--sidebar-width);
+            height: 100vh;
+            background: #ffffff;
+            position: fixed;
+            top: 0;
+            left: 0;
+            border-right: 1px solid #e5e7eb;
+            padding: 30px 20px 24px 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            z-index: 1000;
+        }
+
+        .sidebar-logo-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 28px;
+            padding: 0 10px;
+        }
+
+        .sidebar-logo {
+            max-width: 155px;
+            height: auto;
+            max-height: 58px;
+            object-fit: contain;
+            transition: transform 0.2s ease;
+        }
+        .sidebar-logo:hover {
+            transform: scale(1.03);
+        }
+
+        .sidebar-menu {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .side-btn {
+            background-color: var(--menu-bg-inactive);
+            color: #111827;
+            text-align: center;
+            padding: 12px 14px;
+            border-radius: 12px;
+            font-size: 14.5px;
+            font-weight: 700;
+            text-decoration: none;
+            display: block;
+            border: none;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            user-select: none;
+        }
+
+        .side-btn:hover {
+            background-color: #cbced4;
+            color: #000000;
+            transform: translateY(-1px);
+        }
+
+        .side-btn.active {
+            background-color: var(--menu-bg-active);
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(19, 27, 62, 0.25);
+        }
+
+        .logout-btn {
+            background-color: var(--btn-blue);
+            color: #ffffff;
+            border: none;
+            border-radius: 14px;
+            padding: 13px;
+            width: 100%;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 14px rgba(0, 102, 255, 0.3);
+            text-align: center;
+            text-decoration: none;
+            display: block;
+        }
+
+        .logout-btn:hover {
+            background-color: #0052cc;
+            color: #ffffff;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 18px rgba(0, 102, 255, 0.4);
+        }
+
+        /* ================= MAIN WRAPPER ================= */
+        .main-wrapper {
+            margin-left: var(--sidebar-width);
+            min-height: 100vh;
+            background-color: #ffffff;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Top Bar Header Dark Banner (Matching Design Screenshot) */
+        .top-navbar-banner {
+            background-color: var(--menu-bg-active);
+            color: #ffffff;
+            height: 64px;
+            padding: 0 36px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .navbar-brand-section {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .navbar-brand-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #ffffff;
+            letter-spacing: -0.2px;
+        }
+
+        .navbar-date-section {
+            font-size: 14px;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.95);
+            letter-spacing: 0.1px;
+        }
+
+        /* Content Area */
+        .content-body {
+            padding: 36px 44px 60px 44px;
+            flex: 1;
+            background-color: #ffffff;
+        }
+
+        /* Page Title */
+        .page-header-title {
+            font-size: 28px;
+            font-weight: 800;
+            color: #111827;
+            margin-bottom: 2px;
+            letter-spacing: -0.5px;
+        }
+
+        .page-breadcrumb {
+            font-size: 13.5px;
+            font-weight: 500;
+            color: #6b7280;
+            margin-bottom: 32px;
+        }
+
+        /* ================= GRID KARTU REQUEST ================= */
+        .requests-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 28px;
+            margin-bottom: 40px;
+        }
+
+        .request-card {
+            background: #ffffff;
+            border-radius: 18px;
+            border: var(--card-border);
+            box-shadow: var(--card-shadow);
+            padding: 30px 24px 24px 24px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+        }
+
+        .request-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 14px 30px rgba(0, 0, 0, 0.08);
+            border-color: #cbd5e1;
+        }
+
+        /* Mascot Container */
+        .mascot-wrapper {
+            margin-bottom: 18px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.2s ease;
+        }
+
+        .request-mascot-img {
+            width: 130px;
+            height: 130px;
+            object-fit: contain;
+            transition: transform 0.2s ease;
+        }
+
+        /* Highlight border on mascot (sesuai kartu ke-3 pada screenshot) */
+        .highlight-card-border {
+            border: 2.5px solid #0088ff;
+            border-radius: 14px;
+            padding: 6px;
+            background: #f8fbff;
+        }
+
+        .request-card:hover .request-mascot-img {
+            transform: scale(1.05);
+        }
+
+        .request-role {
+            font-size: 13px;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 2px;
+        }
+
+        .request-name {
+            font-size: 20px;
+            font-weight: 800;
+            color: #111827;
+            letter-spacing: -0.3px;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+        }
+
+        .request-reason {
+            font-size: 12.5px;
+            font-weight: 500;
+            color: #6b7280;
+            margin-bottom: 14px;
+            min-height: 18px;
+        }
+
+        .request-date {
+            font-size: 11.5px;
+            color: #9ca3af;
+            font-weight: 500;
+            margin-bottom: 16px;
+        }
+
+        .btn-see-more {
+            background: none;
+            border: none;
+            color: #0066ff;
+            font-size: 13px;
+            font-weight: 700;
+            padding: 0;
+            cursor: pointer;
+            text-decoration: underline;
+            text-underline-offset: 3px;
+            transition: color 0.15s ease;
+        }
+
+        .btn-see-more:hover {
+            color: #004ecc;
+            text-decoration: underline;
+        }
+
+        /* Badge status pill di pojok atas kartu */
+        .card-type-badge {
+            position: absolute;
+            top: 14px;
+            right: 16px;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 6px;
+        }
+
+        /* ================= LIST TABLE STYLES (SESUAI GAMBAR ACUAN USER) ================= */
+        .request-table-card {
+            background: #ffffff;
+            border-radius: 14px;
+            border: 1px solid #eef2f6;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.03);
+            overflow: hidden;
+        }
+
+        .request-list-table {
+            width: 100%;
+            margin-bottom: 0;
+            border-collapse: collapse;
+        }
+
+        .request-list-table thead th {
+            background-color: #f8fafc;
+            color: #64748b;
+            font-size: 11.5px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 13px 18px;
+            border-bottom: 1px solid #edf2f7;
+            border-top: 1px solid #edf2f7;
+            white-space: nowrap;
+        }
+
+        .request-list-table tbody tr {
+            background-color: #ffffff;
+            transition: background-color 0.15s ease;
+        }
+
+        .request-list-table tbody tr:hover {
+            background-color: #f8fafc;
+        }
+
+        .request-list-table tbody td {
+            padding: 13px 18px;
+            font-size: 13.5px;
+            color: #334155;
+            border-bottom: 1px solid #edf2f7;
+            vertical-align: middle;
+        }
+
+        /* Garis vertikal pemisah kolom (persis seperti di screenshot acuan user) */
+        .v-divider-left {
+            border-left: 1px solid #edf2f7 !important;
+        }
+
+        /* Pill Badge Tag Status (Warna pastel lembut persis seperti di gambar acuan) */
+        .tag-pill {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            padding: 3px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            line-height: 1.4;
+            white-space: nowrap;
+            letter-spacing: 0.2px;
+        }
+
+        .tag-pill-approved {
+            background-color: #eaf8ee;
+            color: #1e8e3e;
+            border: 1px solid #c8e6c9;
+        }
+
+        .tag-pill-pending {
+            background-color: #fff8e1;
+            color: #d97706;
+            border: 1px solid #fde68a;
+        }
+
+        .tag-pill-rejected {
+            background-color: #fef2f2;
+            color: #dc2626;
+            border: 1px solid #fecaca;
+        }
+
+        /* Tombol Aksi berbentuk Tag Pill (persis seperti di gambar acuan) */
+        .tag-action-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            text-decoration: none;
+            border: 1px solid transparent;
+            line-height: 1.3;
+        }
+
+        .tag-action-success {
+            background-color: #eaf8ee;
+            color: #1e8e3e;
+            border-color: #a3e635;
+        }
+        .tag-action-success:hover {
+            background-color: #1e8e3e;
+            color: #ffffff;
+            border-color: #1e8e3e;
+        }
+
+        .tag-action-danger {
+            background-color: #fef2f2;
+            color: #dc2626;
+            border-color: #fca5a5;
+        }
+        .tag-action-danger:hover {
+            background-color: #dc2626;
+            color: #ffffff;
+            border-color: #dc2626;
+        }
+
+        .tag-action-primary {
+            background-color: #eff6ff;
+            color: #2563eb;
+            border-color: #93c5fd;
+        }
+        .tag-action-primary:hover {
+            background-color: #2563eb;
+            color: #ffffff;
+            border-color: #2563eb;
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .requests-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 890px) {
+            .sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+            }
+            .sidebar.show {
+                transform: translateX(0);
+            }
+            .main-wrapper {
+                margin-left: 0;
+            }
+            .content-body {
+                padding: 24px 20px;
+            }
+            .requests-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ================= SIDEBAR ================= -->
+    <div class="sidebar">
+        <div>
+            <!-- LOGO TSA -->
+            <div class="sidebar-logo-container">
+                <a href="/" title="TSA Home">
+                    <img src="/assets/tsa_logo.png" alt="TSA Logo" class="sidebar-logo">
+                </a>
+            </div>
+
+            <!-- MENU TOMBOL SAMPING -->
+            <nav class="sidebar-menu">
+                <a href="/" class="side-btn" id="menu-home">Home page</a>
+                <a href="/employee" class="side-btn" id="menu-employee">Employee</a>
+                <a href="/branch-company" class="side-btn" id="menu-branch">Branch company</a>
+                <a href="/vacancy" class="side-btn" id="menu-vacancy">Vacancy</a>
+                <a href="/presence" class="side-btn" id="menu-presence">Presence</a>
+                <a href="/request" class="side-btn active" id="menu-request">Request</a>
+                <a href="/report" class="side-btn" id="menu-report">Report</a>
+            </nav>
+        </div>
+
+        <!-- LOGOUT BUTTON (BLUE PILL) -->
+        <div>
+            <button type="button" class="logout-btn" id="btn-logout" data-bs-toggle="modal" data-bs-target="#logoutModal">
+                Logout
+            </button>
+        </div>
+    </div>
+
+    <!-- ================= MAIN WRAPPER ================= -->
+    <main class="main-wrapper">
+
+        <!-- TOP BAR BANNER (DARK NAVY - MATCHING DESIGN SCREENSHOT) -->
+        <header class="top-navbar-banner">
+            <div class="navbar-brand-section">
+                <i class="bi bi-list fs-3 text-white cursor-pointer" title="Menu"></i>
+                <span class="navbar-brand-title">Request</span>
+            </div>
+            <div class="navbar-date-section">
+                {{ current_day }} {{ current_date_formatted }}
+            </div>
+        </header>
+
+        <!-- CONTENT BODY -->
+        <div class="content-body">
+
+            <!-- FLASH ALERTS -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} alert-dismissible fade show rounded-3 mb-4 shadow-sm" role="alert">
+                            <i class="bi bi-info-circle-fill me-2"></i>{{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <!-- PAGE TITLE & BREADCRUMB -->
+            <div class="d-flex justify-content-between align-items-end mb-4 flex-wrap gap-2">
+                <div>
+                    <h1 class="page-header-title">Data Pengajuan Izin / Sakit</h1>
+                    <p class="page-breadcrumb mb-0">Request / Data Pengajuan Izin Sakit</p>
+                </div>
+                <div>
+                    <button type="button" class="btn btn-primary rounded-3 fw-bold px-3 py-2 shadow-sm" data-bs-toggle="modal" data-bs-target="#addRequestModal">
+                        <i class="bi bi-plus-lg me-1"></i> Ajukan Izin / Sakit
+                    </button>
+                </div>
+            </div>
+
+            <!-- =============== MACRO UNTUK TABEL PENGAJUAN (SESUAI GAMBAR ACUAN) =============== -->
+            {% macro render_request_table(items, empty_msg) %}
+                {% if items %}
+                <div class="table-responsive">
+                    <table class="table request-list-table align-middle">
+                        <thead>
+                            <tr>
+                                <th style="min-width: 250px;">Karyawan & Keperluan</th>
+                                <th style="min-width: 140px;">Tanggal</th>
+                                <th class="v-divider-left" style="min-width: 110px;">Divisi</th>
+                                <th style="min-width: 120px;">Cabang</th>
+                                <th class="v-divider-left text-center" style="min-width: 120px;">Status</th>
+                                <th class="v-divider-left text-end" style="min-width: 180px;">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for req in items %}
+                            <tr>
+                                <!-- KOLOM 1: KARYAWAN & ALASAN -->
+                                <td>
+                                    <div class="d-flex align-items-center gap-3">
+                                        {% if req.face_image %}
+                                            <img src="{% if req.face_image.startswith('http') or req.face_image.startswith('data:') %}{{ req.face_image }}{% elif req.face_image.startswith('/') %}{{ req.face_image }}{% else %}/{{ req.face_image }}{% endif %}" alt="{{ req.name }}" class="rounded-circle object-fit-cover shadow-sm border" style="width: 38px; height: 38px; flex-shrink: 0;" onerror="this.src='/assets/avatar_mascot_centered.png'">
+                                        {% else %}
+                                            <img src="/assets/avatar_mascot_centered.png" alt="{{ req.name }}" class="rounded-circle border shadow-sm" style="width: 38px; height: 38px; object-fit: contain; background: #fff; flex-shrink: 0;">
+                                        {% endif %}
+                                        <div style="min-width: 0;">
+                                            <div class="d-flex align-items-center gap-2 mb-1">
+                                                <span class="fw-bold text-dark text-truncate" style="font-size: 14px;">{{ req.name }}</span>
+                                                {% if req.display_type == 'Sakit' %}
+                                                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle" style="font-size: 10px; padding: 2px 7px;">Sakit</span>
+                                                {% else %}
+                                                    <span class="badge bg-warning-subtle text-warning border border-warning-subtle" style="font-size: 10px; padding: 2px 7px;">Izin</span>
+                                                {% endif %}
+                                            </div>
+                                            <div class="text-muted text-truncate" style="font-size: 12px; max-width: 280px;" title="{{ req.reason }}">
+                                                {{ req.reason if req.reason else '-' }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+
+                                <!-- KOLOM 2: TANGGAL PENGAJUAN -->
+                                <td>
+                                    <div class="fw-semibold text-dark" style="font-size: 13px;">{{ req.formatted_date if req.formatted_date else '-' }}</div>
+                                    <small class="text-muted" style="font-size: 11px;">ID: {{ req.employee_id if req.employee_id else '-' }}</small>
+                                </td>
+
+                                <!-- KOLOM 3: DIVISI / JABATAN (GARIS PEMISAH VERTIKAL) -->
+                                <td class="v-divider-left">
+                                    <span class="fw-medium text-secondary">{{ req.role if req.role else (req.team if req.team else 'Staff') }}</span>
+                                </td>
+
+                                <!-- KOLOM 4: CABANG -->
+                                <td>
+                                    <span class="fw-medium text-secondary">{{ req.branch if req.branch else 'Surabaya' }}</span>
+                                </td>
+
+                                <!-- KOLOM 5: STATUS BADGE PILL (GARIS PEMISAH VERTIKAL) -->
+                                <td class="v-divider-left text-center">
+                                    {% if req.status == 'Approved' %}
+                                        <span class="tag-pill tag-pill-approved">
+                                            <i class="bi bi-check-circle-fill" style="font-size: 11px;"></i> Disetujui
+                                        </span>
+                                    {% elif req.status == 'Rejected' %}
+                                        <span class="tag-pill tag-pill-rejected">
+                                            <i class="bi bi-x-circle-fill" style="font-size: 11px;"></i> Ditolak
+                                        </span>
+                                    {% else %}
+                                        <span class="tag-pill tag-pill-pending">
+                                            <i class="bi bi-hourglass-split" style="font-size: 11px;"></i> Pending
+                                        </span>
+                                    {% endif %}
+                                </td>
+
+                                <!-- KOLOM 6: AKSI BUTTON PILL (GARIS PEMISAH VERTIKAL) -->
+                                <td class="v-divider-left text-end">
+                                    <div class="d-inline-flex align-items-center gap-1 justify-content-end">
+                                        {% if req.status != 'Approved' %}
+                                        <form action="/update-request-status/{{ req.id }}" method="POST" class="d-inline m-0">
+                                            <input type="hidden" name="status" value="Approved">
+                                            <button type="submit" class="tag-action-btn tag-action-success" title="Setujui Pengajuan">
+                                                <i class="bi bi-check-lg"></i> Setujui
+                                            </button>
+                                        </form>
+                                        {% endif %}
+
+                                        {% if req.status != 'Rejected' %}
+                                        <form action="/update-request-status/{{ req.id }}" method="POST" class="d-inline m-0">
+                                            <input type="hidden" name="status" value="Rejected">
+                                            <button type="submit" class="tag-action-btn tag-action-danger" title="Tolak Pengajuan">
+                                                <i class="bi bi-x-lg"></i> Tolak
+                                            </button>
+                                        </form>
+                                        {% endif %}
+
+                                        <button type="button" class="tag-action-btn tag-action-primary" data-bs-toggle="modal" data-bs-target="#requestModal{{ req.id }}" title="Lihat Identitas & Foto">
+                                            <i class="bi bi-eye"></i> Detail
+                                        </button>
+
+                                        {% if req.status == 'Rejected' %}
+                                        <form action="/delete-request/{{ req.id }}" method="POST" class="d-inline m-0" onsubmit="return confirm('Yakin ingin menghapus data pengajuan ini?')">
+                                            <button type="submit" class="tag-action-btn tag-action-danger" title="Hapus Riwayat">
+                                                <i class="bi bi-trash3"></i> Hapus
+                                            </button>
+                                        </form>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-5 text-muted">
+                    <i class="bi bi-inbox fs-1 d-block mb-2 opacity-50"></i>
+                    <p class="fw-semibold mb-0">{{ empty_msg }}</p>
+                </div>
+                {% endif %}
+            {% endmacro %}
+
+            <!-- =============== TABS NAVIGASI STATUS (SESUAI GAMBAR ACUAN) =============== -->
+            <div class="request-table-card mb-4">
+                <div class="card-header bg-white border-bottom pt-3 px-4 pb-0">
+                    <ul class="nav nav-tabs border-bottom-0" id="requestStatusTabs" role="tablist" style="gap: 6px;">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active d-flex align-items-center gap-2 fw-bold" id="pending-tab" data-bs-toggle="tab" data-bs-target="#pending-content" type="button" role="tab" style="font-size: 13.5px; padding: 10px 18px;">
+                                <i class="bi bi-hourglass-split text-warning"></i>
+                                <span>Pending</span>
+                                <span class="badge rounded-pill bg-warning text-dark border border-warning-subtle" style="font-size: 11px;">{{ count_pending }}</span>
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link d-flex align-items-center gap-2 fw-bold" id="approved-tab" data-bs-toggle="tab" data-bs-target="#approved-content" type="button" role="tab" style="font-size: 13.5px; padding: 10px 18px;">
+                                <i class="bi bi-check-circle-fill text-success"></i>
+                                <span>Disetujui</span>
+                                <span class="badge rounded-pill bg-success-subtle text-success border border-success-subtle" style="font-size: 11px;">{{ count_approved }}</span>
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link d-flex align-items-center gap-2 fw-bold" id="rejected-tab" data-bs-toggle="tab" data-bs-target="#rejected-content" type="button" role="tab" style="font-size: 13.5px; padding: 10px 18px;">
+                                <i class="bi bi-x-circle-fill text-danger"></i>
+                                <span>Ditolak</span>
+                                <span class="badge rounded-pill bg-danger-subtle text-danger border border-danger-subtle" style="font-size: 11px;">{{ count_rejected }}</span>
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link d-flex align-items-center gap-2 fw-bold" id="all-tab" data-bs-toggle="tab" data-bs-target="#all-content" type="button" role="tab" style="font-size: 13.5px; padding: 10px 18px;">
+                                <i class="bi bi-collection-fill text-primary"></i>
+                                <span>Semua Data</span>
+                                <span class="badge rounded-pill bg-secondary-subtle text-secondary border border-secondary-subtle" style="font-size: 11px;">{{ requests_list|length }}</span>
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="card-body p-0">
+                    <div class="tab-content" id="requestStatusTabContent">
+
+                        <!-- ======== TAB 1: PENDING ======== -->
+                        <div class="tab-pane fade show active" id="pending-content" role="tabpanel">
+                            {{ render_request_table(pending_list, 'Tidak ada pengajuan yang menunggu persetujuan.') }}
+                        </div>
+
+                        <!-- ======== TAB 2: DISETUJUI ======== -->
+                        <div class="tab-pane fade" id="approved-content" role="tabpanel">
+                            {{ render_request_table(approved_list, 'Belum ada pengajuan yang disetujui.') }}
+                        </div>
+
+                        <!-- ======== TAB 3: DITOLAK ======== -->
+                        <div class="tab-pane fade" id="rejected-content" role="tabpanel">
+                            {{ render_request_table(rejected_list, 'Tidak ada pengajuan yang ditolak.') }}
+                        </div>
+
+                        <!-- ======== TAB 4: SEMUA DATA ======== -->
+                        <div class="tab-pane fade" id="all-content" role="tabpanel">
+                            {{ render_request_table(requests_list, 'Belum ada riwayat pengajuan izin/sakit.') }}
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+            <!-- =============== MODALS DETAIL (SEMUA REQUEST) =============== -->
+            {% for req in requests_list %}
+            <div class="modal fade" id="requestModal{{ req.id }}" tabindex="-1" aria-labelledby="modalLabel{{ req.id }}" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered" style="max-width: 580px;">
+                    <div class="modal-content rounded-4 border-0 shadow-lg overflow-hidden">
+                        
+                        <!-- MODAL HEADER -->
+                        <div class="modal-header bg-light border-bottom px-4 py-3">
+                            <h5 class="modal-title fw-bold text-dark fs-6" id="modalLabel{{ req.id }}">
+                                <i class="bi bi-person-badge-fill text-primary me-2"></i> Identitas & Rincian Pengajuan
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+
+                        <!-- MODAL BODY -->
+                        <div class="modal-body p-4">
+
+                            <!-- HEADER PROFIL KARYAWAN -->
+                            <div class="d-flex align-items-center gap-3 p-3 bg-light rounded-4 mb-4 border">
+                                <div class="position-relative">
+                                    {% if req.face_image %}
+                                        <img src="{% if req.face_image.startswith('http') or req.face_image.startswith('data:') %}{{ req.face_image }}{% elif req.face_image.startswith('/') %}{{ req.face_image }}{% else %}/{{ req.face_image }}{% endif %}" alt="{{ req.name }}" class="rounded-circle border border-3 border-white shadow-sm" style="width: 82px; height: 82px; object-fit: cover;" onerror="this.src='/assets/mascot_avatar.png'">
+                                    {% else %}
+                                        <img src="/assets/avatar_mascot_centered.png" alt="{{ req.name }}" class="rounded-circle border border-3 border-white shadow-sm" style="width: 82px; height: 82px; object-fit: cover; background: #fff;">
+                                    {% endif %}
+                                    <span class="position-absolute bottom-0 end-0 p-2 bg-success border border-white rounded-circle"></span>
+                                </div>
+                                
+                                <div class="flex-grow-1">
+                                    <div class="d-flex align-items-center gap-2 mb-1">
+                                        <h5 class="fw-bold text-dark mb-0 fs-5">{{ req.name }}</h5>
+                                        {% if req.display_type == 'Sakit' %}
+                                            <span class="badge bg-danger text-white rounded-pill px-2 py-1" style="font-size: 11px;">Sakit</span>
+                                        {% else %}
+                                            <span class="badge bg-warning text-dark rounded-pill px-2 py-1" style="font-size: 11px;">Izin</span>
+                                        {% endif %}
+                                    </div>
+                                    <div class="text-muted small fw-semibold mb-1">
+                                        ID Karyawan: <span class="text-dark">{{ req.employee_id }}</span> | @{{ req.username }}
+                                    </div>
+                                    <div class="d-flex gap-2">
+                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2 py-0" style="font-size: 11px;">
+                                            {{ req.role }}
+                                        </span>
+                                        <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle rounded-pill px-2 py-0" style="font-size: 11px;">
+                                            Cabang {{ req.branch if req.branch else 'Surabaya' }}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- INFORMASI DETAIL -->
+                            <div class="row g-3 mb-4">
+                                <div class="col-6">
+                                    <div class="p-3 rounded-3 bg-white border h-100">
+                                        <small class="text-muted d-block mb-1 fw-bold" style="font-size: 11px; text-transform: uppercase;">Divisi / Tim</small>
+                                        <div class="fw-bold text-dark">{{ req.team if req.team else req.role }}</div>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="p-3 rounded-3 bg-white border h-100">
+                                        <small class="text-muted d-block mb-1 fw-bold" style="font-size: 11px; text-transform: uppercase;">Tanggal Pengajuan</small>
+                                        <div class="fw-bold text-dark">{{ req.formatted_date if req.formatted_date else '-' }}</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- ALASAN PENGAJUAN -->
+                            <div class="card border rounded-4 p-3 mb-3 bg-light-subtle">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="fw-bold text-dark small">
+                                        <i class="bi bi-chat-left-text-fill text-primary me-1"></i> Alasan Pengajuan:
+                                    </span>
+                                    <span class="badge {% if req.status == 'Approved' %}bg-success{% elif req.status == 'Rejected' %}bg-danger{% else %}bg-warning text-dark{% endif %} rounded-pill px-3 py-1">
+                                        {{ req.status if req.status else 'Pending' }}
+                                    </span>
+                                </div>
+                                <p class="mb-1 text-dark fw-bold" style="font-size: 14.5px;">{{ req.reason }}</p>
+                                <p class="text-secondary small mb-0 lh-base">
+                                    {{ req.detail_reason if req.detail_reason else 'Pemohon mengajukan surat izin resmi kepada atasan divisi untuk waktu pemulihan atau keperluan mendesak.' }}
+                                </p>
+                            </div>
+
+                            <!-- FOTO LAMPIRAN -->
+                            {% if req.image_path %}
+                            <div class="card border rounded-4 p-3 mb-2 bg-white">
+                                <div class="d-flex align-items-center gap-2 mb-2">
+                                    <i class="bi bi-camera-fill text-primary"></i>
+                                    <span class="fw-bold text-dark small">Foto Lampiran:</span>
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2 py-0" style="font-size: 10px;">Terlampir</span>
+                                </div>
+                                <a href="/{{ req.image_path }}" target="_blank" title="Klik untuk buka foto full">
+                                    <img src="/{{ req.image_path }}"
+                                         alt="Foto lampiran izin {{ req.name }}"
+                                         class="img-fluid rounded-3 border"
+                                         style="max-height: 220px; width: 100%; object-fit: cover; cursor: zoom-in;"
+                                         onerror="this.parentElement.innerHTML='<div class=\'text-muted small p-2\'>Foto tidak dapat dimuat.</div>'">
+                                </a>
+                            </div>
+                            {% else %}
+                            <div class="d-flex align-items-center gap-2 text-muted small mb-2">
+                                <i class="bi bi-camera-slash"></i>
+                                <span>Tidak ada foto lampiran</span>
+                            </div>
+                            {% endif %}
+
+                        </div>
+
+                        <!-- MODAL FOOTER DENGAN AKSI SETUJUI / TOLAK -->
+                        <div class="modal-footer bg-light px-4 py-3 d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="text-muted small fw-semibold">Status Saat Ini:</span>
+                                {% if req.status == 'Approved' %}
+                                    <span class="badge bg-success px-2 py-1"><i class="bi bi-check-circle-fill me-1"></i> Disetujui</span>
+                                {% elif req.status == 'Rejected' %}
+                                    <span class="badge bg-danger px-2 py-1"><i class="bi bi-x-circle-fill me-1"></i> Ditolak</span>
+                                {% else %}
+                                    <span class="badge bg-warning text-dark px-2 py-1"><i class="bi bi-hourglass-split me-1"></i> Pending</span>
+                                {% endif %}
+                            </div>
+
+                            <div class="d-flex gap-2">
+                                <form action="/update-request-status/{{ req.id }}" method="POST" class="d-inline">
+                                    <input type="hidden" name="status" value="Approved">
+                                    <button type="submit" class="btn btn-sm btn-success rounded-3 fw-bold px-3" {% if req.status == 'Approved' %}disabled{% endif %}>
+                                        <i class="bi bi-check-circle me-1"></i> Setujui
+                                    </button>
+                                </form>
+
+                                <form action="/update-request-status/{{ req.id }}" method="POST" class="d-inline">
+                                    <input type="hidden" name="status" value="Rejected">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger rounded-3 fw-semibold px-3" {% if req.status == 'Rejected' %}disabled{% endif %}>
+                                        <i class="bi bi-x-circle me-1"></i> Tolak
+                                    </button>
+                                </form>
+
+                                <button type="button" class="btn btn-sm btn-secondary rounded-3 fw-semibold px-3" data-bs-dismiss="modal">
+                                    Tutup
+                                </button>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+
+        </div>
+
+    </main>
+
+    <!-- ================= MODAL TAMBAH PENGAJUAN IZIN / SAKIT ================= -->
+    <div class="modal fade" id="addRequestModal" tabindex="-1" aria-labelledby="addRequestModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" style="max-width: 520px;">
+            <div class="modal-content rounded-4 border-0 shadow-lg">
+                <div class="modal-header bg-light border-bottom px-4 py-3">
+                    <h5 class="modal-title fw-bold text-dark fs-6" id="addRequestModalLabel">
+                        <i class="bi bi-file-earmark-plus-fill text-primary me-2"></i> Ajukan Izin / Sakit Karyawan
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form action="/add-request" method="POST">
+                    <div class="modal-body p-4">
+                        <!-- Pilih Karyawan dari Database MySQL -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small text-muted text-uppercase mb-1" style="font-size: 11px;">Pilih Karyawan (Tersambung ke Database)</label>
+                            <select name="username" class="form-select rounded-3 py-2" required>
+                                <option value="">-- Pilih Karyawan --</option>
+                                {% for emp in employees_list %}
+                                    <option value="{{ emp.username }}">{{ emp.name }} (ID: {{ emp.employee_id }} | {{ emp.team }})</option>
+                                {% endfor %}
+                            </select>
+                            <small class="text-muted" style="font-size: 11.5px;">Data karyawan langsung tersambung dari tabel MySQL <code>employees</code>.</small>
+                        </div>
+
+                        <!-- Tipe Pengajuan -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small text-muted text-uppercase mb-1" style="font-size: 11px;">Jenis Pengajuan</label>
+                            <select name="type" class="form-select rounded-3 py-2" required>
+                                <option value="sakit">Sakit</option>
+                                <option value="izin">Izin</option>
+                                <option value="cuti">Cuti</option>
+                            </select>
+                        </div>
+
+                        <!-- Tanggal Pengajuan -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small text-muted text-uppercase mb-1" style="font-size: 11px;">Tanggal Pengajuan</label>
+                            <input type="date" name="date" class="form-control rounded-3 py-2" required>
+                        </div>
+
+                        <!-- Alasan -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small text-muted text-uppercase mb-1" style="font-size: 11px;">Alasan / Keterangan</label>
+                            <textarea name="reason" class="form-control rounded-3" rows="3" placeholder="Contoh: Sakit flu burung, izin keperluan keluarga mendesak..." required></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-light px-4 py-3">
+                        <button type="button" class="btn btn-light rounded-3 fw-semibold px-4" data-bs-dismiss="modal">Batal</button>
+                        <button type="submit" class="btn btn-primary rounded-3 fw-bold px-4">
+                            <i class="bi bi-send-fill me-1"></i> Kirim Pengajuan
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL LOGOUT -->
+    <div class="modal fade" id="logoutModal" tabindex="-1" aria-labelledby="logoutModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" style="max-width: 380px;">
+            <div class="modal-content rounded-4 border-0 shadow">
+                <div class="modal-body text-center p-4">
+                    <div class="mb-3 text-primary">
+                        <i class="bi bi-box-arrow-right fs-1"></i>
+                    </div>
+                    <h5 class="fw-bold mb-2">Konfirmasi Logout</h5>
+                    <p class="text-muted small mb-4">Apakah Anda yakin ingin keluar dari Admin Dashboard TSA?</p>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-light w-50 fw-semibold rounded-3 py-2" data-bs-dismiss="modal">Batal</button>
+                        <a href="/logout" class="btn btn-primary w-50 fw-semibold rounded-3 py-2">Ya, Keluar</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap 5 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Branch Company - Admin Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <style>
+        body { background-color: #f8f9fa; font-family: sans-serif; }
+        .sidebar { width: 260px; height: 100vh; background: #fff; position: fixed; border-right: 1px solid #e5e5e5; padding: 25px 20px; display: flex; flex-direction: column; justify-content: space-between; z-index: 100; }
+        .main-content { margin-left: 260px; padding: 30px; }
+
+        .sidebar-menu { display: flex; flex-direction: column; gap: 12px; }
+        .side-btn {
+            background-color: #e4e4e4;
+            color: #000;
+            text-align: center;
+            padding: 12px;
+            border-radius: 12px;
+            font-weight: bold;
+            text-decoration: none;
+            display: block;
+            transition: all 0.2s ease;
+        }
+        .side-btn:hover { background-color: #d1d1d1; color: #000; }
+        .side-btn.active { background-color: #000; color: #fff; }
+
+        .logout-btn { background: #f87171; color: #fff; border: none; border-radius: 12px; padding: 12px; width: 100%; font-weight: bold; }
+        .top-header { background: #000; color: #fff; padding: 15px 30px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+        .table-card { background: #fff; border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.02); }
+
+        .branch-icon {
+            width: 40px; height: 40px;
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            color: #fff;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+
+        .coord-badge {
+            font-size: 11px;
+            background: #f0f4ff;
+            color: #3b5bdb;
+            border-radius: 6px;
+            padding: 2px 7px;
+            font-family: monospace;
+        }
+
+        .radius-pill {
+            background: #fff3cd;
+            color: #856404;
+            border-radius: 20px;
+            padding: 3px 10px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+        <div>
+            <div class="text-center mb-4">
+                <a href="/"><img src="/assets/tsa_logo.png" alt="TSA Logo" style="max-width: 155px; max-height: 56px; object-fit: contain;"></a>
+            </div>
+            <div class="sidebar-menu">
+                <a href="/" class="side-btn">Home page</a>
+                <a href="/employee" class="side-btn">Employee</a>
+                <a href="/branch-company" class="side-btn active">Branch company</a>
+                <a href="/vacancy" class="side-btn">Vacancy</a>
+                <a href="/presence" class="side-btn">Presence</a>
+                <a href="/request" class="side-btn">Request</a>
+                <a href="/report" class="side-btn">Report</a>
+            </div>
+        </div>
+        <a href="/logout" class="logout-btn d-block text-center text-decoration-none" style="background: #0066ff; box-shadow: 0 4px 14px rgba(0, 102, 255, 0.3);">Logout</a>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div class="main-content">
+        <!-- TOP BAR -->
+        <div class="top-header">
+            <span class="fs-5 fw-semibold">Branch Company</span>
+            <span>Thursday October 1, 2026</span>
+        </div>
+
+        <!-- FLASH MESSAGES -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        <i class="bi bi-info-circle-fill me-2"></i>{{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- HEADER & INSERT BUTTON -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h3 class="fw-bold mb-0">Data Kantor Cabang</h3>
+                <p class="text-muted small">Branch company / Koordinat GPS & Radius Absensi</p>
+            </div>
+            <button class="btn btn-warning fw-bold px-4 py-2" data-bs-toggle="modal" data-bs-target="#addBranchModal">
+                <i class="bi bi-building-add me-1"></i> Insert Data
+            </button>
+        </div>
+
+        <!-- TABEL DATA -->
+        <div class="table-card">
+            <table class="table align-middle">
+                <thead>
+                    <tr class="text-secondary small">
+                        <th>Kantor Cabang</th>
+                        <th>Kota</th>
+                        <th>Koordinat GPS</th>
+                        <th>Radius Absen</th>
+                        <th>Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for b in branches %}
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="branch-icon">
+                                    <i class="bi bi-building"></i>
+                                </div>
+                                <div class="fw-bold text-dark">{{ b.branch_name }}</div>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge bg-dark-subtle text-dark border">
+                                <i class="bi bi-geo-alt me-1"></i>{{ b.city }}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="d-flex flex-column gap-1">
+                                <span class="coord-badge">Lat: {{ b.latitude }}</span>
+                                <span class="coord-badge">Lng: {{ b.longitude }}</span>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="radius-pill">
+                                <i class="bi bi-bullseye me-1"></i>{{ b.radius }} m
+                            </span>
+                        </td>
+                        <td>
+                            <!-- Tombol Edit -->
+                            <button
+                                class="btn btn-sm btn-outline-primary fw-bold me-1"
+                                data-bs-toggle="modal"
+                                data-bs-target="#editBranchModal{{ b.id }}"
+                                title="Edit cabang ini">
+                                <i class="bi bi-pencil-square"></i> Edit
+                            </button>
+                            <!-- Tombol Hapus -->
+                            <form action="/delete-branch/{{ b.id }}" method="POST" class="d-inline"
+                                  onsubmit="return confirm('Yakin ingin menghapus cabang {{ b.branch_name }}?\nSemua data koordinat akan dihapus permanen.');">
+                                <button type="submit" class="btn btn-sm btn-outline-danger fw-bold" title="Hapus cabang ini">
+                                    <i class="bi bi-trash"></i> Hapus
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+
+                    <!-- MODAL EDIT PER CABANG -->
+                    <div class="modal fade" id="editBranchModal{{ b.id }}" tabindex="-1" data-bs-backdrop="static">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <form action="/edit-branch/{{ b.id }}" method="POST">
+                                    <div class="modal-header bg-light">
+                                        <div>
+                                            <h5 class="modal-title fw-bold text-dark mb-0">
+                                                <i class="bi bi-pencil-square text-primary me-1"></i> Edit Kantor Cabang
+                                            </h5>
+                                            <small class="text-muted">ID: {{ b.id }} &mdash; {{ b.branch_name }}</small>
+                                        </div>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <div class="mb-3">
+                                            <label class="form-label small fw-bold">Nama Cabang <span class="text-danger">*</span></label>
+                                            <input type="text" class="form-control" name="branch_name" value="{{ b.branch_name }}" required>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label small fw-bold">Kota <span class="text-danger">*</span></label>
+                                            <input type="text" class="form-control" name="city" value="{{ b.city }}" required>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-md-6 mb-3">
+                                                <label class="form-label small fw-bold">Latitude <span class="text-danger">*</span></label>
+                                                <input type="text" class="form-control" name="latitude" value="{{ b.latitude }}" required>
+                                            </div>
+                                            <div class="col-md-6 mb-3">
+                                                <label class="form-label small fw-bold">Longitude <span class="text-danger">*</span></label>
+                                                <input type="text" class="form-control" name="longitude" value="{{ b.longitude }}" required>
+                                            </div>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label small fw-bold">Radius Validasi Absen (Meter)</label>
+                                            <input type="number" class="form-control" name="radius" value="{{ b.radius }}" min="10" max="5000" required>
+                                            <div class="form-text">Jarak maksimal karyawan dari kantor saat absen (dalam meter).</div>
+                                        </div>
+
+                                        <!-- Bantuan: Tombol Ambil Koordinat Live -->
+                                        <div class="border rounded-3 p-3 bg-light">
+                                            <div class="fw-bold small mb-2 text-secondary">
+                                                <i class="bi bi-crosshair2 me-1 text-danger"></i> Ambil Koordinat GPS Saat Ini
+                                            </div>
+                                            <button type="button" class="btn btn-sm btn-outline-danger w-100 fw-bold"
+                                                    onclick="getMyLocation('edit_lat_{{ b.id }}', 'edit_lng_{{ b.id }}')">
+                                                <i class="bi bi-pin-map-fill me-1"></i> Gunakan Lokasi Saya Sekarang
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer bg-light">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                                        <button type="submit" class="btn btn-primary fw-bold px-4">
+                                            <i class="bi bi-check-circle-fill me-1"></i> Simpan Perubahan
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Script helper untuk mengisi lat/lng di modal edit -->
+                    <script>
+                        // Simpan referensi input field lat/lng untuk modal edit ini
+                        document.querySelector('#editBranchModal{{ b.id }} input[name="latitude"]').id = 'edit_lat_{{ b.id }}';
+                        document.querySelector('#editBranchModal{{ b.id }} input[name="longitude"]').id = 'edit_lng_{{ b.id }}';
+                    </script>
+
+                    {% else %}
+                    <tr>
+                        <td colspan="5" class="text-center text-muted py-5">
+                            <i class="bi bi-building-x fs-1 d-block mb-2 text-secondary"></i>
+                            Belum ada data kantor cabang. Klik <strong>Insert Data</strong> untuk menambahkan.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- MODAL INSERT DATA CABANG BARU -->
+    <div class="modal fade" id="addBranchModal" tabindex="-1" data-bs-backdrop="static">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form action="/add-branch" method="POST">
+                    <div class="modal-header bg-light">
+                        <div>
+                            <h5 class="modal-title fw-bold text-dark mb-0">
+                                <i class="bi bi-building-add text-warning me-1"></i> Tambah Kantor Cabang Baru
+                            </h5>
+                            <small class="text-muted">Isi koordinat GPS dan radius absensi</small>
+                        </div>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">Nama Cabang <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="branch_name" placeholder="Contoh: Kantor Pusat Surabaya" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">Kota <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="city" placeholder="Contoh: Surabaya" required>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label small fw-bold">Latitude <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="add_lat" name="latitude" placeholder="-7.2575" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label small fw-bold">Longitude <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="add_lng" name="longitude" placeholder="112.7521" required>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">Radius Validasi Absen (Meter)</label>
+                            <input type="number" class="form-control" name="radius" value="100" min="10" max="5000" required>
+                            <div class="form-text">Jarak maksimal karyawan dari kantor saat absen.</div>
+                        </div>
+
+                        <!-- Tombol ambil koordinat GPS -->
+                        <div class="border rounded-3 p-3 bg-light">
+                            <div class="fw-bold small mb-2 text-secondary">
+                                <i class="bi bi-crosshair2 me-1 text-danger"></i> Ambil Koordinat GPS Otomatis
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-danger w-100 fw-bold"
+                                    onclick="getMyLocation('add_lat', 'add_lng')">
+                                <i class="bi bi-pin-map-fill me-1"></i> Gunakan Lokasi Saya Sekarang
+                            </button>
+                            <div id="gps_status_add" class="mt-2 small text-muted text-center"></div>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-light">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                        <button type="submit" class="btn btn-warning fw-bold px-4">
+                            <i class="bi bi-plus-circle-fill me-1"></i> Simpan Cabang
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function getMyLocation(latFieldId, lngFieldId) {
+            const statusEl = document.getElementById('gps_status_add');
+            if (statusEl) statusEl.textContent = 'Mengambil lokasi GPS...';
+
+            if (!navigator.geolocation) {
+                alert('Browser Anda tidak mendukung Geolocation.');
+                return;
+            }
+
+            navigator.geolocation.getCurrentPosition(
+                function(pos) {
+                    const lat = pos.coords.latitude.toFixed(10);
+                    const lng = pos.coords.longitude.toFixed(10);
+
+                    const latField = document.getElementById(latFieldId);
+                    const lngField = document.getElementById(lngFieldId);
+                    if (latField) latField.value = lat;
+                    if (lngField) lngField.value = lng;
+
+                    if (statusEl) {
+                        statusEl.innerHTML = '<span class="text-success"><i class="bi bi-check-circle-fill"></i> Koordinat berhasil diambil!</span>';
+                    }
+                },
+                function(err) {
+                    const msg = err.code === 1 ? 'Akses lokasi ditolak. Izinkan di browser.' :
+                                err.code === 2 ? 'Lokasi tidak tersedia.' : 'Timeout mengambil lokasi.';
+                    alert('Error GPS: ' + msg);
+                    if (statusEl) statusEl.textContent = msg;
+                },
+                { enableHighAccuracy: true, timeout: 10000 }
+            );
+        }
+    </script>
+</body>
+</html>

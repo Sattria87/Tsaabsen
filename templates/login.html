@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Admin - TSA (Tunggal Sahabat Abadi)</title>
+    <!-- Google Font: Plus Jakarta Sans -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    
+    <style>
+        :root {
+            --primary-dark: #262626;
+            --primary-hover: #111111;
+            --accent-blue: #2563eb;
+            --text-main: #111827;
+            --text-muted: #6b7280;
+            --input-border: #e2e8f0;
+            --input-focus: #2563eb;
+            --card-bg: rgba(255, 255, 255, 0.96);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f1f3f7 url('/assets/Minimalist TSA Login Background.png') no-repeat center center;
+            background-size: cover;
+            background-attachment: fixed;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-main);
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* Subtle ambient glow behind card */
+        .ambient-glow {
+            position: fixed;
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.7) 0%, rgba(243, 244, 246, 0) 70%);
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .login-wrapper {
+            position: relative;
+            z-index: 2;
+            width: 100%;
+            max-width: 460px;
+            padding: 24px;
+        }
+
+        /* Centered Login Card */
+        .login-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-radius: 28px;
+            padding: 42px 38px 38px;
+            box-shadow: 
+                0 20px 50px rgba(17, 24, 39, 0.08),
+                0 4px 16px rgba(0, 0, 0, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.85);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        /* Brand / Header */
+        .login-header {
+            text-align: center;
+            margin-bottom: 28px;
+        }
+
+        .login-title {
+            font-size: 23px;
+            font-weight: 800;
+            color: var(--text-main);
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+        }
+
+        .login-subtitle {
+            font-size: 13.5px;
+            color: var(--text-muted);
+            font-weight: 500;
+            line-height: 1.4;
+        }
+
+        /* Flash Messages Alert */
+        .alert-box {
+            padding: 12px 16px;
+            border-radius: 14px;
+            font-size: 13px;
+            font-weight: 500;
+            margin-bottom: 22px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            animation: slideDown 0.3s ease-out;
+        }
+
+        .alert-danger {
+            background-color: #fef2f2;
+            color: #dc2626;
+            border: 1px solid #fee2e2;
+        }
+
+        .alert-success {
+            background-color: #ecfdf5;
+            color: #059669;
+            border: 1px solid #d1fae5;
+        }
+
+        .alert-info {
+            background-color: #eff6ff;
+            color: #2563eb;
+            border: 1px solid #dbeafe;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-8px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Form Styles */
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 13.5px;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 8px;
+        }
+
+        .input-box {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .form-input {
+            width: 100%;
+            height: 48px;
+            border-radius: 24px;
+            border: 1.5px solid var(--input-border);
+            background: #ffffff;
+            padding: 0 20px;
+            font-size: 14px;
+            color: #1e293b;
+            font-family: inherit;
+            transition: all 0.2s ease;
+            box-sizing: border-box;
+        }
+
+        .form-input:focus {
+            border-color: var(--input-focus);
+            box-shadow: 0 0 0 3.5px rgba(37, 99, 235, 0.12);
+            outline: none;
+        }
+
+        .form-input.has-toggle {
+            padding-right: 48px;
+        }
+
+        .toggle-btn {
+            position: absolute;
+            right: 16px;
+            background: none;
+            border: none;
+            color: #94a3b8;
+            cursor: pointer;
+            font-size: 17px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: color 0.2s ease;
+            padding: 4px;
+        }
+
+        .toggle-btn:hover {
+            color: #1e293b;
+        }
+
+        /* Options Row (Remember me & Forgot Password) */
+        .options-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 12px;
+            margin-bottom: 26px;
+            font-size: 13px;
+        }
+
+        .remember-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #4b5563;
+            cursor: pointer;
+            user-select: none;
+            font-weight: 500;
+        }
+
+        .remember-checkbox {
+            width: 16px;
+            height: 16px;
+            border-radius: 4px;
+            border: 1.5px solid #cbd5e1;
+            accent-color: var(--primary-dark);
+            cursor: pointer;
+        }
+
+        .forgot-link {
+            color: var(--accent-blue);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.2s ease;
+            cursor: pointer;
+        }
+
+        .forgot-link:hover {
+            text-decoration: underline;
+            color: #1d4ed8;
+        }
+
+        /* Submit Button */
+        .btn-wrapper {
+            display: flex;
+            justify-content: center;
+            margin-top: 8px;
+        }
+
+        .btn-login {
+            width: 175px;
+            height: 44px;
+            background: var(--primary-dark);
+            color: #ffffff;
+            border: none;
+            border-radius: 14px;
+            font-size: 14.5px;
+            font-weight: 700;
+            font-family: inherit;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.16);
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .btn-login:hover {
+            background: var(--primary-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 22px rgba(0, 0, 0, 0.24);
+        }
+
+        .btn-login:active {
+            transform: translateY(0);
+        }
+
+        /* Simple Modal for Forgot Password */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.5);
+            backdrop-filter: blur(4px);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal-box {
+            background: #ffffff;
+            border-radius: 20px;
+            padding: 28px 24px;
+            width: 100%;
+            max-width: 380px;
+            text-align: center;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+            animation: modalPop 0.25s ease-out;
+        }
+
+        @keyframes modalPop {
+            from {
+                transform: scale(0.92);
+                opacity: 0;
+            }
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .modal-icon {
+            width: 52px;
+            height: 52px;
+            background: #eff6ff;
+            color: #2563eb;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            margin-bottom: 14px;
+        }
+
+        .modal-title {
+            font-size: 17px;
+            font-weight: 700;
+            color: #111827;
+            margin-bottom: 8px;
+        }
+
+        .modal-desc {
+            font-size: 13.5px;
+            color: #64748b;
+            line-height: 1.5;
+            margin-bottom: 20px;
+        }
+
+        .btn-modal-close {
+            background: var(--primary-dark);
+            color: #ffffff;
+            border: none;
+            border-radius: 10px;
+            padding: 10px 24px;
+            font-size: 13.5px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: background 0.2s;
+        }
+
+        .btn-modal-close:hover {
+            background: #000000;
+        }
+
+        @media (max-width: 480px) {
+            .login-card {
+                padding: 32px 24px 28px;
+                border-radius: 22px;
+            }
+            .login-title {
+                font-size: 20px;
+            }
+            .btn-login {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="ambient-glow"></div>
+
+    <div class="login-wrapper">
+        <div class="login-card">
+            
+            <!-- HEADER -->
+            <div class="login-header">
+                <h1 class="login-title">LOGIN ADMIN</h1>
+                <p class="login-subtitle">Enter username and password to login</p>
+            </div>
+
+            <!-- FLASH ALERTS -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert-box alert-{{ category if category != 'error' else 'danger' }}">
+                            <i class="bi {% if category == 'danger' or category == 'error' %}bi-exclamation-circle-fill{% elif category == 'success' %}bi-check-circle-fill{% else %}bi-info-circle-fill{% endif %}"></i>
+                            <span>{{ message }}</span>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <!-- FORM -->
+            <form action="{{ url_for('login') }}{% if request.args.get('next') %}?next={{ request.args.get('next') }}{% endif %}" method="POST" autocomplete="off">
+                
+                <!-- USERNAME -->
+                <div class="form-group">
+                    <label class="form-label" for="username">Username</label>
+                    <div class="input-box">
+                        <input 
+                            type="text" 
+                            id="username" 
+                            name="username" 
+                            class="form-input" 
+                            value="{{ username if username else '' }}"
+                            placeholder="" 
+                            required 
+                            autofocus
+                        >
+                    </div>
+                </div>
+
+                <!-- PASSWORD -->
+                <div class="form-group">
+                    <label class="form-label" for="password">Password</label>
+                    <div class="input-box">
+                        <input 
+                            type="password" 
+                            id="password" 
+                            name="password" 
+                            class="form-input has-toggle" 
+                            placeholder="" 
+                            required
+                        >
+                        <button type="button" class="toggle-btn" id="togglePassword" aria-label="Toggle password visibility">
+                            <i class="bi bi-eye" id="toggleIcon"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- REMEMBER ME & FORGOT PASSWORD -->
+                <div class="options-row">
+                    <label class="remember-label" for="remember">
+                        <input type="checkbox" id="remember" name="remember" class="remember-checkbox">
+                        <span>Remember me</span>
+                    </label>
+                    <a href="javascript:void(0)" class="forgot-link" onclick="openForgotModal()">Forgot password?</a>
+                </div>
+
+                <!-- LOGIN BUTTON -->
+                <div class="btn-wrapper">
+                    <button type="submit" class="btn-login" id="btnLogin">
+                        <span>Login</span>
+                    </button>
+                </div>
+
+            </form>
+
+        </div>
+    </div>
+
+    <!-- MODAL FORGOT PASSWORD -->
+    <div class="modal-overlay" id="forgotModal">
+        <div class="modal-box">
+            <div class="modal-icon">
+                <i class="bi bi-shield-lock"></i>
+            </div>
+            <h3 class="modal-title">Reset Password Admin</h3>
+            <p class="modal-desc">
+                Untuk alasan keamanan sistem, pengaturan ulang kata sandi admin hanya dapat dilakukan oleh Super Admin melalui database atau hubungi tim IT di <strong>admin@tsa.co.id</strong>.
+            </p>
+            <button type="button" class="btn-modal-close" onclick="closeForgotModal()">Mengerti</button>
+        </div>
+    </div>
+
+    <script>
+        // Toggle password show/hide
+        const togglePassword = document.getElementById('togglePassword');
+        const passwordInput = document.getElementById('password');
+        const toggleIcon = document.getElementById('toggleIcon');
+
+        if (togglePassword && passwordInput && toggleIcon) {
+            togglePassword.addEventListener('click', function () {
+                const isPassword = passwordInput.getAttribute('type') === 'password';
+                passwordInput.setAttribute('type', isPassword ? 'text' : 'password');
+                toggleIcon.classList.toggle('bi-eye', !isPassword);
+                toggleIcon.classList.toggle('bi-eye-slash', isPassword);
+            });
+        }
+
+        // Forgot password modal
+        function openForgotModal() {
+            document.getElementById('forgotModal').classList.add('active');
+        }
+        function closeForgotModal() {
+            document.getElementById('forgotModal').classList.remove('active');
+        }
+        window.addEventListener('click', function(e) {
+            const modal = document.getElementById('forgotModal');
+            if (e.target === modal) {
+                closeForgotModal();
+            }
+        });
+    </script>
+</body>
+</html>

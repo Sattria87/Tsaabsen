@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  ai_service:
+    build: .
+    container_name: projectwg_ai_service
+    restart: always
+    ports:
+      - "5001:5001"
+    environment:
+      - AI_HOST=0.0.0.0
+      - AI_PORT=5001
+      - AI_DEBUG=False
+      - DB_HOST=host.docker.internal
+      - DB_USER=root
+      - DB_PASSWORD=
+      - DB_NAME=absensi_wg
+      - FACE_TOLERANCE=0.55
+      - SIMILARITY_THRESHOLD=65.0
+    volumes:
+      # Mount folder assets foto karyawan dari root project
+      - ../assets:/app/assets
+      - ./embeddings:/app/embeddings

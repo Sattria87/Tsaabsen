@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Report - Export Laporan Kehadiran</title>
+    <!-- Google Font: Plus Jakarta Sans -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+    <style>
+        :root {
+            --bg-canvas: #f8f9fa;
+            --sidebar-width: 260px;
+            --text-dark: #121826;
+            --text-muted: #8c97a8;
+            --menu-bg-inactive: #d9dbdf;
+            --menu-bg-active: #131b3e;
+            --btn-blue: #0066ff;
+            --card-shadow: 0 8px 24px rgba(17, 24, 39, 0.04);
+            --card-border: 1px solid rgba(226, 232, 240, 0.9);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--bg-canvas);
+            color: var(--text-dark);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* ================= SIDEBAR ================= */
+        .sidebar {
+            width: var(--sidebar-width);
+            height: 100vh;
+            background: #ffffff;
+            position: fixed;
+            top: 0;
+            left: 0;
+            border-right: 1px solid #e5e7eb;
+            padding: 30px 20px 24px 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            z-index: 1000;
+        }
+
+        .sidebar-logo-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 28px;
+            padding: 0 10px;
+        }
+
+        .sidebar-logo {
+            max-width: 155px;
+            height: auto;
+            max-height: 58px;
+            object-fit: contain;
+            transition: transform 0.2s ease;
+        }
+        .sidebar-logo:hover {
+            transform: scale(1.03);
+        }
+
+        .sidebar-menu {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .side-btn {
+            background-color: var(--menu-bg-inactive);
+            color: #111827;
+            text-align: center;
+            padding: 12px 14px;
+            border-radius: 12px;
+            font-size: 14.5px;
+            font-weight: 700;
+            text-decoration: none;
+            display: block;
+            border: none;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            user-select: none;
+        }
+
+        .side-btn:hover {
+            background-color: #cbced4;
+            color: #000000;
+            transform: translateY(-1px);
+        }
+
+        .side-btn.active {
+            background-color: var(--menu-bg-active);
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(19, 27, 62, 0.25);
+        }
+
+        .logout-btn {
+            background-color: var(--btn-blue);
+            color: #ffffff;
+            border: none;
+            border-radius: 14px;
+            padding: 13px;
+            width: 100%;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 14px rgba(0, 102, 255, 0.3);
+            text-align: center;
+            text-decoration: none;
+            display: block;
+        }
+
+        .logout-btn:hover {
+            background-color: #0052cc;
+            color: #ffffff;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 18px rgba(0, 102, 255, 0.4);
+        }
+
+        /* ================= MAIN WRAPPER ================= */
+        .main-wrapper {
+            margin-left: var(--sidebar-width);
+            min-height: 100vh;
+            background-color: #ffffff;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Top Bar Header Dark Banner (Matching Design Screenshot) */
+        .top-navbar-banner {
+            background-color: var(--menu-bg-active);
+            color: #ffffff;
+            height: 64px;
+            padding: 0 36px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .navbar-brand-section {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .navbar-brand-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #ffffff;
+            letter-spacing: -0.2px;
+        }
+
+        .navbar-date-section {
+            font-size: 14px;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.95);
+            letter-spacing: 0.1px;
+        }
+
+        /* Content Area */
+        .content-body {
+            padding: 36px 44px 60px 44px;
+            flex: 1;
+            background-color: #ffffff;
+        }
+
+        /* Page Title & Breadcrumb */
+        .page-header-title {
+            font-size: 28px;
+            font-weight: 800;
+            color: #111827;
+            margin-bottom: 2px;
+            letter-spacing: -0.5px;
+        }
+
+        .page-breadcrumb {
+            font-size: 13.5px;
+            font-weight: 500;
+            color: #6b7280;
+            margin-bottom: 32px;
+        }
+
+        /* ================= REPORT FORM CARDS ================= */
+        .report-section-card {
+            background: #ffffff;
+            border-radius: 18px;
+            border: var(--card-border);
+            box-shadow: var(--card-shadow);
+            padding: 32px 34px;
+            margin-bottom: 28px;
+        }
+
+        .card-inner-title {
+            font-size: 19px;
+            font-weight: 800;
+            color: #111827;
+            margin-bottom: 24px;
+            letter-spacing: -0.3px;
+        }
+
+        /* Pill Input Controls (Matching Design Screenshot) */
+        .field-label {
+            font-size: 13.5px;
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .pill-control-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+            background: #ffffff;
+            border: 1.5px solid #d1d5db;
+            border-radius: 28px;
+            padding: 9px 18px;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
+            height: 48px;
+        }
+
+        .pill-control-wrapper:focus-within {
+            border-color: #4b5563;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+        }
+
+        .pill-input {
+            border: none;
+            outline: none;
+            background: transparent;
+            font-size: 13.5px;
+            font-weight: 500;
+            color: #111827;
+            width: 100%;
+        }
+
+        .pill-select {
+            border: none;
+            outline: none;
+            background: transparent;
+            font-size: 13.5px;
+            font-weight: 500;
+            color: #111827;
+            width: 100%;
+            cursor: pointer;
+            padding-right: 20px;
+        }
+
+        .pill-icon {
+            color: #6b7280;
+            font-size: 16px;
+            pointer-events: none;
+            margin-left: 8px;
+        }
+
+        /* Date Range Double Input inside Pill */
+        .date-range-box {
+            display: flex;
+            align-items: center;
+            width: 100%;
+            gap: 6px;
+        }
+
+        .date-input-inline {
+            border: none;
+            outline: none;
+            background: transparent;
+            font-size: 13px;
+            font-weight: 500;
+            color: #111827;
+            width: 45%;
+        }
+
+        /* Custom Checkbox Styling (Matching Design Screenshot) */
+        .checkbox-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px 48px;
+            margin-bottom: 24px;
+        }
+
+        .custom-check-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .custom-check-item input[type="checkbox"] {
+            appearance: none;
+            -webkit-appearance: none;
+            width: 19px;
+            height: 19px;
+            border-radius: 4px;
+            background-color: #ffffff;
+            border: 2px solid #0066ff;
+            cursor: pointer;
+            position: relative;
+            outline: none;
+            transition: all 0.15s ease;
+            flex-shrink: 0;
+        }
+
+        .custom-check-item input[type="checkbox"]:checked {
+            background-color: #0066ff;
+            border-color: #0066ff;
+        }
+
+        .custom-check-item input[type="checkbox"]:checked::after {
+            content: '';
+            position: absolute;
+            left: 5.5px;
+            top: 2px;
+            width: 5px;
+            height: 10px;
+            border: solid #ffffff;
+            border-width: 0 2px 2px 0;
+            transform: rotate(45deg);
+        }
+
+        .check-label-text {
+            font-size: 14px;
+            font-weight: 600;
+            color: #1f2937;
+        }
+
+        /* Generate Button */
+        .btn-generate-report {
+            background-color: var(--btn-blue);
+            color: #ffffff;
+            border: none;
+            border-radius: 12px;
+            padding: 12px 42px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 14px rgba(0, 102, 255, 0.3);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-generate-report:hover {
+            background-color: #0052cc;
+            color: #ffffff;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 18px rgba(0, 102, 255, 0.4);
+        }
+
+        /* Preview Data Table Container */
+        .preview-table-card {
+            background: #ffffff;
+            border-radius: 18px;
+            border: var(--card-border);
+            box-shadow: var(--card-shadow);
+            overflow: hidden;
+            margin-top: 32px;
+        }
+
+        .preview-table-card thead th {
+            background-color: #f8fafc;
+            color: #374151;
+            font-size: 13px;
+            font-weight: 700;
+            padding: 14px 18px;
+            border-bottom: 1.5px solid #e2e8f0;
+            white-space: nowrap;
+        }
+
+        .preview-table-card tbody td {
+            padding: 14px 18px;
+            font-size: 13.5px;
+            border-bottom: 1px solid #f1f5f9;
+            vertical-align: middle;
+        }
+
+        /* Responsive */
+        @media (max-width: 992px) {
+            .checkbox-grid {
+                grid-template-columns: 1fr;
+                gap: 16px;
+            }
+        }
+
+        @media (max-width: 890px) {
+            .sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+            }
+            .sidebar.show {
+                transform: translateX(0);
+            }
+            .main-wrapper {
+                margin-left: 0;
+            }
+            .content-body {
+                padding: 24px 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ================= SIDEBAR ================= -->
+    <div class="sidebar">
+        <div>
+            <!-- LOGO TSA -->
+            <div class="sidebar-logo-container">
+                <a href="/" title="TSA Home">
+                    <img src="/assets/tsa_logo.png" alt="TSA Logo" class="sidebar-logo">
+                </a>
+            </div>
+
+            <!-- MENU TOMBOL SAMPING -->
+            <nav class="sidebar-menu">
+                <a href="/" class="side-btn" id="menu-home">Home page</a>
+                <a href="/employee" class="side-btn" id="menu-employee">Employee</a>
+                <a href="/branch-company" class="side-btn" id="menu-branch">Branch company</a>
+                <a href="/vacancy" class="side-btn" id="menu-vacancy">Vacancy</a>
+                <a href="/presence" class="side-btn" id="menu-presence">Presence</a>
+                <a href="/request" class="side-btn" id="menu-request">Request</a>
+                <a href="/report" class="side-btn active" id="menu-report">Report</a>
+            </nav>
+        </div>
+
+        <!-- LOGOUT BUTTON (BLUE PILL) -->
+        <div>
+            <button type="button" class="logout-btn" id="btn-logout" data-bs-toggle="modal" data-bs-target="#logoutModal">
+                Logout
+            </button>
+        </div>
+    </div>
+
+    <!-- ================= MAIN WRAPPER ================= -->
+    <main class="main-wrapper">
+
+        <!-- TOP BAR BANNER (DARK NAVY - MATCHING DESIGN SCREENSHOT) -->
+        <header class="top-navbar-banner">
+            <div class="navbar-brand-section">
+                <i class="bi bi-list fs-3 text-white cursor-pointer" title="Menu"></i>
+                <span class="navbar-brand-title">Report</span>
+            </div>
+            <div class="navbar-date-section">
+                {{ current_day }} {{ current_date_formatted }}
+            </div>
+        </header>
+
+        <!-- CONTENT BODY -->
+        <div class="content-body">
+
+            <!-- FLASH ALERTS -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} alert-dismissible fade show rounded-3 mb-4 shadow-sm" role="alert">
+                            <i class="bi bi-info-circle-fill me-2"></i>{{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <!-- PAGE TITLE & BREADCRUMB (SESUAI GAMBAR) -->
+            <div class="mb-4">
+                <h1 class="page-header-title">Export Laporan Kehadiran</h1>
+                <p class="page-breadcrumb mb-0">Report / Export Laporan Kehadiran</p>
+            </div>
+
+            <!-- FORM EXPORT LAPORAN -->
+            <form action="/report/export" method="POST" id="reportForm">
+
+                <!-- KARTU 1: PENGATURAN LAPORAN (SESUAI GAMBAR) -->
+                <div class="report-section-card">
+                    <h2 class="card-inner-title">Pengaturan Laporan</h2>
+
+                    <div class="row g-4">
+                        <!-- Kolom 1: Rentang Tanggal -->
+                        <div class="col-lg-4 col-md-6">
+                            <label class="field-label">Rentang tanggal</label>
+                            <div class="pill-control-wrapper">
+                                <div class="date-range-box">
+                                    <input type="date" name="start_date" id="startDate" class="date-input-inline" value="{{ start_date }}" required title="Tanggal Mulai">
+                                    <span class="text-muted fw-bold" style="font-size: 11px;">s/d</span>
+                                    <input type="date" name="end_date" id="endDate" class="date-input-inline" value="{{ end_date }}" required title="Tanggal Selesai">
+                                </div>
+                                <i class="bi bi-calendar3 pill-icon" title="Kalender"></i>
+                            </div>
+                        </div>
+
+                        <!-- Kolom 2: Kantor Cabang -->
+                        <div class="col-lg-4 col-md-6">
+                            <label class="field-label">Kantor Cabang</label>
+                            <div class="pill-control-wrapper">
+                                <select name="branch" class="pill-select" id="branchSelect">
+                                    <option value="all" {% if selected_branch == 'all' %}selected{% endif %}>Semua Kantor Cabang</option>
+                                    {% for b in branches %}
+                                        <option value="{{ b }}" {% if selected_branch == b %}selected{% endif %}>{{ b }}</option>
+                                    {% endfor %}
+                                </select>
+                                <i class="bi bi-funnel pill-icon" title="Filter Cabang"></i>
+                            </div>
+                        </div>
+
+                        <!-- Kolom 3: Format File -->
+                        <div class="col-lg-4 col-md-12">
+                            <label class="field-label">Format</label>
+                            <div class="pill-control-wrapper">
+                                <select name="format" class="pill-select" id="formatSelect">
+                                    <option value="xlsx" {% if selected_format == 'xlsx' %}selected{% endif %}>.XLSX (Pivot)</option>
+                                    <option value="pdf" {% if selected_format == 'pdf' %}selected{% endif %}>.PDF (Dokumen PDF)</option>
+                                    <option value="csv" {% if selected_format == 'csv' %}selected{% endif %}>.CSV (Comma Separated)</option>
+                                </select>
+                                <i class="bi bi-chevron-down pill-icon" title="Pilih Format"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- KARTU 2: DATA YANG DISERTAKAN (SESUAI GAMBAR) -->
+                <div class="report-section-card">
+                    <h2 class="card-inner-title">Data yang Disertakan</h2>
+
+                    <div class="checkbox-grid">
+                        <!-- Kolom Kiri -->
+                        <div>
+                            <div class="d-flex flex-column gap-3">
+                                <label class="custom-check-item">
+                                    <input type="checkbox" name="inc_presence" value="1" checked>
+                                    <span class="check-label-text">Data Kehadiran</span>
+                                </label>
+                                <label class="custom-check-item">
+                                    <input type="checkbox" name="inc_duration" value="1" checked>
+                                    <span class="check-label-text">Durasi Jam kerja</span>
+                                </label>
+                                <label class="custom-check-item">
+                                    <input type="checkbox" name="inc_status" value="1" checked>
+                                    <span class="check-label-text">Status Kehadiran</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Kolom Kanan -->
+                        <div>
+                            <div class="d-flex flex-column gap-3">
+                                <label class="custom-check-item">
+                                    <input type="checkbox" name="inc_coords" value="1" checked>
+                                    <span class="check-label-text">Koordinat (Longitude, Latitude)</span>
+                                </label>
+                                <label class="custom-check-item">
+                                    <input type="checkbox" name="inc_photo" value="1" checked>
+                                    <span class="check-label-text">Foto Clock In</span>
+                                </label>
+                                <label class="custom-check-item">
+                                    <input type="checkbox" name="inc_ai" value="1" checked>
+                                    <span class="check-label-text">Hasil Verifikasi AI</span>
+                                </label>
+                                <label class="custom-check-item">
+                                    <input type="checkbox" name="inc_recap" value="1" checked>
+                                    <span class="check-label-text">Rekapitulasi per karyawan</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TOMBOL GENERATE (DI SUDUT KANAN BAWAH KARTU) -->
+                    <div class="d-flex justify-content-end mt-4">
+                        <button type="submit" class="btn-generate-report" id="btnGenerate">
+                            <i class="bi bi-download"></i> Generate
+                        </button>
+                    </div>
+                </div>
+
+            </form>
+
+            <!-- ================= PRATINJAU DATA REAL-TIME DARI DATABASE ================= -->
+            <div class="preview-table-card">
+                <div class="p-4 border-bottom d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <div>
+                        <h5 class="fw-bold text-dark mb-1">
+                            <i class="bi bi-table text-primary me-2"></i> Pratinjau Rekapitulasi Kehadiran Karyawan
+                        </h5>
+                        <small class="text-muted">Rentang tanggal: <strong>{{ start_date }}</strong> s/d <strong>{{ end_date }}</strong> (Total Hari Kerja: <strong>{{ total_hari_kerja }} Hari</strong>)</small>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <span class="badge bg-primary-subtle text-primary border px-3 py-2 fw-bold" style="font-size: 12.5px;">
+                            Total Karyawan: {{ preview_data | length }}
+                        </span>
+                        <span class="badge bg-success-subtle text-success border px-3 py-2 fw-bold" style="font-size: 12.5px;">
+                            Total Hadir: {{ tot_hadir }}
+                        </span>
+                        <span class="badge bg-warning-subtle text-warning border px-3 py-2 fw-bold" style="font-size: 12.5px;">
+                            Total Izin: {{ tot_izin }}
+                        </span>
+                        <span class="badge bg-danger-subtle text-danger border px-3 py-2 fw-bold" style="font-size: 12.5px;">
+                            Total Alpha: {{ tot_alpha }}
+                        </span>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table mb-0 align-middle">
+                        <thead>
+                            <tr>
+                                <th style="width: 50px;">No</th>
+                                <th style="width: 200px;">Nama Karyawan</th>
+                                <th style="width: 180px;">Email</th>
+                                <th style="width: 140px;">Divisi</th>
+                                <th style="width: 140px; text-align: center;">Total Hari Kerja</th>
+                                <th style="width: 120px; text-align: center;">Jumlah Hadir</th>
+                                <th style="width: 120px; text-align: center;">Jumlah Izin</th>
+                                <th style="width: 120px; text-align: center;">Jumlah Alpha</th>
+                                <th style="width: 160px; text-align: center;">Persentase Kehadiran (%)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in preview_data %}
+                            <tr>
+                                <td class="text-muted fw-bold">{{ row.no }}</td>
+                                <td>
+                                    <div class="fw-bold text-dark">{{ row.name }}</div>
+                                    <small class="text-muted">{{ row.branch }}</small>
+                                </td>
+                                <td class="text-secondary fw-semibold">{{ row.email }}</td>
+                                <td>
+                                    <span class="badge bg-light text-dark border">{{ row.divisi }}</span>
+                                </td>
+                                <td class="text-center fw-bold text-secondary">{{ row.total_hari_kerja }}</td>
+                                <td class="text-center">
+                                    <span class="badge bg-success-subtle text-success border px-2 py-1 fw-bold">{{ row.jumlah_hadir }}</span>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge bg-warning-subtle text-warning border px-2 py-1 fw-bold">{{ row.jumlah_izin }}</span>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge bg-danger-subtle text-danger border px-2 py-1 fw-bold">{{ row.jumlah_alpha }}</span>
+                                </td>
+                                <td class="text-center fw-bold {% if row.persentase_num >= 75 %}text-success{% elif row.persentase_num >= 50 %}text-warning{% else %}text-danger{% endif %}">
+                                    {{ row.persentase }}
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="9" class="text-center py-5 text-muted">
+                                    <i class="bi bi-inbox fs-2 d-block mb-2 text-secondary"></i>
+                                    Tidak ada data karyawan pada rentang tanggal dan cabang yang dipilih.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- MODAL LOGOUT -->
+    <div class="modal fade" id="logoutModal" tabindex="-1" aria-labelledby="logoutModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" style="max-width: 380px;">
+            <div class="modal-content rounded-4 border-0 shadow">
+                <div class="modal-body text-center p-4">
+                    <div class="mb-3 text-primary">
+                        <i class="bi bi-box-arrow-right fs-1"></i>
+                    </div>
+                    <h5 class="fw-bold mb-2">Konfirmasi Logout</h5>
+                    <p class="text-muted small mb-4">Apakah Anda yakin ingin keluar dari Admin Dashboard TSA?</p>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-light w-50 fw-semibold rounded-3 py-2" data-bs-dismiss="modal">Batal</button>
+                        <a href="/logout" class="btn btn-primary w-50 fw-semibold rounded-3 py-2">Ya, Keluar</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap 5 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Update URL and preview when start_date, end_date or branch changes
+        function updateFilterPreview() {
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            const branch = document.getElementById('branchSelect').value;
+            if (startDate && endDate) {
+                window.location.href = `/report?start_date=${startDate}&end_date=${endDate}&branch=${branch}`;
+            }
+        }
+        document.getElementById('branchSelect').addEventListener('change', updateFilterPreview);
+    </script>
+</body>
+</html>

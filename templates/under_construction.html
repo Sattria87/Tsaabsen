@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ page_name }} - TSA Admin</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <style>
+        :root {
+            --bg-canvas: #f4f5f9;
+            --sidebar-width: 260px;
+            --text-dark: #121826;
+            --menu-bg-inactive: #d9dbdf;
+            --menu-bg-active: #131b3e;
+            --btn-blue: #0066ff;
+        }
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg-canvas);
+            color: var(--text-dark);
+            min-height: 100vh;
+        }
+        .sidebar {
+            width: var(--sidebar-width);
+            height: 100vh;
+            background: #ffffff;
+            position: fixed;
+            top: 0; left: 0;
+            border-right: 1px solid #e5e7eb;
+            padding: 30px 20px 24px 20px;
+            display: flex; flex-direction: column; justify-content: space-between;
+            z-index: 1000;
+        }
+        .sidebar-logo-container {
+            display: flex; justify-content: center; align-items: center; margin-bottom: 28px;
+        }
+        .sidebar-logo {
+            max-width: 155px; max-height: 58px; object-fit: contain;
+        }
+        .sidebar-menu { display: flex; flex-direction: column; gap: 12px; }
+        .side-btn {
+            background-color: var(--menu-bg-inactive);
+            color: #111827; text-align: center; padding: 12px 14px;
+            border-radius: 12px; font-size: 14.5px; font-weight: 700;
+            text-decoration: none; display: block;
+            transition: all 0.2s ease;
+        }
+        .side-btn:hover { background-color: #cbced4; color: #000; }
+        .side-btn.active {
+            background-color: var(--menu-bg-active); color: #ffffff;
+        }
+        .logout-btn {
+            background-color: var(--btn-blue); color: #fff; border: none;
+            border-radius: 14px; padding: 13px; width: 100%;
+            font-size: 15px; font-weight: 700;
+            box-shadow: 0 4px 14px rgba(0, 102, 255, 0.3);
+        }
+        .main-wrapper {
+            margin-left: var(--sidebar-width);
+            padding: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+        .empty-card {
+            background: #ffffff;
+            border-radius: 24px;
+            padding: 50px 40px;
+            text-align: center;
+            max-width: 540px;
+            box-shadow: 0 10px 28px rgba(17, 24, 39, 0.04);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div>
+            <div class="sidebar-logo-container">
+                <a href="/">
+                    <img src="/assets/tsa_logo.png" alt="TSA Logo" class="sidebar-logo">
+                </a>
+            </div>
+            <nav class="sidebar-menu">
+                <a href="/" class="side-btn">Home page</a>
+                <a href="/employee" class="side-btn">Employee</a>
+                <a href="/branch-company" class="side-btn">Branch company</a>
+                <a href="/vacancy" class="side-btn {% if page_name == 'Vacancy' %}active{% endif %}">Vacancy</a>
+                <a href="/presence" class="side-btn {% if page_name == 'Presence' %}active{% endif %}">Presence</a>
+                <a href="/request" class="side-btn {% if page_name == 'Request' %}active{% endif %}">Request</a>
+                <a href="/report" class="side-btn {% if page_name == 'Report' %}active{% endif %}">Report</a>
+            </nav>
+        </div>
+        <div>
+            <a href="/" class="logout-btn d-block text-center text-decoration-none">Kembali</a>
+        </div>
+    </div>
+
+    <main class="main-wrapper">
+        <div class="empty-card">
+            <div class="mb-3 text-warning">
+                <i class="bi bi-cone-striped" style="font-size: 54px;"></i>
+            </div>
+            <h3 class="fw-bold mb-2">Modul {{ page_name }}</h3>
+            <p class="text-muted mb-4">Halaman ini sedang dalam pengembangan atau konfigurasi lebih lanjut.</p>
+            <a href="/" class="btn btn-dark px-4 py-2 rounded-3 fw-bold">
+                <i class="bi bi-arrow-left me-1"></i> Kembali ke Home page
+            </a>
+        </div>
+    </main>
+</body>
+</html>

@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Presence - TSA Admin</title>
+    <!-- Google Font: Plus Jakarta Sans -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+    <style>
+        :root {
+            --bg-canvas: #f8f9fa;
+            --sidebar-width: 260px;
+            --text-dark: #121826;
+            --text-muted: #8c97a8;
+            --menu-bg-inactive: #d9dbdf;
+            --menu-bg-active: #131b3e;
+            --btn-blue: #0066ff;
+            --card-shadow: 0 10px 28px rgba(17, 24, 39, 0.04);
+            --card-border: 1px solid rgba(226, 232, 240, 0.8);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--bg-canvas);
+            color: var(--text-dark);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* ================= SIDEBAR ================= */
+        .sidebar {
+            width: var(--sidebar-width);
+            height: 100vh;
+            background: #ffffff;
+            position: fixed;
+            top: 0;
+            left: 0;
+            border-right: 1px solid #e5e7eb;
+            padding: 30px 20px 24px 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            z-index: 1000;
+        }
+
+        .sidebar-logo-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 28px;
+            padding: 0 10px;
+        }
+
+        .sidebar-logo {
+            max-width: 155px;
+            height: auto;
+            max-height: 58px;
+            object-fit: contain;
+            transition: transform 0.2s ease;
+        }
+        .sidebar-logo:hover {
+            transform: scale(1.03);
+        }
+
+        .sidebar-menu {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .side-btn {
+            background-color: var(--menu-bg-inactive);
+            color: #111827;
+            text-align: center;
+            padding: 12px 14px;
+            border-radius: 12px;
+            font-size: 14.5px;
+            font-weight: 700;
+            text-decoration: none;
+            display: block;
+            border: none;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            user-select: none;
+        }
+
+        .side-btn:hover {
+            background-color: #cbced4;
+            color: #000000;
+            transform: translateY(-1px);
+        }
+
+        .side-btn.active {
+            background-color: var(--menu-bg-active);
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(19, 27, 62, 0.25);
+        }
+
+        .logout-btn {
+            background-color: var(--btn-blue);
+            color: #ffffff;
+            border: none;
+            border-radius: 14px;
+            padding: 13px;
+            width: 100%;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 14px rgba(0, 102, 255, 0.3);
+            text-align: center;
+            text-decoration: none;
+            display: block;
+        }
+
+        .logout-btn:hover {
+            background-color: #0052cc;
+            color: #ffffff;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 18px rgba(0, 102, 255, 0.4);
+        }
+
+        /* ================= MAIN WRAPPER ================= */
+        .main-wrapper {
+            margin-left: var(--sidebar-width);
+            min-height: 100vh;
+            background-color: #ffffff;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Top Bar Header Dark Banner (Matching Design Screenshot) */
+        .top-navbar-banner {
+            background-color: var(--menu-bg-active);
+            color: #ffffff;
+            height: 64px;
+            padding: 0 36px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .navbar-brand-section {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .navbar-brand-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #ffffff;
+            letter-spacing: -0.2px;
+        }
+
+        .navbar-date-section {
+            font-size: 14px;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.95);
+            letter-spacing: 0.1px;
+        }
+
+        /* Content Area */
+        .content-body {
+            padding: 36px 42px 60px 42px;
+            flex: 1;
+            background-color: #ffffff;
+        }
+
+        /* Page Title */
+        .page-header-title {
+            font-size: 28px;
+            font-weight: 800;
+            color: #111827;
+            margin-bottom: 2px;
+            letter-spacing: -0.5px;
+        }
+
+        .page-breadcrumb {
+            font-size: 13.5px;
+            font-weight: 500;
+            color: #6b7280;
+            margin-bottom: 26px;
+        }
+
+        /* Search Box Bar (Matching Design Screenshot) */
+        .search-container {
+            margin-bottom: 28px;
+            max-width: 520px;
+        }
+
+        .search-box-pill {
+            display: flex;
+            align-items: center;
+            background: #ffffff;
+            border: 1.5px solid #d1d5db;
+            border-radius: 28px;
+            padding: 9px 20px;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
+        }
+
+        .search-box-pill:focus-within {
+            border-color: #4b5563;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+        }
+
+        .search-input-field {
+            border: none;
+            outline: none;
+            width: 100%;
+            font-size: 14px;
+            color: #111827;
+            background: transparent;
+        }
+
+        .search-input-field::placeholder {
+            color: #9ca3af;
+        }
+
+        .search-icon-btn {
+            background: none;
+            border: none;
+            color: #6b7280;
+            font-size: 16px;
+            cursor: pointer;
+            padding: 0 0 0 8px;
+        }
+
+        /* Filter Button Pill & Dropdown Panel */
+        .btn-filter-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #ffffff;
+            border: 1.5px solid #d1d5db;
+            border-radius: 28px;
+            padding: 9px 20px;
+            font-size: 14px;
+            font-weight: 700;
+            color: #374151;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
+            cursor: pointer;
+            height: 44px;
+        }
+
+        .btn-filter-pill:hover, .btn-filter-pill:focus {
+            border-color: #4b5563;
+            background-color: #f9fafb;
+            color: #111827;
+        }
+
+        .btn-filter-pill.active-filter {
+            border-color: #2563eb;
+            background-color: #eff6ff;
+            color: #1d4ed8;
+        }
+
+        .btn-filter-pill::after {
+            margin-left: 6px;
+            vertical-align: middle;
+        }
+
+        .filter-dropdown-panel {
+            background: #ffffff;
+            border: 1px solid #e5e7eb !important;
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12) !important;
+            z-index: 1050;
+        }
+
+        /* Table Card Container */
+        .table-presence-card {
+            background: #ffffff;
+            border-radius: 16px;
+            border: var(--card-border);
+            box-shadow: var(--card-shadow);
+            overflow: hidden;
+        }
+
+        .table-presence {
+            width: 100%;
+            margin-bottom: 0;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+
+        .table-presence thead th {
+            background-color: #f8fafc;
+            color: #374151;
+            font-size: 13.5px;
+            font-weight: 700;
+            padding: 16px 20px;
+            border-bottom: 1.5px solid #e2e8f0;
+            white-space: nowrap;
+        }
+
+        .table-presence tbody td {
+            padding: 16px 20px;
+            vertical-align: middle;
+            border-bottom: 1px solid #f1f5f9;
+            font-size: 14px;
+            color: #1f2937;
+        }
+
+        .table-presence tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .table-presence tbody tr:hover {
+            background-color: #f8fafc;
+        }
+
+        .presence-avatar-img {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid #e2e8f0;
+            background-color: #ffffff;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+        }
+
+        /* Action Badges / Tags (Matching Design Screenshot) */
+        .tag-pill-badge {
+            display: inline-block;
+            font-size: 11.5px;
+            font-weight: 700;
+            padding: 3px 10px;
+            border-radius: 6px;
+            letter-spacing: 0.1px;
+            margin-right: 4px;
+            user-select: none;
+            line-height: 1.3;
+        }
+
+        .tag-green {
+            background-color: #d1fae5;
+            color: #059669;
+            border: 1px solid #a7f3d0;
+        }
+
+        .tag-blue {
+            background-color: #dbeafe;
+            color: #2563eb;
+            border: 1px solid #bfdbfe;
+        }
+
+        .tag-orange {
+            background-color: #ffedd5;
+            color: #ea580c;
+            border: 1px solid #fed7aa;
+        }
+
+        /* Responsive */
+        @media (max-width: 890px) {
+            .sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+            }
+            .sidebar.show {
+                transform: translateX(0);
+            }
+            .main-wrapper {
+                margin-left: 0;
+            }
+            .content-body {
+                padding: 24px 20px;
+            }
+            .search-container {
+                max-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ================= SIDEBAR ================= -->
+    <div class="sidebar">
+        <div>
+            <!-- LOGO TSA -->
+            <div class="sidebar-logo-container">
+                <a href="/" title="TSA Home">
+                    <img src="/assets/tsa_logo.png" alt="TSA Logo" class="sidebar-logo">
+                </a>
+            </div>
+
+            <!-- MENU TOMBOL SAMPING -->
+            <nav class="sidebar-menu">
+                <a href="/" class="side-btn" id="menu-home">Home page</a>
+                <a href="/employee" class="side-btn" id="menu-employee">Employee</a>
+                <a href="/branch-company" class="side-btn" id="menu-branch">Branch company</a>
+                <a href="/vacancy" class="side-btn" id="menu-vacancy">Vacancy</a>
+                <a href="/presence" class="side-btn active" id="menu-presence">Presence</a>
+                <a href="/request" class="side-btn" id="menu-request">Request</a>
+                <a href="/report" class="side-btn" id="menu-report">Report</a>
+            </nav>
+        </div>
+
+        <!-- LOGOUT BUTTON (BLUE PILL) -->
+        <div>
+            <button type="button" class="logout-btn" id="btn-logout" data-bs-toggle="modal" data-bs-target="#logoutModal">
+                Logout
+            </button>
+        </div>
+    </div>
+
+    <!-- ================= MAIN WRAPPER ================= -->
+    <main class="main-wrapper">
+
+        <!-- TOP BAR BANNER (DARK NAVY - MATCHING DESIGN SCREENSHOT) -->
+        <header class="top-navbar-banner">
+            <div class="navbar-brand-section">
+                <i class="bi bi-list fs-3 text-white cursor-pointer" title="Menu"></i>
+                <span class="navbar-brand-title">Presence</span>
+            </div>
+            <div class="navbar-date-section">
+                {{ current_day }} {{ current_date_formatted }}
+            </div>
+        </header>
+
+        <!-- CONTENT BODY -->
+        <div class="content-body">
+
+            <!-- PAGE TITLE & BREADCRUMB (MATCHING DESIGN SCREENSHOT) -->
+            <div class="mb-4">
+                <h1 class="page-header-title">Data Kehadiran</h1>
+                <p class="page-breadcrumb mb-0">Presence / Data Kehadiran</p>
+            </div>
+
+            <!-- SEARCH BAR & FILTER BUTTON -->
+            <div class="d-flex align-items-center gap-3 mb-3 flex-wrap">
+                <!-- SEARCH BOX (CARI BERDASARKAN NAMA KANTOR ATAU KOTA) -->
+                <div class="search-container mb-0" style="flex: 1; max-width: 520px;">
+                    <form action="/presence" method="GET" class="search-box-pill" id="searchBarForm">
+                        <input type="text" name="search" class="search-input-field" placeholder="Cari berdasarkan Nama Kantor atau Kota" value="{{ search_query }}">
+                        {% if selected_branch %}<input type="hidden" name="branch" value="{{ selected_branch }}">{% endif %}
+                        {% if selected_team %}<input type="hidden" name="team" value="{{ selected_team }}">{% endif %}
+                        {% if selected_status %}<input type="hidden" name="status" value="{{ selected_status }}">{% endif %}
+                        {% if selected_tag %}<input type="hidden" name="tag" value="{{ selected_tag }}">{% endif %}
+                        <button type="submit" class="search-icon-btn" title="Cari">
+                            <i class="bi bi-search"></i>
+                        </button>
+                    </form>
+                </div>
+
+                <!-- FILTER BUTTON -->
+                <div class="dropdown">
+                    <button class="btn btn-filter-pill dropdown-toggle {% if active_filter_count > 0 %}active-filter{% endif %}" type="button" id="dropdownFilterBtn" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                        <i class="bi bi-funnel-fill text-primary"></i>
+                        <span>Filter</span>
+                        {% if active_filter_count > 0 %}
+                            <span class="badge bg-primary text-white rounded-pill ms-1 px-2" style="font-size: 11px;">{{ active_filter_count }}</span>
+                        {% endif %}
+                    </button>
+                    
+                    <!-- FILTER DROPDOWN MENU -->
+                    <div class="dropdown-menu dropdown-menu-end filter-dropdown-panel shadow-lg border-0 rounded-4 p-4 mt-2" aria-labelledby="dropdownFilterBtn" style="width: 340px;">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="fw-bold mb-0 text-dark">
+                                <i class="bi bi-sliders me-1 text-primary"></i> Filter Kehadiran
+                            </h6>
+                            {% if active_filter_count > 0 or search_query %}
+                                <a href="/presence" class="text-decoration-none small text-danger fw-semibold">
+                                    <i class="bi bi-arrow-counterclockwise"></i> Reset
+                                </a>
+                            {% endif %}
+                        </div>
+
+                        <form action="/presence" method="GET">
+                            {% if search_query %}
+                                <input type="hidden" name="search" value="{{ search_query }}">
+                            {% endif %}
+
+                            <!-- Filter Kantor Cabang -->
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold text-muted text-uppercase mb-1" style="font-size: 11px;">Kantor Cabang</label>
+                                <select name="branch" class="form-select form-select-sm rounded-3">
+                                    <option value="">Semua Cabang</option>
+                                    {% for b in branches %}
+                                        <option value="{{ b }}" {% if selected_branch == b %}selected{% endif %}>{{ b }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <!-- Filter Tim / Divisi -->
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold text-muted text-uppercase mb-1" style="font-size: 11px;">Tim / Divisi</label>
+                                <select name="team" class="form-select form-select-sm rounded-3">
+                                    <option value="">Semua Tim</option>
+                                    {% for t in teams %}
+                                        <option value="{{ t }}" {% if selected_team == t %}selected{% endif %}>{{ t }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <!-- Filter Status Kehadiran Hari Ini -->
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold text-muted text-uppercase mb-1" style="font-size: 11px;">Status Kehadiran Hari Ini</label>
+                                <select name="status" class="form-select form-select-sm rounded-3">
+                                    <option value="">Semua Status</option>
+                                    <option value="hadir" {% if selected_status == 'hadir' %}selected{% endif %}>Hadir</option>
+                                    <option value="pulang" {% if selected_status == 'pulang' %}selected{% endif %}>Pulang</option>
+                                    <option value="izin" {% if selected_status == 'izin' %}selected{% endif %}>Izin</option>
+                                    <option value="sakit" {% if selected_status == 'sakit' %}selected{% endif %}>Sakit</option>
+                                    <option value="belum_hadir" {% if selected_status == 'belum_hadir' %}selected{% endif %}>Belum Hadir</option>
+                                </select>
+                            </div>
+
+                            <!-- Filter Tipe / Tag -->
+                            <div class="mb-4">
+                                <label class="form-label small fw-bold text-muted text-uppercase mb-1" style="font-size: 11px;">Tipe Kerja / Tag</label>
+                                <select name="tag" class="form-select form-select-sm rounded-3">
+                                    <option value="">Semua Tipe Kerja</option>
+                                    <option value="Full Time" {% if selected_tag == 'Full Time' %}selected{% endif %}>Full Time</option>
+                                    <option value="Part Time" {% if selected_tag == 'Part Time' %}selected{% endif %}>Part Time</option>
+                                    <option value="Contract" {% if selected_tag == 'Contract' %}selected{% endif %}>Contract</option>
+                                    <option value="Remote" {% if selected_tag == 'Remote' %}selected{% endif %}>Remote</option>
+                                    <option value="On Site" {% if selected_tag == 'On Site' %}selected{% endif %}>On Site</option>
+                                    <option value="Shift Pagi" {% if selected_tag == 'Shift Pagi' %}selected{% endif %}>Shift Pagi</option>
+                                </select>
+                            </div>
+
+                            <!-- Action Buttons -->
+                            <div class="d-flex gap-2">
+                                <a href="/presence{% if search_query %}?search={{ search_query }}{% endif %}" class="btn btn-sm btn-light border w-50 rounded-3 fw-semibold">Reset</a>
+                                <button type="submit" class="btn btn-sm btn-primary w-50 rounded-3 fw-bold">Terapkan</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ACTIVE FILTER PILLS (IF ANY) -->
+            {% if active_filter_count > 0 or search_query %}
+            <div class="d-flex align-items-center flex-wrap gap-2 mb-3">
+                <span class="small text-muted fw-semibold me-1"><i class="bi bi-funnel"></i> Filter Aktif:</span>
+                
+                {% if search_query %}
+                    <span class="badge bg-light text-dark border rounded-pill px-3 py-2 fw-normal d-inline-flex align-items-center gap-1">
+                        Pencarian: "<strong>{{ search_query }}</strong>"
+                        <a href="/presence?branch={{ selected_branch }}&team={{ selected_team }}&status={{ selected_status }}&tag={{ selected_tag }}" class="text-secondary text-decoration-none ms-1">&times;</a>
+                    </span>
+                {% endif %}
+
+                {% if selected_branch %}
+                    <span class="badge bg-light text-dark border rounded-pill px-3 py-2 fw-normal d-inline-flex align-items-center gap-1">
+                        Cabang: <strong>{{ selected_branch }}</strong>
+                        <a href="/presence?search={{ search_query }}&team={{ selected_team }}&status={{ selected_status }}&tag={{ selected_tag }}" class="text-secondary text-decoration-none ms-1">&times;</a>
+                    </span>
+                {% endif %}
+
+                {% if selected_team %}
+                    <span class="badge bg-light text-dark border rounded-pill px-3 py-2 fw-normal d-inline-flex align-items-center gap-1">
+                        Tim: <strong>{{ selected_team }}</strong>
+                        <a href="/presence?search={{ search_query }}&branch={{ selected_branch }}&status={{ selected_status }}&tag={{ selected_tag }}" class="text-secondary text-decoration-none ms-1">&times;</a>
+                    </span>
+                {% endif %}
+
+                {% if selected_status %}
+                    <span class="badge bg-light text-dark border rounded-pill px-3 py-2 fw-normal d-inline-flex align-items-center gap-1">
+                        Status: <strong>{{ selected_status | capitalize }}</strong>
+                        <a href="/presence?search={{ search_query }}&branch={{ selected_branch }}&team={{ selected_team }}&tag={{ selected_tag }}" class="text-secondary text-decoration-none ms-1">&times;</a>
+                    </span>
+                {% endif %}
+
+                {% if selected_tag %}
+                    <span class="badge bg-light text-dark border rounded-pill px-3 py-2 fw-normal d-inline-flex align-items-center gap-1">
+                        Tag: <strong>{{ selected_tag }}</strong>
+                        <a href="/presence?search={{ search_query }}&branch={{ selected_branch }}&team={{ selected_team }}&status={{ selected_status }}" class="text-secondary text-decoration-none ms-1">&times;</a>
+                    </span>
+                {% endif %}
+
+                <a href="/presence" class="small text-danger fw-bold text-decoration-none ms-2">Hapus Semua</a>
+            </div>
+            {% endif %}
+
+            <!-- TABLE CONTAINER (MATCHING DESIGN SCREENSHOT) -->
+            <div class="table-presence-card">
+                <div class="table-responsive">
+                    <table class="table table-presence align-middle">
+                        <thead>
+                            <tr>
+                                <th style="width: 170px;">Foto</th>
+                                <th style="width: 170px;">Nama</th>
+                                <th style="width: 120px;">Tim</th>
+                                <th style="width: 160px;">Kantor Cabang</th>
+                                <th style="width: 150px;">Status</th>
+                                <th>Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for emp in presence_list %}
+                            <tr>
+                                <!-- KOLOM 1: FOTO -->
+                                <td>
+                                    <div class="d-flex align-items-center gap-2">
+                                        {% if emp.face_image %}
+                                            <img src="{% if emp.face_image.startswith('http') or emp.face_image.startswith('data:') %}{{ emp.face_image }}{% elif emp.face_image.startswith('/') %}{{ emp.face_image }}{% else %}/{{ emp.face_image }}{% endif %}" alt="{{ emp.name }}" class="presence-avatar-img" onerror="this.src='/assets/mascot_avatar.png'">
+                                        {% else %}
+                                            <img src="/assets/mascot_avatar.png" alt="{{ emp.name }}" class="presence-avatar-img">
+                                        {% endif %}
+                                        <span class="text-secondary small text-truncate" style="max-width: 95px;" title="{{ emp.face_image or 'foto_karyawan.png' }}">
+                                            {% if emp.face_image %}
+                                                {{ emp.face_image.split('/')[-1] }}
+                                            {% else %}
+                                                foto_karyawan
+                                            {% endif %}
+                                        </span>
+                                    </div>
+                                </td>
+
+                                <!-- KOLOM 2: NAMA DULU BARU ID -->
+                                <td>
+                                    <div class="fw-bold text-dark" style="font-size: 15px; letter-spacing: -0.2px;">{{ emp.name }}</div>
+                                    <small class="text-muted fw-semibold">
+                                        {% if emp.employee_id and emp.employee_id.count('.') == 2 %}
+                                            {% set parts = emp.employee_id.split('.') %}
+                                            {{ parts[0] }},{{ parts[1] }}.{{ parts[2] }}
+                                        {% else %}
+                                            {{ emp.employee_id }}
+                                        {% endif %}
+                                    </small>
+                                </td>
+
+                                <!-- KOLOM 3: TIM (HR, HG, COLO, RELOC, DLL) -->
+                                <td>
+                                    <span class="fw-bold text-dark">{{ emp.team }}</span>
+                                </td>
+
+                                <!-- KOLOM 4: KANTOR CABANG (SURABAYA, JAKARTA) -->
+                                <td>
+                                    <span class="text-secondary fw-semibold">{{ emp.branch }}</span>
+                                </td>
+
+                                <!-- KOLOM 5: STATUS KEHADIRAN HARI INI -->
+                                <td>
+                                    {% if emp.today_type == 'clock_in' %}
+                                        <div class="d-flex flex-column gap-1 align-items-start">
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">
+                                                <i class="bi bi-check-circle-fill me-1"></i> Hadir {{ emp.today_clock_in }}
+                                            </span>
+                                            {% if emp.today_keterangan %}
+                                                <span class="badge bg-{{ emp.keterangan_class }}-subtle text-{{ emp.keterangan_class }} border border-{{ emp.keterangan_class }}-subtle px-2 py-0" style="font-size: 11px;">
+                                                    {{ emp.today_keterangan }}
+                                                </span>
+                                            {% endif %}
+                                        </div>
+                                    {% elif emp.today_type == 'clock_out' %}
+                                        <div class="d-flex flex-column gap-1 align-items-start">
+                                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1">
+                                                <i class="bi bi-box-arrow-right me-1"></i> Pulang {{ emp.today_clock_out }}
+                                            </span>
+                                            {% if emp.today_keterangan %}
+                                                <span class="badge bg-{{ emp.keterangan_class }}-subtle text-{{ emp.keterangan_class }} border border-{{ emp.keterangan_class }}-subtle px-2 py-0" style="font-size: 11px;">
+                                                    {{ emp.today_keterangan }}
+                                                </span>
+                                            {% endif %}
+                                        </div>
+                                    {% elif emp.today_type == 'izin' %}
+                                        <span class="badge bg-warning-subtle text-warning border border-warning-subtle px-2 py-1">
+                                            <i class="bi bi-clock-history me-1"></i> Izin
+                                        </span>
+                                    {% elif emp.today_type == 'sakit' %}
+                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1">
+                                            <i class="bi bi-heart-pulse me-1"></i> Sakit
+                                        </span>
+                                    {% endif %}
+                                </td>
+
+                                <!-- KOLOM 6: AKSI / TAGS (BADGE HIJAU, BIRU, ORANYE PERSIS SEPERTI DESAIN) -->
+                                <td>
+                                    <div class="d-flex align-items-center flex-wrap gap-1">
+                                        <!-- Tag 1 (Hijau) -->
+                                        {% if emp.tag1 %}
+                                            <span class="tag-pill-badge tag-green">{{ emp.tag1 }}</span>
+                                        {% else %}
+                                            <span class="tag-pill-badge tag-green">Full Time</span>
+                                        {% endif %}
+
+                                        <!-- Tag 2 (Biru) -->
+                                        {% if emp.tag2 %}
+                                            <span class="tag-pill-badge tag-blue">{{ emp.tag2 }}</span>
+                                        {% endif %}
+
+                                        <!-- Tag 3 (Oranye) -->
+                                        {% if emp.tag3 %}
+                                            <span class="tag-pill-badge tag-orange">{{ emp.tag3 }}</span>
+                                        {% endif %}
+
+                                        <!-- Tombol Detail Presensi -->
+                                        <button type="button" class="btn btn-sm btn-light border ms-1 px-2 py-0 fw-semibold text-secondary" data-bs-toggle="modal" data-bs-target="#detailModal{{ emp.id }}" title="Lihat Rincian Kehadiran">
+                                            <i class="bi bi-eye"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+
+                            <!-- MODAL DETAIL KEHADIRAN KARYAWAN -->
+                            <div class="modal fade" id="detailModal{{ emp.id }}" tabindex="-1" aria-hidden="true">
+                                <div class="modal-dialog modal-dialog-centered">
+                                    <div class="modal-content rounded-4 border-0 shadow">
+                                        <div class="modal-header bg-light">
+                                            <h5 class="modal-title fw-bold">
+                                                <i class="bi bi-person-badge text-primary me-2"></i> Rincian Kehadiran: {{ emp.name }}
+                                            </h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <div class="modal-body p-4">
+                                            <div class="text-center mb-3">
+                                                {% if emp.face_image %}
+                                                    <img src="{% if emp.face_image.startswith('http') or emp.face_image.startswith('data:') %}{{ emp.face_image }}{% elif emp.face_image.startswith('/') %}{{ emp.face_image }}{% else %}/{{ emp.face_image }}{% endif %}" alt="{{ emp.name }}" class="rounded-circle border mb-2 shadow-sm" style="width: 72px; height: 72px; object-fit: cover;" onerror="this.src='/assets/mascot_avatar.png'">
+                                                {% else %}
+                                                    <img src="/assets/mascot_avatar.png" alt="{{ emp.name }}" class="rounded-circle border mb-2 shadow-sm" style="width: 72px; height: 72px; object-fit: cover;">
+                                                {% endif %}
+                                                <h5 class="fw-bold mb-0">{{ emp.name }}</h5>
+                                                <small class="text-muted">ID: {{ emp.employee_id }} | @{{ emp.username }}</small>
+                                            </div>
+                                            <ul class="list-group list-group-flush small mb-3">
+                                                <li class="list-group-item d-flex justify-content-between px-0">
+                                                    <span class="text-muted">Tim / Divisi:</span>
+                                                    <strong>{{ emp.team }}</strong>
+                                                </li>
+                                                <li class="list-group-item d-flex justify-content-between px-0">
+                                                    <span class="text-muted">Kantor Cabang:</span>
+                                                    <strong>{{ emp.branch }}</strong>
+                                                </li>
+                                                <li class="list-group-item d-flex justify-content-between px-0">
+                                                    <span class="text-muted">Jam Masuk (Clock In):</span>
+                                                    <strong>{{ emp.today_clock_in if emp.today_clock_in else '--:--' }}</strong>
+                                                </li>
+                                                <li class="list-group-item d-flex justify-content-between px-0">
+                                                    <span class="text-muted">Jam Pulang (Clock Out):</span>
+                                                    <strong>{{ emp.today_clock_out if emp.today_clock_out else '--:--' }}</strong>
+                                                </li>
+                                                {% if emp.today_reason %}
+                                                <li class="list-group-item px-0">
+                                                    <span class="text-muted d-block mb-1">Catatan / Alasan:</span>
+                                                    <span class="badge bg-warning-subtle text-warning border px-2 py-1">{{ emp.today_reason }}</span>
+                                                </li>
+                                                {% endif %}
+                                            </ul>
+                                        </div>
+                                        <div class="modal-footer bg-light">
+                                            <button type="button" class="btn btn-secondary w-100 rounded-3 fw-semibold" data-bs-dismiss="modal">Tutup</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% else %}
+                            <tr>
+                                <td colspan="6" class="text-center py-5 text-muted">
+                                    <i class="bi bi-search fs-2 d-block mb-2 text-secondary"></i>
+                                    Tidak ada data kehadiran yang sesuai dengan pencarian "<strong>{{ search_query }}</strong>".
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- MODAL LOGOUT -->
+    <div class="modal fade" id="logoutModal" tabindex="-1" aria-labelledby="logoutModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" style="max-width: 380px;">
+            <div class="modal-content rounded-4 border-0 shadow">
+                <div class="modal-body text-center p-4">
+                    <div class="mb-3 text-primary">
+                        <i class="bi bi-box-arrow-right fs-1"></i>
+                    </div>
+                    <h5 class="fw-bold mb-2">Konfirmasi Logout</h5>
+                    <p class="text-muted small mb-4">Apakah Anda yakin ingin keluar dari Admin Dashboard TSA?</p>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-light w-50 fw-semibold rounded-3 py-2" data-bs-dismiss="modal">Batal</button>
+                        <a href="/logout" class="btn btn-primary w-50 fw-semibold rounded-3 py-2">Ya, Keluar</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap 5 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
