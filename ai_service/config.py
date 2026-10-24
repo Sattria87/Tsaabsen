@@ -24,7 +24,18 @@ PORT = int(os.getenv("AI_PORT", 5001))
 DEBUG = os.getenv("AI_DEBUG", "True").lower() == "true"
 
 # Asset Paths
-ASSETS_DIR = PROJECT_ROOT / "assets"
+_assets_env = os.getenv("ASSETS_DIR")
+if _assets_env and Path(_assets_env).exists():
+    ASSETS_DIR = Path(_assets_env)
+elif (PROJECT_ROOT / "assets").exists():
+    ASSETS_DIR = PROJECT_ROOT / "assets"
+elif (BASE_DIR / "assets").exists():
+    ASSETS_DIR = BASE_DIR / "assets"
+elif Path("/app/assets").exists():
+    ASSETS_DIR = Path("/app/assets")
+else:
+    ASSETS_DIR = PROJECT_ROOT / "assets"
+
 FOTO_KARYAWAN_DIR = ASSETS_DIR / "foto_karyawan"
 MODELS_DIR = BASE_DIR / "models"
 EMBEDDINGS_DIR = BASE_DIR / "embeddings"

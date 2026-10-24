@@ -1,0 +1,31 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PORT=8085
+
+# Install library sistem Linux untuk Pillow, reportlab, cryptography
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    libfreetype6-dev \
+    libjpeg-dev \
+    zlib1g-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install dependensi Python Website TSA Admin
+COPY requirements_web.txt .
+RUN pip install --no-cache-dir -r requirements_web.txt
+
+# Salin script web admin dan folder templates
+COPY admin_app.py .
+COPY templates/ ./templates/
+
+# Buat folder assets lokal sebagai fallback bila tidak di-mount
+RUN mkdir -p /app/assets/foto_karyawan
+
+EXPOSE 8085
+
+# Jalankan service menggunakan Gunicorn production WSGI server
+CMD ["gunicorn", "--bind", "0.0.0.0:8085", "--workers", "2", "--timeout", "120", "admin_app:app"]

@@ -1,0 +1,145 @@
+version: '3.8'
+
+# ==============================================================================
+# PROJECTWG DOCKER COMPOSE CONFIGURATION
+# Siap digunakan untuk Deployment VPS dengan Coolify / Standalone Docker Compose
+# Terdiri dari 4 Service:
+# 1. db          : MySQL 8.0 Database (Inisialisasi schema & dummy data otomatis)
+# 2. ai_service  : Python Face Recognition Service (Port 5001)
+# 3. backend     : Node.js Express REST API untuk Aplikasi Mobile Flutter (Port 3000)
+# 4. admin_web   : Flask Web TSA Admin Dashboard (Port 8085)
+# ==============================================================================
+
+services:
+  # ----------------------------------------------------------------------------
+  # 1. DATABASE MYSQL
+  # ----------------------------------------------------------------------------
+  db:
+    image: mysql:8.0
+    container_name: projectwg_db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-wg_secure_pass_2026}
+      MYSQL_DATABASE: ${DB_NAME:-absensi_wg}
+      MYSQL_USER: ${DB_USER:-user_wg}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-wg_secure_pass_2026}
+      TZ: Asia/Jakarta
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/01_init.sql:ro
+    ports:
+      - "${PORT_DB:-3306}:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD:-wg_secure_pass_2026}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 25s
+    networks:
+      - projectwg_network
+
+  # ----------------------------------------------------------------------------
+  # 2. AI SERVICE (Face Recognition & Verification)
+  # ----------------------------------------------------------------------------
+  ai_service:
+    build:
+      context: ./ai_service
+      dockerfile: Dockerfile
+    container_name: projectwg_ai_service
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - AI_HOST=0.0.0.0
+      - AI_PORT=5001
+      - AI_DEBUG=False
+      - DB_HOST=db
+      - DB_PORT=3306
+      - DB_USER=root
+      - DB_PASSWORD=${DB_ROOT_PASSWORD:-wg_secure_pass_2026}
+      - DB_NAME=${DB_NAME:-absensi_wg}
+      - FACE_TOLERANCE=${FACE_TOLERANCE:-0.55}
+      - SIMILARITY_THRESHOLD=${SIMILARITY_THRESHOLD:-70.0}
+      - ASSETS_DIR=/app/assets
+    volumes:
+      - ./assets:/app/assets
+      - ./ai_service/embeddings:/app/embeddings
+      - insightface_models:/root/.insightface
+    ports:
+      - "${PORT_AI:-5001}:5001"
+    networks:
+      - projectwg_network
+
+  # ----------------------------------------------------------------------------
+  # 3. BACKEND REST API (Express.js - REST API Mobile Flutter)
+  # ----------------------------------------------------------------------------
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: projectwg_backend
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+      ai_service:
+        condition: service_started
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DB_HOST=db
+      - DB_PORT=3306
+      - DB_USER=root
+      - DB_PASSWORD=${DB_ROOT_PASSWORD:-wg_secure_pass_2026}
+      - DB_NAME=${DB_NAME:-absensi_wg}
+      - AI_SERVICE_URL=http://ai_service:5001/api/verify
+    volumes:
+      # Mount folder assets foto karyawan dan bukti izin
+      - ./assets:/app/assets
+    ports:
+      - "${PORT_BACKEND:-3000}:3000"
+    networks:
+      - projectwg_network
+
+  # ----------------------------------------------------------------------------
+  # 4. ADMIN WEB DASHBOARD (Flask TSA Admin)
+  # ----------------------------------------------------------------------------
+  admin_web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    container_name: projectwg_admin_web
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - PORT=8085
+      - DB_HOST=db
+      - DB_PORT=3306
+      - DB_USER=root
+      - DB_PASSWORD=${DB_ROOT_PASSWORD:-wg_secure_pass_2026}
+      - DB_NAME=${DB_NAME:-absensi_wg}
+      - FLASK_DEBUG=${FLASK_DEBUG:-False}
+      - SECRET_KEY=${SECRET_KEY:-projectwg_super_secret_production_key_2026}
+    volumes:
+      - ./assets:/app/assets
+    ports:
+      - "${PORT_ADMIN:-8085}:8085"
+    networks:
+      - projectwg_network
+
+# ------------------------------------------------------------------------------
+# VOLUMES & NETWORKS
+# ------------------------------------------------------------------------------
+volumes:
+  db_data:
+    name: projectwg_db_data
+  insightface_models:
+    name: projectwg_insightface_models
+
+networks:
+  projectwg_network:
+    name: projectwg_network
+    driver: bridge

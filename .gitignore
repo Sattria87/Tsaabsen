@@ -46,3 +46,14 @@ app.*.map.json
 
 # Widget Preview related
 .widget_preview/
+
+# Environment & Docker
+.env
+.env.local
+docker-compose.override.yml
+backend/node_modules/
+backend/npm-debug.log*
+ai_service/.venv/
+ai_service/embeddings/*.pkl
+ai_service/embeddings/*.npy
+
