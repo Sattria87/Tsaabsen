@@ -79,6 +79,23 @@ class FaceEngine:
 
         # In-memory cache untuk encoding foto acuan agar verifikasi berulang berlangsung kilat
         self.reference_cache = {}
+        self.preload_reference_photos()
+
+    def preload_reference_photos(self):
+        """Pre-cache seluruh foto acuan karyawan ke memory RAM saat startup agar verifikasi kilat."""
+        ref_dir = getattr(config, "FOTO_KARYAWAN_DIR", None)
+        if not ref_dir or not os.path.exists(str(ref_dir)):
+            return
+        try:
+            count = 0
+            for ext in ('*.jpg', '*.jpeg', '*.png', '*.JPG', '*.JPEG', '*.PNG'):
+                for p in Path(ref_dir).glob(ext):
+                    self._get_cached_encoding(str(p))
+                    count += 1
+            if count > 0:
+                print(f"[AI SERVICE] [OK] {count} foto acuan karyawan berhasil di-cache ke memory RAM!")
+        except Exception as e:
+            print(f"[AI SERVICE Info] Gagal pre-cache foto acuan: {e}")
 
     def decode_image(self, image_input):
         """
@@ -91,10 +108,17 @@ class FaceEngine:
                 return cv2.cvtColor(image_input, cv2.COLOR_RGBA2RGB) if hasattr(cv2, 'cvtColor') else image_input[:, :, :3]
             return image_input
 
+        def _process_pil(img):
+            # Optimasi kecepatan: resize gambar jika > 640px dengan BILINEAR agar deteksi AI kilat
+            if max(img.size) > 640:
+                resample_filter = getattr(Image, 'Resampling', Image).BILINEAR
+                img.thumbnail((640, 640), resample_filter)
+            return np.array(img.convert('RGB'))
+
         # Jika input adalah path file
         if isinstance(image_input, (str, Path)) and os.path.exists(str(image_input)):
             image = Image.open(str(image_input))
-            return np.array(image.convert('RGB'))
+            return _process_pil(image)
 
         # Jika input adalah base64 string
         if isinstance(image_input, str):
@@ -102,12 +126,12 @@ class FaceEngine:
                 image_input = image_input.split(',', 1)[1]
             raw_bytes = base64.b64decode(image_input)
             image = Image.open(io.BytesIO(raw_bytes))
-            return np.array(image.convert('RGB'))
+            return _process_pil(image)
 
         # Jika input adalah raw bytes
         if isinstance(image_input, (bytes, bytearray)):
             image = Image.open(io.BytesIO(image_input))
-            return np.array(image.convert('RGB'))
+            return _process_pil(image)
 
         raise ValueError("Format gambar tidak dikenali (gunakan Base64, Bytes, atau File Path)")
 
@@ -216,7 +240,7 @@ class FaceEngine:
         """Helper untuk mengambil encoding dari cache jika input adalah file path atau hash."""
         cache_key = None
         if isinstance(image_input, (str, Path)):
-            cache_key = str(image_input)
+            cache_key = os.path.abspath(str(image_input)).lower()
         elif isinstance(image_input, (bytes, bytearray)):
             cache_key = hashlib.md5(image_input[:1024]).hexdigest()
 
@@ -246,29 +270,55 @@ class FaceEngine:
                 "message": f"Gagal membaca foto selfie: {str(e)}"
             }
 
-        # Periksa apakah wajah terdeteksi pada foto live selfie
-        live_faces = self.detect_faces(live_rgb)
-        if len(live_faces) == 0:
-            return {
-                "matched": False,
-                "similarity_score": 0.0,
-                "distance": 1.0,
-                "face_detected": False,
-                "engine": self.engine_name,
-                "message": "Wajah tidak terdeteksi pada foto selfie. Harap posisikan wajah Anda dengan jelas di depan kamera!"
-            }
-
-        # Ekstraksi encoding foto selfie live
-        live_encoding = self.get_face_encoding(live_rgb)
-        if live_encoding is None:
-            return {
-                "matched": False,
-                "similarity_score": 0.0,
-                "distance": 1.0,
-                "face_detected": False,
-                "engine": self.engine_name,
-                "message": "Gagal mengekstrak fitur wajah pada foto selfie."
-            }
+        # Ekstraksi fitur wajah foto selfie live (Optimasi kilat 1-pass untuk InsightFace)
+        if self.engine_type == "insightface" and self.insightface_app is not None:
+            try:
+                bgr_image = self._to_bgr(live_rgb)
+                faces = self.insightface_app.get(bgr_image)
+                if not faces:
+                    return {
+                        "matched": False,
+                        "similarity_score": 0.0,
+                        "distance": 1.0,
+                        "face_detected": False,
+                        "engine": self.engine_name,
+                        "message": "Wajah tidak terdeteksi pada foto selfie. Harap posisikan wajah Anda dengan jelas di depan kamera!"
+                    }
+                largest_face = max(faces, key=lambda f: (f.bbox[2] - f.bbox[0]) * (f.bbox[3] - f.bbox[1]))
+                emb = largest_face.embedding.astype(np.float32)
+                norm = np.linalg.norm(emb)
+                live_encoding = (emb / norm) if norm > 0 else emb
+            except Exception as e:
+                return {
+                    "matched": False,
+                    "similarity_score": 0.0,
+                    "distance": 1.0,
+                    "face_detected": False,
+                    "engine": self.engine_name,
+                    "message": f"Gagal mengekstrak fitur wajah: {str(e)}"
+                }
+        else:
+            # Fallback untuk engine dlib / opencv
+            live_faces = self.detect_faces(live_rgb)
+            if len(live_faces) == 0:
+                return {
+                    "matched": False,
+                    "similarity_score": 0.0,
+                    "distance": 1.0,
+                    "face_detected": False,
+                    "engine": self.engine_name,
+                    "message": "Wajah tidak terdeteksi pada foto selfie. Harap posisikan wajah Anda dengan jelas di depan kamera!"
+                }
+            live_encoding = self.get_face_encoding(live_rgb)
+            if live_encoding is None:
+                return {
+                    "matched": False,
+                    "similarity_score": 0.0,
+                    "distance": 1.0,
+                    "face_detected": False,
+                    "engine": self.engine_name,
+                    "message": "Gagal mengekstrak fitur wajah pada foto selfie."
+                }
 
         # Ekstraksi foto acuan (dengan cache)
         try:

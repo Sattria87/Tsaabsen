@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:convert';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import '../utils/mysql_helper.dart';
@@ -62,7 +63,7 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
 
         final controller = CameraController(
           selectedCamera, 
-          ResolutionPreset.high, 
+          ResolutionPreset.medium, 
           enableAudio: false,
         );
 
@@ -124,6 +125,26 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
     });
   }
 
+  /// Optimasi ukuran foto selfie dengan native engine Skia (resolusi 480px, ~200KB)
+  /// Menghindari upload file mentah 3-5MB dari kamera HP yang memperlambat koneksi internet
+  Future<String> _compressAndEncodeImage(File file) async {
+    try {
+      final bytes = await file.readAsBytes();
+      final codec = await ui.instantiateImageCodec(bytes, targetWidth: 480);
+      final frame = await codec.getNextFrame();
+      final byteData = await frame.image.toByteData(format: ui.ImageByteFormat.png);
+      if (byteData != null) {
+        final compressed = byteData.buffer.asUint8List();
+        debugPrint('[FaceCapture] Foto dioptimasi: ${(bytes.length / 1024).toStringAsFixed(1)} KB -> ${(compressed.length / 1024).toStringAsFixed(1)} KB');
+        return 'data:image/png;base64,${base64Encode(compressed)}';
+      }
+    } catch (e) {
+      debugPrint('[FaceCapture] Fallback kompresi gagal ($e), gunakan foto asli');
+    }
+    final rawBytes = await file.readAsBytes();
+    return 'data:image/jpeg;base64,${base64Encode(rawBytes)}';
+  }
+
   // 3. Konfirmasi & Verifikasi Wajah dengan Model AI lalu Submit Clock In
   Future<void> _submitClockIn() async {
     if (_capturedImage == null || _isSubmitting) return;
@@ -131,18 +152,17 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
     setState(() {
       _isSubmitting = true;
       _isVerifyingAI = true;
-      _aiVerificationStatus = 'Menganalisis wajah dengan Model AI...';
+      _aiVerificationStatus = 'Mengoptimalkan foto selfie...';
     });
 
     try {
-      // 1. Konversi foto selfie ke Base64
-      final bytes = await File(_capturedImage!.path).readAsBytes();
-      final imageBase64 = 'data:image/jpeg;base64,${base64Encode(bytes)}';
+      // 1. Kompres foto selfie ke ukuran optimal sebelum dikirim via internet
+      final imageBase64 = await _compressAndEncodeImage(File(_capturedImage!.path));
       final username = (widget.userData['username'] ?? '').toString();
 
       // 2. Verifikasi Wajah dengan Microservice AI (Face Recognition Engine)
       setState(() {
-        _aiVerificationStatus = 'Mencocokkan dengan foto acuan karyawan...';
+        _aiVerificationStatus = 'Menganalisis wajah dengan Model AI...';
       });
 
       final aiResult = await MySQLHelper.verifyFaceWithAI(username, imageBase64);

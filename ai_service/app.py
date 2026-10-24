@@ -15,6 +15,7 @@ if hasattr(sys.stdout, 'reconfigure'):
 import config
 from face_engine import face_engine
 
+# ProjectWG AI Service - Reloaded with High Performance Optimizations
 app = Flask(__name__)
 CORS(app)  # Izinkan request dari Flutter mobile & backend Express
 
