@@ -98,7 +98,8 @@ services:
       # Mount folder assets foto karyawan dan bukti izin
       - ./assets:/app/assets
     ports:
-      - "${PORT_BACKEND:-3000}:3000"
+      - "3000:3000"
+      - "5000:3000"
     networks:
       - projectwg_network
 

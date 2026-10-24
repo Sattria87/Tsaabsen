@@ -6,23 +6,23 @@ import 'package:http/http.dart' as http;
 /// ============================================================
 /// KONFIGURASI BACKEND API (EXPRESS.JS)
 /// ============================================================
-/// Ganti IP address berikut sesuai IP perangkat/server Express:
-/// - Jika menggunakan USB Debugging (adb reverse) / Web / Desktop: 'http://localhost:3000/api'
-/// - Jika dijalankan di HP fisik via Wi-Fi: 'http://`IP_KOMPUTER`:3000/api'
-const String apiBaseUrl = 'https://portion-court-rural-anything.trycloudflare.com/api';
+/// KONFIGURASI BACKEND API (EXPRESS.JS VPS)
+/// ============================================================
+const String apiBaseUrl = 'http://208.76.40.204:5000/api';
 const String defaultAiBaseUrl = apiBaseUrl; // Menggunakan jalur aktif yang sama dengan login
 
 const List<String> candidateApiUrls = [
-  'http://127.0.0.1:3000/api',     // Jalur USB Cable via 'adb reverse' (paling stabil & cepat)
-  'http://192.168.1.9:3000/api',    // Jalur Wi-Fi lokal laptop saat ini
-  'http://10.0.2.2:3000/api',
+  'http://208.76.40.204:5000/api',    // VPS Port 5000
+  'http://208.76.40.204:3000/api',    // VPS Port 3000 (Fallback)
+  'http://127.0.0.1:3000/api',        // Jalur USB Cable via 'adb reverse'
+  'http://10.0.2.2:3000/api',         // Android Emulator
 ];
 
 const List<String> candidateAiUrls = [
-  // Express Backend Proxy (port 3000 otomatis memforward langsung ke AI port 5001 secara lokal)
   apiBaseUrl,
+  'http://208.76.40.204:5000/api',
+  'http://208.76.40.204:3000/api',
   'http://127.0.0.1:3000/api',
-  'http://192.168.1.9:3000/api',
 ];
 
 /// Helper client untuk berkomunikasi dengan Backend Express.js REST API & AI Service.
