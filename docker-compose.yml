@@ -32,6 +32,8 @@ services:
     volumes:
       - db_data:/var/lib/mysql
       - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/01_init.sql:ro
+    expose:
+      - "3306"
     ports:
       # Port 3306 dibuka ke host agar bisa diakses dari luar/DBeaver/Navicat
       - "3306:3306"
