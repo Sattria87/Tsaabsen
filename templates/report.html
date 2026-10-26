@@ -526,64 +526,16 @@
                             <label class="field-label">Format</label>
                             <div class="pill-control-wrapper">
                                 <select name="format" class="pill-select" id="formatSelect">
-                                    <option value="xlsx" {% if selected_format == 'xlsx' %}selected{% endif %}>.XLSX (Pivot)</option>
+                                    <option value="xlsx" {% if selected_format == 'xlsx' %}selected{% endif %}>.XLSX (Excel)</option>
                                     <option value="pdf" {% if selected_format == 'pdf' %}selected{% endif %}>.PDF (Dokumen PDF)</option>
-                                    <option value="csv" {% if selected_format == 'csv' %}selected{% endif %}>.CSV (Comma Separated)</option>
                                 </select>
                                 <i class="bi bi-chevron-down pill-icon" title="Pilih Format"></i>
                             </div>
                         </div>
                     </div>
-                </div>
 
-                <!-- KARTU 2: DATA YANG DISERTAKAN (SESUAI GAMBAR) -->
-                <div class="report-section-card">
-                    <h2 class="card-inner-title">Data yang Disertakan</h2>
-
-                    <div class="checkbox-grid">
-                        <!-- Kolom Kiri -->
-                        <div>
-                            <div class="d-flex flex-column gap-3">
-                                <label class="custom-check-item">
-                                    <input type="checkbox" name="inc_presence" value="1" checked>
-                                    <span class="check-label-text">Data Kehadiran</span>
-                                </label>
-                                <label class="custom-check-item">
-                                    <input type="checkbox" name="inc_duration" value="1" checked>
-                                    <span class="check-label-text">Durasi Jam kerja</span>
-                                </label>
-                                <label class="custom-check-item">
-                                    <input type="checkbox" name="inc_status" value="1" checked>
-                                    <span class="check-label-text">Status Kehadiran</span>
-                                </label>
-                            </div>
-                        </div>
-
-                        <!-- Kolom Kanan -->
-                        <div>
-                            <div class="d-flex flex-column gap-3">
-                                <label class="custom-check-item">
-                                    <input type="checkbox" name="inc_coords" value="1" checked>
-                                    <span class="check-label-text">Koordinat (Longitude, Latitude)</span>
-                                </label>
-                                <label class="custom-check-item">
-                                    <input type="checkbox" name="inc_photo" value="1" checked>
-                                    <span class="check-label-text">Foto Clock In</span>
-                                </label>
-                                <label class="custom-check-item">
-                                    <input type="checkbox" name="inc_ai" value="1" checked>
-                                    <span class="check-label-text">Hasil Verifikasi AI</span>
-                                </label>
-                                <label class="custom-check-item">
-                                    <input type="checkbox" name="inc_recap" value="1" checked>
-                                    <span class="check-label-text">Rekapitulasi per karyawan</span>
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- TOMBOL GENERATE (DI SUDUT KANAN BAWAH KARTU) -->
-                    <div class="d-flex justify-content-end mt-4">
+                    <!-- TOMBOL GENERATE -->
+                    <div class="d-flex justify-content-end mt-4 pt-2">
                         <button type="submit" class="btn-generate-report" id="btnGenerate">
                             <i class="bi bi-download"></i> Generate
                         </button>
@@ -591,85 +543,6 @@
                 </div>
 
             </form>
-
-            <!-- ================= PRATINJAU DATA REAL-TIME DARI DATABASE ================= -->
-            <div class="preview-table-card">
-                <div class="p-4 border-bottom d-flex justify-content-between align-items-center flex-wrap gap-2">
-                    <div>
-                        <h5 class="fw-bold text-dark mb-1">
-                            <i class="bi bi-table text-primary me-2"></i> Pratinjau Rekapitulasi Kehadiran Karyawan
-                        </h5>
-                        <small class="text-muted">Rentang tanggal: <strong>{{ start_date }}</strong> s/d <strong>{{ end_date }}</strong> (Total Hari Kerja: <strong>{{ total_hari_kerja }} Hari</strong>)</small>
-                    </div>
-                    <div class="d-flex gap-2">
-                        <span class="badge bg-primary-subtle text-primary border px-3 py-2 fw-bold" style="font-size: 12.5px;">
-                            Total Karyawan: {{ preview_data | length }}
-                        </span>
-                        <span class="badge bg-success-subtle text-success border px-3 py-2 fw-bold" style="font-size: 12.5px;">
-                            Total Hadir: {{ tot_hadir }}
-                        </span>
-                        <span class="badge bg-warning-subtle text-warning border px-3 py-2 fw-bold" style="font-size: 12.5px;">
-                            Total Izin: {{ tot_izin }}
-                        </span>
-                        <span class="badge bg-danger-subtle text-danger border px-3 py-2 fw-bold" style="font-size: 12.5px;">
-                            Total Alpha: {{ tot_alpha }}
-                        </span>
-                    </div>
-                </div>
-
-                <div class="table-responsive">
-                    <table class="table mb-0 align-middle">
-                        <thead>
-                            <tr>
-                                <th style="width: 50px;">No</th>
-                                <th style="width: 200px;">Nama Karyawan</th>
-                                <th style="width: 180px;">Email</th>
-                                <th style="width: 140px;">Divisi</th>
-                                <th style="width: 140px; text-align: center;">Total Hari Kerja</th>
-                                <th style="width: 120px; text-align: center;">Jumlah Hadir</th>
-                                <th style="width: 120px; text-align: center;">Jumlah Izin</th>
-                                <th style="width: 120px; text-align: center;">Jumlah Alpha</th>
-                                <th style="width: 160px; text-align: center;">Persentase Kehadiran (%)</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for row in preview_data %}
-                            <tr>
-                                <td class="text-muted fw-bold">{{ row.no }}</td>
-                                <td>
-                                    <div class="fw-bold text-dark">{{ row.name }}</div>
-                                    <small class="text-muted">{{ row.branch }}</small>
-                                </td>
-                                <td class="text-secondary fw-semibold">{{ row.email }}</td>
-                                <td>
-                                    <span class="badge bg-light text-dark border">{{ row.divisi }}</span>
-                                </td>
-                                <td class="text-center fw-bold text-secondary">{{ row.total_hari_kerja }}</td>
-                                <td class="text-center">
-                                    <span class="badge bg-success-subtle text-success border px-2 py-1 fw-bold">{{ row.jumlah_hadir }}</span>
-                                </td>
-                                <td class="text-center">
-                                    <span class="badge bg-warning-subtle text-warning border px-2 py-1 fw-bold">{{ row.jumlah_izin }}</span>
-                                </td>
-                                <td class="text-center">
-                                    <span class="badge bg-danger-subtle text-danger border px-2 py-1 fw-bold">{{ row.jumlah_alpha }}</span>
-                                </td>
-                                <td class="text-center fw-bold {% if row.persentase_num >= 75 %}text-success{% elif row.persentase_num >= 50 %}text-warning{% else %}text-danger{% endif %}">
-                                    {{ row.persentase }}
-                                </td>
-                            </tr>
-                            {% else %}
-                            <tr>
-                                <td colspan="9" class="text-center py-5 text-muted">
-                                    <i class="bi bi-inbox fs-2 d-block mb-2 text-secondary"></i>
-                                    Tidak ada data karyawan pada rentang tanggal dan cabang yang dipilih.
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
 
         </div>
 
@@ -696,17 +569,5 @@
 
     <!-- Bootstrap 5 JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        // Update URL and preview when start_date, end_date or branch changes
-        function updateFilterPreview() {
-            const startDate = document.getElementById('startDate').value;
-            const endDate = document.getElementById('endDate').value;
-            const branch = document.getElementById('branchSelect').value;
-            if (startDate && endDate) {
-                window.location.href = `/report?start_date=${startDate}&end_date=${endDate}&branch=${branch}`;
-            }
-        }
-        document.getElementById('branchSelect').addEventListener('change', updateFilterPreview);
-    </script>
 </body>
 </html>

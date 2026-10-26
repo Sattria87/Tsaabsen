@@ -1364,23 +1364,24 @@ def report_page():
     
     start_date = request.args.get('start_date', '2026-10-01')
     end_date = request.args.get('end_date', '2026-10-31')
-    selected_branch = request.args.get('branch', 'TUNGGAL SAHABAT ABADI')
+    selected_branch = request.args.get('branch', 'all')
     selected_format = request.args.get('format', 'xlsx')
     
-    rekap = get_rekap_report_data(start_date, end_date, selected_branch)
-    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT branch_name FROM branch_companies ORDER BY id ASC")
+    branches = [b['branch_name'] for b in cursor.fetchall()]
+    if not branches:
+        branches = ['TUNGGAL SAHABAT ABADI', 'Decoy']
+    conn.close()
+
     return render_template(
         'report.html',
         start_date=start_date,
         end_date=end_date,
         selected_branch=selected_branch,
         selected_format=selected_format,
-        branches=rekap['branches'],
-        preview_data=rekap['data'],
-        total_hari_kerja=rekap['total_hari_kerja'],
-        tot_hadir=rekap['tot_hadir'],
-        tot_izin=rekap['tot_izin'],
-        tot_alpha=rekap['tot_alpha'],
+        branches=branches,
         current_day=current_day,
         current_date_formatted=current_date_formatted
     )
@@ -1390,12 +1391,12 @@ def export_report():
     if request.method == 'POST':
         start_date = request.form.get('start_date', '2026-10-01')
         end_date = request.form.get('end_date', '2026-10-31')
-        branch = request.form.get('branch', 'TUNGGAL SAHABAT ABADI')
+        branch = request.form.get('branch', 'all')
         file_format = request.form.get('format', 'xlsx').lower()
     else:
         start_date = request.args.get('start_date', '2026-10-01')
         end_date = request.args.get('end_date', '2026-10-31')
-        branch = request.args.get('branch', 'TUNGGAL SAHABAT ABADI')
+        branch = request.args.get('branch', 'all')
         file_format = request.args.get('format', 'xlsx').lower()
 
     rekap = get_rekap_report_data(start_date, end_date, branch)
@@ -1404,8 +1405,66 @@ def export_report():
 
     filename_base = f"Laporan_Kehadiran_Karyawan_{start_date}_sd_{end_date}"
 
-    # EXCEL GENERATION (.XLSX)
-    if file_format == 'xlsx':
+    # PDF GENERATION (.PDF)
+    if file_format == 'pdf':
+        buf = io.BytesIO()
+        doc = SimpleDocTemplate(buf, pagesize=landscape(letter), rightMargin=24, leftMargin=24, topMargin=24, bottomMargin=24)
+        elements = []
+
+        styles = getSampleStyleSheet()
+        title_style = ParagraphStyle('ReportTitle', parent=styles['Heading1'], fontSize=15, leading=19, textColor=colors.HexColor('#131B3E'))
+        sub_style = ParagraphStyle('ReportSub', parent=styles['Normal'], fontSize=9, leading=13, textColor=colors.HexColor('#4A5568'))
+
+        branch_str = "Semua Cabang" if branch == 'all' else branch
+        elements.append(Paragraph("<b>LAPORAN REKAPITULASI KEHADIRAN KARYAWAN</b>", title_style))
+        elements.append(Paragraph(f"Rentang Tanggal: {start_date} s/d {end_date} | Kantor Cabang: {branch_str} | Dicetak: {datetime.now().strftime('%d/%m/%Y %H:%M')}", sub_style))
+        elements.append(Spacer(1, 14))
+
+        table_headers = ["No", "Nama Karyawan", "Email", "Divisi", "Total Hari Kerja", "Jumlah Hadir", "Jumlah Izin", "Jumlah Alpha", "Kehadiran (%)"]
+        table_rows = [table_headers]
+
+        for r in processed_data:
+            table_rows.append([
+                str(r['no']),
+                str(r['name'])[:22],
+                str(r['email'])[:24],
+                str(r['divisi'])[:16],
+                str(r['total_hari_kerja']),
+                str(r['jumlah_hadir']),
+                str(r['jumlah_izin']),
+                str(r['jumlah_alpha']),
+                r['persentase']
+            ])
+
+        col_widths = [30, 140, 140, 90, 80, 65, 65, 65, 75]
+        pdf_table = Table(table_rows, colWidths=col_widths, repeatRows=1)
+        pdf_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#131B3E')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('ALIGN', (1, 1), (3, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 9),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 6),
+            ('TOPPADDING', (0, 0), (-1, 0), 6),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#F8FAFC')]),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#E2E8F0')),
+            ('FONTSIZE', (0, 1), (-1, -1), 8.5),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ]))
+        elements.append(pdf_table)
+
+        doc.build(elements)
+        buf.seek(0)
+        return send_file(
+            buf,
+            as_attachment=True,
+            download_name=f"{filename_base}.pdf",
+            mimetype="application/pdf"
+        )
+
+    # EXCEL GENERATION (.XLSX) - Default template
+    else:
         wb = openpyxl.Workbook()
         ws = wb.active
         ws.title = "Rekap Kehadiran"
@@ -1475,90 +1534,6 @@ def export_report():
             as_attachment=True,
             download_name=f"{filename_base}.xlsx",
             mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
-
-    # PDF GENERATION (.PDF)
-    elif file_format == 'pdf':
-        buf = io.BytesIO()
-        doc = SimpleDocTemplate(buf, pagesize=landscape(letter), rightMargin=24, leftMargin=24, topMargin=24, bottomMargin=24)
-        elements = []
-
-        styles = getSampleStyleSheet()
-        title_style = ParagraphStyle('ReportTitle', parent=styles['Heading1'], fontSize=15, leading=19, textColor=colors.HexColor('#131B3E'))
-        sub_style = ParagraphStyle('ReportSub', parent=styles['Normal'], fontSize=9, leading=13, textColor=colors.HexColor('#4A5568'))
-
-        branch_str = "Semua Cabang" if branch == 'all' else branch
-        elements.append(Paragraph("<b>LAPORAN REKAPITULASI KEHADIRAN KARYAWAN</b>", title_style))
-        elements.append(Paragraph(f"Rentang Tanggal: {start_date} s/d {end_date} | Kantor Cabang: {branch_str} | Dicetak: {datetime.now().strftime('%d/%m/%Y %H:%M')}", sub_style))
-        elements.append(Spacer(1, 14))
-
-        table_headers = ["No", "Nama Karyawan", "Email", "Divisi", "Total Hari Kerja", "Jumlah Hadir", "Jumlah Izin", "Jumlah Alpha", "Kehadiran (%)"]
-        table_rows = [table_headers]
-
-        for r in processed_data:
-            table_rows.append([
-                str(r['no']),
-                str(r['name'])[:22],
-                str(r['email'])[:24],
-                str(r['divisi'])[:16],
-                str(r['total_hari_kerja']),
-                str(r['jumlah_hadir']),
-                str(r['jumlah_izin']),
-                str(r['jumlah_alpha']),
-                r['persentase']
-            ])
-
-        col_widths = [30, 140, 140, 90, 80, 65, 65, 65, 75]
-        pdf_table = Table(table_rows, colWidths=col_widths, repeatRows=1)
-        pdf_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#131B3E')),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-            ('ALIGN', (1, 1), (3, -1), 'LEFT'),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, 0), 9),
-            ('BOTTOMPADDING', (0, 0), (-1, 0), 6),
-            ('TOPPADDING', (0, 0), (-1, 0), 6),
-            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#F8FAFC')]),
-            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#E2E8F0')),
-            ('FONTSIZE', (0, 1), (-1, -1), 8.5),
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ]))
-        elements.append(pdf_table)
-
-        doc.build(elements)
-        buf.seek(0)
-        return send_file(
-            buf,
-            as_attachment=True,
-            download_name=f"{filename_base}.pdf",
-            mimetype="application/pdf"
-        )
-
-    # CSV GENERATION (.CSV)
-    else:
-        buf = io.StringIO()
-        writer = csv.writer(buf)
-        writer.writerow(["No", "Nama Karyawan", "Email", "Divisi", "Total Hari Kerja", "Jumlah Hadir", "Jumlah Izin", "Jumlah Alpha", "Persentase Kehadiran (%)"])
-        for r in processed_data:
-            writer.writerow([
-                r['no'],
-                r['name'],
-                r['email'],
-                r['divisi'],
-                r['total_hari_kerja'],
-                r['jumlah_hadir'],
-                r['jumlah_izin'],
-                r['jumlah_alpha'],
-                r['persentase']
-            ])
-        output_bytes = io.BytesIO(buf.getvalue().encode('utf-8-sig'))
-        output_bytes.seek(0)
-        return send_file(
-            output_bytes,
-            as_attachment=True,
-            download_name=f"{filename_base}.csv",
-            mimetype="text/csv"
         )
 
 @app.route('/logout')
