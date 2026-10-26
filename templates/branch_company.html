@@ -64,7 +64,7 @@
     <div class="sidebar">
         <div>
             <div class="text-center mb-4">
-                <a href="/"><img src="/assets/tsa_logo.png" alt="TSA Logo" style="max-width: 155px; max-height: 56px; object-fit: contain;"></a>
+                <a href="/" style="display: inline-block; text-decoration: none;"><img src="/assets/tsa_logo.png" alt="TSA Logo" style="max-width: 155px; max-height: 56px; object-fit: contain;" onerror="if(!this.dataset.fallback && '{{ tsa_logo_data_uri }}'){this.dataset.fallback='1'; this.src='{{ tsa_logo_data_uri }}';}"></a>
             </div>
             <div class="sidebar-menu">
                 <a href="/" class="side-btn">Home page</a>

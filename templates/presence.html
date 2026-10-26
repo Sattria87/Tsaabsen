@@ -393,8 +393,8 @@
         <div>
             <!-- LOGO TSA -->
             <div class="sidebar-logo-container">
-                <a href="/" title="TSA Home">
-                    <img src="/assets/tsa_logo.png" alt="TSA Logo" class="sidebar-logo">
+                <a href="/" title="TSA Home" style="display: inline-block; text-decoration: none;">
+                    <img src="/assets/tsa_logo.png" alt="TSA Logo" class="sidebar-logo" onerror="if(!this.dataset.fallback && '{{ tsa_logo_data_uri }}'){this.dataset.fallback='1'; this.src='{{ tsa_logo_data_uri }}';}">
                 </a>
             </div>
 

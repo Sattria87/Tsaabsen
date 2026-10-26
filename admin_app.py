@@ -13,7 +13,17 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, Tabl
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
 
-app = Flask(__name__)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+ASSETS_DIR = os.path.join(BASE_DIR, 'assets')
+
+# Import fallback data logo TSA jika file di disk tidak ditemukan / tertutup volume Docker
+try:
+    from logo_fallback import TSA_LOGO_BASE64, TSA_LOGO_DATA_URI
+except Exception:
+    TSA_LOGO_BASE64 = None
+    TSA_LOGO_DATA_URI = None
+
+app = Flask(__name__, static_folder=ASSETS_DIR, static_url_path='/assets')
 app.secret_key = 'projectwg_admin_secret_key_tsa_2026'
 app.permanent_session_lifetime = timedelta(days=7)
 
@@ -228,8 +238,9 @@ def inject_admin_context():
             'name': session.get('admin_name', 'Administrator TSA'),
             'role': session.get('admin_role', 'Super Admin'),
             'email': session.get('admin_email', 'admin@tsa.co.id'),
-            'avatar': 'assets/tsa_logo.png'
-        }
+            'avatar': '/assets/tsa_logo.png'
+        },
+        'tsa_logo_data_uri': TSA_LOGO_DATA_URI
     }
 
 @app.before_request
@@ -494,7 +505,42 @@ def employee_management():
 
 @app.route('/assets/<path:filename>')
 def serve_assets(filename):
-    return send_from_directory(os.path.join(app.root_path, 'assets'), filename)
+    # 1. Cek langsung di direktori ASSETS_DIR
+    file_path = os.path.join(ASSETS_DIR, filename)
+    if os.path.isfile(file_path):
+        return send_from_directory(ASSETS_DIR, filename)
+
+    # 2. Cek di app.root_path/assets jika berbeda
+    root_assets = os.path.join(app.root_path, 'assets')
+    if os.path.isfile(os.path.join(root_assets, filename)):
+        return send_from_directory(root_assets, filename)
+
+    # 3. Pencarian case-insensitive untuk kompatibilitas sistem Linux
+    base_name = os.path.basename(filename).lower()
+    sub_dir = os.path.dirname(filename)
+    for s_dir in [ASSETS_DIR, root_assets]:
+        dir_to_check = os.path.join(s_dir, sub_dir) if sub_dir else s_dir
+        if os.path.isdir(dir_to_check):
+            try:
+                for existing_file in os.listdir(dir_to_check):
+                    if existing_file.lower() == base_name:
+                        return send_from_directory(dir_to_check, existing_file)
+            except Exception:
+                pass
+
+    # 4. Fallback proteksi tinggi khusus logo TSA jika file fisik tidak ada di disk
+    if 'tsa_logo' in filename.lower() and TSA_LOGO_BASE64:
+        try:
+            logo_bytes = base64.b64decode(TSA_LOGO_BASE64)
+            return send_file(
+                io.BytesIO(logo_bytes),
+                mimetype='image/png',
+                download_name='tsa_logo.png'
+            )
+        except Exception:
+            pass
+
+    return send_from_directory(ASSETS_DIR, filename)
 
 @app.route('/add', methods=['POST'])
 def add_employee():

@@ -18,12 +18,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements_web.txt .
 RUN pip install --no-cache-dir -r requirements_web.txt
 
-# Salin script web admin dan folder templates
+# Salin script web admin, modul helper, folder templates, dan folder assets
 COPY admin_app.py .
+COPY logo_fallback.py* ./
 COPY templates/ ./templates/
+COPY assets/ ./assets/
 
-# Buat folder assets lokal sebagai fallback bila tidak di-mount
-RUN mkdir -p /app/assets/foto_karyawan
+# Buat dan pastikan folder assets lokal serta upload tersedia
+RUN mkdir -p /app/assets/foto_karyawan /app/assets/foto_izin
 
 EXPOSE 8085
 
