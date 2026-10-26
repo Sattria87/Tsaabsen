@@ -157,8 +157,6 @@ services:
       - TZ=Asia/Jakarta
       - PMA_HOST=db
       - PMA_PORT=3306
-      - PMA_USER=root
-      - PMA_PASSWORD=${DB_ROOT_PASSWORD:-${DB_PASSWORD:-wg_secure_pass_2026}}
       - UPLOAD_LIMIT=64M
     ports:
       - "${PORT_PMA:-8888}:80"
