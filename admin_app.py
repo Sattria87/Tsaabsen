@@ -489,12 +489,16 @@ def index():
 @app.route('/employee')
 @app.route('/employees')
 def employee_management():
-    search_query = request.args.get('search', '')
+    search_query = request.args.get('search', '').strip()
     conn = get_db_connection()
     cursor = conn.cursor()
     
     if search_query:
-        cursor.execute("SELECT * FROM employees WHERE name LIKE %s ORDER BY name ASC", ('%' + search_query + '%',))
+        cursor.execute("""
+            SELECT * FROM employees 
+            WHERE name LIKE %s OR employee_id LIKE %s OR username LIKE %s OR team LIKE %s OR branch LIKE %s
+            ORDER BY name ASC
+        """, (f"%{search_query}%", f"%{search_query}%", f"%{search_query}%", f"%{search_query}%", f"%{search_query}%"))
     else:
         cursor.execute("SELECT * FROM employees ORDER BY name ASC")
         
@@ -506,7 +510,10 @@ def employee_management():
         branches = ['TUNGGAL SAHABAT ABADI', 'Decoy']
     conn.close()
     
-    return render_template('admin_dashboard.html', employees=employees, search_query=search_query, branches=branches)
+    now = datetime.now()
+    current_date_formatted = f"{now.strftime('%A')} {now.strftime('%B')} {now.day}, {now.year}"
+
+    return render_template('admin_dashboard.html', employees=employees, search_query=search_query, branches=branches, current_date_formatted=current_date_formatted)
 
 @app.route('/assets/<path:filename>')
 def serve_assets(filename):
@@ -803,42 +810,11 @@ def delete_branch(id):
     return redirect(url_for('branch_company'))
 
 # ==========================================
-# RUTE LOWONGAN KERJA (VACANCY)
+# RUTE LOWONGAN KERJA (VACANCY - SUDAH DIHAPUS)
 # ==========================================
 @app.route('/vacancy')
 def vacancy():
-    now = datetime.now()
-    current_day = now.strftime('%A')
-    current_date_formatted = now.strftime('%B %d, %Y')
-    
-    vacancies = []
-    branches = []
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute("""
-            SELECT id, title, division, branch, description, requirements,
-                   DATE_FORMAT(posted_date, '%M %e, %Y') as formatted_date,
-                   posted_date, status, image
-            FROM vacancies
-            ORDER BY id DESC
-        """)
-        vacancies = cursor.fetchall()
-        
-        cursor.execute("SELECT branch_name FROM branch_companies ORDER BY branch_name ASC")
-        branches = cursor.fetchall()
-        conn.close()
-    except Exception as e:
-        flash(f'Gagal memuat lowongan kerja: {e}', 'danger')
-        print(f"[Vacancy Error] {e}")
-    
-    return render_template(
-        'vacancy.html', 
-        vacancies=vacancies, 
-        branches=branches,
-        current_day=current_day,
-        current_date_formatted=current_date_formatted
-    )
+    return redirect(url_for('index'))
 
 @app.route('/add-vacancy', methods=['POST'])
 def add_vacancy():

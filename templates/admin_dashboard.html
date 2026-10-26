@@ -126,7 +126,6 @@
                 <a href="/" class="side-btn">Home page</a>
                 <a href="/employee" class="side-btn active">Employee</a>
                 <a href="/branch-company" class="side-btn">Branch company</a>
-                <a href="/vacancy" class="side-btn">Vacancy</a>
                 <a href="/presence" class="side-btn">Presence</a>
                 <a href="/request" class="side-btn">Request</a>
                 <a href="/report" class="side-btn">Report</a>
@@ -142,7 +141,7 @@
         <!-- TOP BAR -->
         <div class="top-header">
             <span class="fs-5 fw-semibold">Employee Management</span>
-            <span>Thursday October 1, 2026</span>
+            <span>{{ current_date_formatted if current_date_formatted else 'Monday October 26, 2026' }}</span>
         </div>
 
         <!-- PESAN FLASH / ALERT -->
@@ -170,9 +169,12 @@
 
         <!-- FORM PENCARIAN -->
         <div class="mb-4">
-            <form method="GET" action="/" class="d-flex gap-2" style="max-width: 400px;">
+            <form method="GET" action="/employee" class="d-flex gap-2" style="max-width: 450px;">
                 <input type="text" name="search" class="form-control" placeholder="Cari nama karyawan..." value="{{ search_query }}">
                 <button type="submit" class="btn btn-dark">Cari</button>
+                {% if search_query %}
+                    <a href="/employee" class="btn btn-outline-secondary">Reset</a>
+                {% endif %}
             </form>
         </div>
 
