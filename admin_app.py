@@ -449,6 +449,7 @@ def index():
                        SUBSTRING_INDEX(GROUP_CONCAT(COALESCE(reason, '') ORDER BY id DESC), ',', 1) AS reason
                 FROM attendance
                 WHERE DATE(timestamp) = CURDATE()
+                  AND (type IN ('clock_in', 'hadir', 'clock_out') OR LOWER(COALESCE(status, '')) IN ('approved', 'disetujui'))
                 GROUP BY username
             ) a ON e.username = a.username
             ORDER BY (CASE WHEN a.type = 'clock_in' THEN 1 WHEN a.type IS NOT NULL THEN 2 ELSE 3 END) ASC, e.id ASC
@@ -1001,6 +1002,7 @@ def presence():
                    SUBSTRING_INDEX(GROUP_CONCAT(COALESCE(reason, '') ORDER BY id DESC), ',', 1) AS reason
             FROM attendance
             WHERE DATE(timestamp) = CURDATE()
+              AND (type IN ('clock_in', 'hadir', 'clock_out') OR LOWER(COALESCE(status, '')) IN ('approved', 'disetujui'))
             GROUP BY username
         ) a ON e.username = a.username
         {where_sql}
@@ -1272,12 +1274,25 @@ def get_rekap_report_data(start_date, end_date, branch='all'):
             e.username,
             COALESCE(e.team, 'Operasional') AS divisi,
             COALESCE(e.branch, 'TUNGGAL SAHABAT ABADI') AS branch,
-            COUNT(DISTINCT CASE WHEN a.type IN ('clock_in', 'hadir') THEN DATE(a.timestamp) END) AS jumlah_hadir,
-            COUNT(DISTINCT CASE WHEN a.type IN ('izin', 'sakit', 'cuti', 'sick_leave', 'necessity_leave') THEN DATE(a.timestamp) END) AS jumlah_izin
+            COALESCE(SUM(att.is_hadir), 0) AS jumlah_hadir,
+            COALESCE(SUM(CASE WHEN att.is_hadir = 0 AND att.is_izin_raw = 1 THEN 1 ELSE 0 END), 0) AS jumlah_izin
         FROM employees e
-        LEFT JOIN attendance a 
-            ON e.username = a.username 
-            AND a.timestamp >= %s AND a.timestamp <= %s
+        LEFT JOIN (
+            SELECT 
+                username,
+                DATE(timestamp) AS att_date,
+                MAX(CASE WHEN type IN ('clock_in', 'hadir') THEN 1 ELSE 0 END) AS is_hadir,
+                MAX(CASE 
+                    WHEN (type IN ('izin', 'sakit', 'cuti', 'sick_leave', 'necessity_leave', 'izin_sakit', 'izin_keperluan') 
+                          OR type LIKE 'izin_%%' 
+                          OR (reason IS NOT NULL AND reason != '' AND type NOT IN ('clock_in', 'clock_out', 'hadir')))
+                      AND LOWER(COALESCE(status, '')) IN ('approved', 'disetujui')
+                    THEN 1 ELSE 0 
+                END) AS is_izin_raw
+            FROM attendance
+            WHERE timestamp >= %s AND timestamp <= %s
+            GROUP BY username, DATE(timestamp)
+        ) att ON e.username = att.username
         {where_branch}
         GROUP BY e.id, e.name, e.username, e.team, e.branch
         ORDER BY e.id ASC
@@ -1296,8 +1311,10 @@ def get_rekap_report_data(start_date, end_date, branch='all'):
     tot_alpha = 0
 
     for idx, r in enumerate(rows, 1):
-        hadir = r['jumlah_hadir']
-        izin = r['jumlah_izin']
+        hadir = int(r['jumlah_hadir'] or 0)
+        izin = int(r['jumlah_izin'] or 0)
+        # Jika izin sudah disetujui (Approved) maka masuk ke jumlah_izin.
+        # Jika izin ditolak (Rejected) atau pending, maka tidak dihitung izin dan tetap dihitung sebagai alpha (tidak hadir).
         alpha = max(0, total_hari_kerja - hadir - izin)
         pct = round((hadir / total_hari_kerja) * 100) if total_hari_kerja > 0 else 0
         username = r['username'] or ''
