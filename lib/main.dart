@@ -115,8 +115,8 @@ class _SplashRouterState extends State<SplashRouter>
             children: [
               // ── LOGO / IKON ──────────────────────────────
               Container(
-                width: 100,
-                height: 100,
+                width: 110,
+                height: 110,
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(28),
@@ -132,7 +132,7 @@ class _SplashRouterState extends State<SplashRouter>
                 child: Padding(
                   padding: const EdgeInsets.all(8.0),
                   child: Image.asset(
-                    'assets/LOGO1.png',
+                    'assets/splash1.png',
                     fit: BoxFit.contain,
                     errorBuilder: (context, error, stackTrace) {
                       return const Icon(
