@@ -96,7 +96,7 @@ class _EmployeeAvatarWidgetState extends State<EmployeeAvatarWidget> {
         if (username.isNotEmpty) {
           _candidateUrls.add('$host/api/user/photo/$username');
           if (host.contains(':5000')) {
-            _candidateUrls.add(host.replaceAll(':5000', ':3000') + '/api/user/photo/$username');
+            _candidateUrls.add('${host.replaceAll(':5000', ':3000')}/api/user/photo/$username');
           }
         }
 
@@ -152,6 +152,32 @@ class _EmployeeAvatarWidgetState extends State<EmployeeAvatarWidget> {
     );
   }
 
+  Widget _buildNetworkOrFallback() {
+    if (_currentUrlIndex < _candidateUrls.length) {
+      final url = _candidateUrls[_currentUrlIndex];
+      return Image.network(
+        url,
+        key: ValueKey('avatar_${url}_$_currentUrlIndex'),
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted && _currentUrlIndex < _candidateUrls.length) {
+              setState(() {
+                _currentUrlIndex++;
+              });
+            }
+          });
+          return _buildFallbackAvatar();
+        },
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return _buildFallbackAvatar();
+        },
+      );
+    }
+    return _buildFallbackAvatar();
+  }
+
   Widget _buildImageContent() {
     // A. Render Base64 Memory Image
     if (_isBase64 && _base64Bytes != null) {
@@ -162,37 +188,7 @@ class _EmployeeAvatarWidgetState extends State<EmployeeAvatarWidget> {
       );
     }
 
-    // B. Coba URL Network secara berurutan
-    if (_currentUrlIndex < _candidateUrls.length) {
-      final url = _candidateUrls[_currentUrlIndex];
-      return Image.network(
-        url,
-        key: ValueKey('avatar_${url}_$_currentUrlIndex'),
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) {
-          // Gagal memuat URL ini, coba kandidat URL berikutnya secara asinkron
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted && _currentUrlIndex < _candidateUrls.length) {
-              setState(() {
-                _currentUrlIndex++;
-              });
-            }
-          });
-          return Container(
-            color: const Color(0xFFF1F5F9),
-            child: const Center(
-              child: SizedBox(
-                width: 14,
-                height: 14,
-                child: CircularProgressIndicator(strokeWidth: 1.5),
-              ),
-            ),
-          );
-        },
-      );
-    }
-
-    // C. Coba Local Asset Bundle (jika ada file di dalam APK)
+    // B. Prioritas Utama: Coba Local Asset Bundle (Instan 0ms jika file ada di dalam aplikasi)
     if (_tryAsset && _facePath != null && _facePath!.isNotEmpty && !_facePath!.startsWith('http')) {
       final clean = _facePath!.startsWith('/') ? _facePath!.substring(1) : _facePath!;
       return Image.asset(
@@ -206,13 +202,13 @@ class _EmployeeAvatarWidgetState extends State<EmployeeAvatarWidget> {
               });
             }
           });
-          return _buildFallbackAvatar();
+          return _buildNetworkOrFallback();
         },
       );
     }
 
-    // D. Fallback default avatar
-    return _buildFallbackAvatar();
+    // C. Prioritas Kedua: Coba URL Network secara berurutan
+    return _buildNetworkOrFallback();
   }
 
   @override
