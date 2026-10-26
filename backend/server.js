@@ -44,8 +44,30 @@ app.use((req, res, next) => {
   next();
 });
 
+// ============================================================
+// RESOLVE DIREKTORI ASSETS (DOCKER / LOCAL)
+// ============================================================
+function resolveAssetsDir() {
+  const possiblePaths = [
+    process.env.ASSETS_DIR,
+    path.join(__dirname, 'assets'),            // Di dalam container: /app/assets
+    path.join('/app/assets'),                  // Path absolut default container
+    path.join(__dirname, '..', 'assets'),      // Local development: ProjectWG/assets
+  ].filter(Boolean);
+
+  for (const p of possiblePaths) {
+    if (fs.existsSync(p)) {
+      return p;
+    }
+  }
+  return path.join(__dirname, '..', 'assets');
+}
+
+const assetsDir = resolveAssetsDir();
+console.log(`[ASSETS] Direktori aset aktif: ${assetsDir}`);
+
 // Sajikan folder assets (foto karyawan dsb) secara statis
-app.use('/assets', express.static(path.join(__dirname, '..', 'assets')));
+app.use('/assets', express.static(assetsDir));
 
 // ============================================================
 // UTILITY: Siklus absensi harian (reset setiap pukul 23:55)
@@ -192,6 +214,57 @@ app.get('/api/user/face/:username', async (req, res) => {
 });
 
 // ============================================================
+// USER: Ambil stream file foto karyawan acuan
+// GET /api/user/photo/:username
+// ============================================================
+app.get('/api/user/photo/:username', async (req, res) => {
+  const { username } = req.params;
+  try {
+    const [rows] = await pool.execute(
+      'SELECT face_image FROM users WHERE username = ?',
+      [username]
+    );
+    if (rows.length === 0 || !rows[0].face_image) {
+      return res.status(404).send('Foto tidak ditemukan');
+    }
+
+    const faceImage = rows[0].face_image.trim();
+
+    // 1. Jika tersimpan sebagai Base64
+    if (faceImage.startsWith('data:image') || (!faceImage.startsWith('http') && !faceImage.includes('/') && !faceImage.includes('\\') && faceImage.length > 150)) {
+      let raw = faceImage;
+      if (raw.includes(',')) raw = raw.split(',')[1];
+      const imgBuf = Buffer.from(raw, 'base64');
+      res.setHeader('Content-Type', 'image/jpeg');
+      return res.send(imgBuf);
+    }
+
+    // 2. Jika path file
+    let cleanPath = faceImage.replace(/\\/g, '/');
+    if (cleanPath.startsWith('/')) cleanPath = cleanPath.substring(1);
+    if (cleanPath.startsWith('assets/')) cleanPath = cleanPath.substring(7);
+
+    const candidates = [
+      path.join(assetsDir, cleanPath),
+      path.join(assetsDir, 'foto_karyawan', path.basename(cleanPath)),
+      path.join(__dirname, '..', 'assets', cleanPath),
+      path.join('/app/assets', cleanPath),
+    ];
+
+    for (const c of candidates) {
+      if (fs.existsSync(c) && fs.statSync(c).isFile()) {
+        return res.sendFile(path.resolve(c));
+      }
+    }
+
+    return res.status(404).send('File foto fisik tidak ditemukan: ' + cleanPath);
+  } catch (err) {
+    console.error('[User Photo Error]', err.message);
+    return res.status(500).send(err.message);
+  }
+});
+
+// ============================================================
 // AI: Verifikasi Wajah AI (Forward ke Python AI Service)
 // POST /api/verify
 // Body: { username, image }
@@ -265,7 +338,7 @@ app.post('/api/attendance', async (req, res) => {
   let savedImagePath = null;
   if (image && typeof image === 'string' && image.trim().length > 0) {
     try {
-      const uploadDir = path.join(__dirname, '..', 'assets', 'foto_izin');
+      const uploadDir = path.join(assetsDir, 'foto_izin');
       if (!fs.existsSync(uploadDir)) {
         fs.mkdirSync(uploadDir, { recursive: true });
       }

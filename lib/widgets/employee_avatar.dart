@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
+import '../utils/auth_service.dart';
 import '../utils/mysql_helper.dart';
 
 /// Widget foto profil karyawan yang tangguh (robust).
@@ -47,6 +48,9 @@ class _EmployeeAvatarWidgetState extends State<EmployeeAvatarWidget> {
 
   void _initImageSources() {
     _facePath = widget.userData['face_image']?.toString().trim();
+    if (_facePath != null) {
+      _facePath = _facePath!.replaceAll('\\', '/');
+    }
     _currentUrlIndex = 0;
     _tryAsset = true;
     _isBase64 = false;
@@ -54,6 +58,15 @@ class _EmployeeAvatarWidgetState extends State<EmployeeAvatarWidget> {
     _candidateUrls = [];
 
     final username = widget.userData['username']?.toString().trim() ?? '';
+
+    // Ambil host dari MySQLHelper.baseUrl
+    String host = MySQLHelper.baseUrl.trim();
+    if (host.endsWith('/api')) {
+      host = host.substring(0, host.length - 4);
+    }
+    final uri = Uri.tryParse(host);
+    final baseHost = uri?.host ?? '208.76.40.204';
+    final scheme = uri?.scheme ?? 'http';
 
     // 1. Cek apakah format Base64 langsung
     if (_facePath != null && _facePath!.isNotEmpty) {
@@ -79,33 +92,36 @@ class _EmployeeAvatarWidgetState extends State<EmployeeAvatarWidget> {
         // Path relatif, contoh: "assets/foto_karyawan/110_196_18_rfky.jpg"
         final clean = _facePath!.startsWith('/') ? _facePath!.substring(1) : _facePath!;
 
-        // Ambil host dari MySQLHelper.baseUrl
-        String host = MySQLHelper.baseUrl.trim();
-        if (host.endsWith('/api')) {
-          host = host.substring(0, host.length - 4);
-        }
-
-        // Kandidat 1: Host aktif saat ini (misal port 5000 / 3000)
-        _candidateUrls.add('$host/$clean');
-
-        // Kandidat 2: Port 8085 (Web Admin TSA tempat foto fisik disimpan langsung)
-        final uri = Uri.tryParse(host);
-        if (uri != null) {
-          final adminUrl = '${uri.scheme}://${uri.host}:8085/$clean';
-          if (!_candidateUrls.contains(adminUrl)) {
-            _candidateUrls.add(adminUrl);
-          }
-        } else {
-          _candidateUrls.add('http://208.76.40.204:8085/$clean');
-        }
-
-        // Kandidat 3: Endpoint foto API backend jika tersedia
+        // Kandidat A: Endpoint stream backend khusus user (Paling aman & akurat)
         if (username.isNotEmpty) {
           _candidateUrls.add('$host/api/user/photo/$username');
+          if (host.contains(':5000')) {
+            _candidateUrls.add(host.replaceAll(':5000', ':3000') + '/api/user/photo/$username');
+          }
+        }
+
+        // Kandidat B: Path statis di host aktif (port 5000/3000)
+        _candidateUrls.add('$host/$clean');
+        if (!clean.startsWith('assets/')) {
+          _candidateUrls.add('$host/assets/$clean');
+        }
+
+        // Kandidat C: Web Admin TSA (port 8085 tempat foto fisik tersimpan)
+        _candidateUrls.add('$scheme://$baseHost:8085/$clean');
+        if (!clean.startsWith('assets/')) {
+          _candidateUrls.add('$scheme://$baseHost:8085/assets/$clean');
+        }
+
+        // Kandidat D: Fallback IP VPS langsung
+        if (baseHost != '208.76.40.204') {
+          _candidateUrls.add('http://208.76.40.204:5000/api/user/photo/$username');
+          _candidateUrls.add('http://208.76.40.204:8085/$clean');
         }
       }
     } else if (username.isNotEmpty) {
-      // Jika face_image belum ada di session lokal, ambil via API secara dinamis
+      // Jika face_image belum ada di session lokal, prioritaskan endpoint foto dan fetch referensi
+      _candidateUrls.add('$host/api/user/photo/$username');
+      _candidateUrls.add('$scheme://$baseHost:8085/assets/foto_karyawan/$username.jpg');
       _fetchFaceReference(username);
     }
   }
@@ -118,6 +134,8 @@ class _EmployeeAvatarWidgetState extends State<EmployeeAvatarWidget> {
           widget.userData['face_image'] = ref;
           _initImageSources();
         });
+        // Perbarui sesi tersimpan di storage lokal agar persist saat app dibuka lagi
+        AuthService.saveSession(widget.userData);
       }
     } catch (_) {}
   }
@@ -149,6 +167,7 @@ class _EmployeeAvatarWidgetState extends State<EmployeeAvatarWidget> {
       final url = _candidateUrls[_currentUrlIndex];
       return Image.network(
         url,
+        key: ValueKey('avatar_${url}_$_currentUrlIndex'),
         fit: BoxFit.cover,
         errorBuilder: (context, error, stackTrace) {
           // Gagal memuat URL ini, coba kandidat URL berikutnya secara asinkron
