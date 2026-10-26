@@ -554,10 +554,8 @@
                                 {{ emp.team }}
                                 {% if emp.today_type == 'clock_in' %}
                                     <span class="badge bg-success-subtle text-success border border-success-subtle ms-1" style="font-size: 11px;">Hadir {{ emp.today_clock_in }}</span>
-                                {% elif emp.today_type == 'izin' %}
-                                    <span class="badge bg-warning-subtle text-warning border border-warning-subtle ms-1" style="font-size: 11px;">Izin {{ emp.today_clock_in }}</span>
-                                {% elif emp.today_type == 'sakit' %}
-                                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle ms-1" style="font-size: 11px;">Sakit</span>
+                                {% elif emp.today_type in ['izin', 'izin_sakit', 'izin_keperluan', 'cuti', 'sakit'] or (emp.today_type and emp.today_type.startswith('izin')) %}
+                                    <span class="badge bg-warning-subtle text-warning border border-warning-subtle ms-1" style="font-size: 11px;">Izin</span>
                                 {% else %}
                                     <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle ms-1" style="font-size: 11px;">Belum Presensi</span>
                                 {% endif %}

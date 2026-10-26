@@ -455,6 +455,10 @@ def index():
             ORDER BY (CASE WHEN a.type = 'clock_in' THEN 1 WHEN a.type IS NOT NULL THEN 2 ELSE 3 END) ASC, e.id ASC
         """)
         attendance_employees = cursor.fetchall()
+        for emp in attendance_employees:
+            raw_type = (emp.get('today_type') or '').lower()
+            if raw_type in ('izin', 'izin_sakit', 'izin_keperluan', 'cuti', 'sakit') or raw_type.startswith('izin'):
+                emp['today_type'] = 'izin'
         conn.close()
 
         top_attendees = attendance_employees[:3]
@@ -972,9 +976,9 @@ def presence():
         elif selected_status == 'pulang':
             where_conditions.append("a.type = 'clock_out'")
         elif selected_status == 'izin':
-            where_conditions.append("a.type = 'izin'")
+            where_conditions.append("(a.type IN ('izin', 'izin_sakit', 'izin_keperluan', 'cuti', 'sakit') OR a.type LIKE 'izin%%')")
         elif selected_status == 'sakit':
-            where_conditions.append("a.type = 'sakit'")
+            where_conditions.append("(a.type IN ('sakit', 'izin_sakit') OR a.type LIKE '%%sakit%%')")
         elif selected_status == 'belum_hadir':
             where_conditions.append("(a.type IS NULL OR a.type = '')")
             
@@ -1021,6 +1025,11 @@ def presence():
     # - 08:50 s/d 09:00 (530 - 540 menit): Baik
     # - diatas 09:00 (> 540 menit): Kurang Baik
     for emp in presence_list:
+        # Jika hari ini memiliki permohonan izin/sakit yang approved, tampilkan sebagai 'izin'
+        raw_type = (emp.get('today_type') or '').lower()
+        if raw_type in ('izin', 'izin_sakit', 'izin_keperluan', 'cuti', 'sakit') or raw_type.startswith('izin'):
+            emp['today_type'] = 'izin'
+
         clock_in = emp.get('today_clock_in')
         if clock_in and clock_in != '--:--':
             try:

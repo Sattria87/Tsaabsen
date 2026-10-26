@@ -670,13 +670,9 @@
                                                 </span>
                                             {% endif %}
                                         </div>
-                                    {% elif emp.today_type == 'izin' %}
+                                    {% elif emp.today_type in ['izin', 'izin_sakit', 'izin_keperluan', 'cuti', 'sakit'] or (emp.today_type and emp.today_type.startswith('izin')) %}
                                         <span class="badge bg-warning-subtle text-warning border border-warning-subtle px-2 py-1">
                                             <i class="bi bi-clock-history me-1"></i> Izin
-                                        </span>
-                                    {% elif emp.today_type == 'sakit' %}
-                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1">
-                                            <i class="bi bi-heart-pulse me-1"></i> Sakit
                                         </span>
                                     {% else %}
                                         <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-2 py-1">
