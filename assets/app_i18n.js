@@ -674,37 +674,47 @@
         if (logoutConfirm) logoutConfirm.textContent = t.logout_confirm;
 
         // 10. Terjemahkan Chart Legends (Homepage jika ada)
-        if (window.monthlyChart && window.monthlyChart.data && window.monthlyChart.data.datasets.length >= 3) {
-            window.monthlyChart.data.datasets[0].label = t.chart_lbl_emp;
-            window.monthlyChart.data.datasets[1].label = t.chart_lbl_pres;
-            window.monthlyChart.data.datasets[2].label = t.chart_lbl_abs;
-            window.monthlyChart.update();
+        try {
+            if (window.monthlyChart && window.monthlyChart.data && window.monthlyChart.data.datasets && window.monthlyChart.data.datasets.length >= 3) {
+                window.monthlyChart.data.datasets[0].label = t.chart_lbl_emp;
+                window.monthlyChart.data.datasets[1].label = t.chart_lbl_pres;
+                window.monthlyChart.data.datasets[2].label = t.chart_lbl_abs;
+                window.monthlyChart.update();
+            }
+        } catch(chartErr) {
+            console.warn("monthlyChart update skipped:", chartErr);
         }
 
         // 11. Terjemahkan Dynamic Badges (Status Pills)
-        document.querySelectorAll('.tag-pill-approved, .badge-approved').forEach(el => {
-            el.innerHTML = `<i class="bi bi-check-circle-fill" style="font-size: 11px;"></i> ${t.status_approved}`;
-        });
-        document.querySelectorAll('.tag-pill-rejected, .badge-rejected').forEach(el => {
-            el.innerHTML = `<i class="bi bi-x-circle-fill" style="font-size: 11px;"></i> ${t.status_rejected}`;
-        });
-        document.querySelectorAll('.tag-pill-pending, .badge-pending').forEach(el => {
-            el.innerHTML = `<i class="bi bi-hourglass-split" style="font-size: 11px;"></i> ${t.status_pending}`;
-        });
+        try {
+            document.querySelectorAll('.tag-pill-approved, .badge-approved').forEach(el => {
+                el.innerHTML = `<i class="bi bi-check-circle-fill" style="font-size: 11px;"></i> ${t.status_approved}`;
+            });
+            document.querySelectorAll('.tag-pill-rejected, .badge-rejected').forEach(el => {
+                el.innerHTML = `<i class="bi bi-x-circle-fill" style="font-size: 11px;"></i> ${t.status_rejected}`;
+            });
+            document.querySelectorAll('.tag-pill-pending, .badge-pending').forEach(el => {
+                el.innerHTML = `<i class="bi bi-hourglass-split" style="font-size: 11px;"></i> ${t.status_pending}`;
+            });
 
-        // Dynamic Status Badges di Presence / Employee
-        document.querySelectorAll('.badge-status-item').forEach(el => {
-            const rawStatus = (el.getAttribute('data-status-type') || '').toLowerCase();
-            if (rawStatus === 'hadir' || rawStatus === 'present') el.textContent = t.status_present;
-            else if (rawStatus === 'izin' || rawStatus === 'leave') el.textContent = t.status_leave;
-            else if (rawStatus === 'sakit' || rawStatus === 'sick') el.textContent = t.status_sick;
-            else if (rawStatus === 'belum' || rawStatus === 'absent') el.textContent = t.status_absent;
-            else if (rawStatus === 'active' || rawStatus === 'aktif') el.textContent = t.status_active;
-            else if (rawStatus === 'inactive' || rawStatus === 'nonaktif') el.textContent = t.status_inactive;
-        });
+            // Dynamic Status Badges di Presence / Employee
+            document.querySelectorAll('.badge-status-item').forEach(el => {
+                const rawStatus = (el.getAttribute('data-status-type') || '').toLowerCase();
+                if (rawStatus === 'hadir' || rawStatus === 'present') el.textContent = t.status_present;
+                else if (rawStatus === 'izin' || rawStatus === 'leave') el.textContent = t.status_leave;
+                else if (rawStatus === 'sakit' || rawStatus === 'sick') el.textContent = t.status_sick;
+                else if (rawStatus === 'belum' || rawStatus === 'absent') el.textContent = t.status_absent;
+                else if (rawStatus === 'active' || rawStatus === 'aktif') el.textContent = t.status_active;
+                else if (rawStatus === 'inactive' || rawStatus === 'nonaktif') el.textContent = t.status_inactive;
+            });
+        } catch(badgeErr) {
+            console.warn("Badge status update skipped:", badgeErr);
+        }
 
         // Trigger custom event untuk perbaikan spesifik per-halaman jika dibutuhkan
-        window.dispatchEvent(new CustomEvent('appLanguageChanged', { detail: { lang, t } }));
+        try {
+            window.dispatchEvent(new CustomEvent('appLanguageChanged', { detail: { lang, t } }));
+        } catch(e) {}
     }
 
     // Ekspor API Global
@@ -721,6 +731,18 @@
 
     // Buat alias global changeLanguage untuk backward compatibility dengan onclick="changeLanguage('...')"
     window.changeLanguage = changeLanguage;
+
+    // Event listener delegasi global: pastikan klik pada tombol bahasa (.lang-btn) selalu berjalan
+    document.addEventListener('click', function(e) {
+        const btn = e.target && e.target.closest && e.target.closest('.lang-btn');
+        if (btn) {
+            e.preventDefault();
+            const lang = btn.getAttribute('data-lang');
+            if (lang) {
+                changeLanguage(lang);
+            }
+        }
+    }, true);
 
     // Inisialisasi otomatis saat DOM siap
     if (document.readyState === 'loading') {
