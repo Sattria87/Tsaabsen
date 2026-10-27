@@ -495,11 +495,11 @@
                                 </select>
                             </div>
 
-                            <!-- Filter Tim / Divisi -->
+                            <!-- Filter Divisi -->
                             <div class="mb-3">
-                                <label class="form-label small fw-bold text-muted text-uppercase mb-1" style="font-size: 11px;">Tim / Divisi</label>
+                                <label class="form-label small fw-bold text-muted text-uppercase mb-1" style="font-size: 11px;">Divisi</label>
                                 <select name="team" class="form-select form-select-sm rounded-3">
-                                    <option value="">Semua Tim</option>
+                                    <option value="">Semua Divisi</option>
                                     {% for t in teams %}
                                         <option value="{{ t }}" {% if selected_team == t %}selected{% endif %}>{{ t }}</option>
                                     {% endfor %}
@@ -595,10 +595,10 @@
                             <tr>
                                 <th style="width: 170px;">Foto</th>
                                 <th style="width: 170px;">Nama</th>
-                                <th style="width: 120px;">Tim</th>
+                                <th style="width: 120px;">Divisi</th>
                                 <th style="width: 160px;">Kantor Cabang</th>
                                 <th style="width: 150px;">Status</th>
-                                <th>Aksi</th>
+                                <th></th>
                             </tr>
                         </thead>
                         <tbody>
