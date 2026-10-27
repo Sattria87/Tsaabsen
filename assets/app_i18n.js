@@ -800,10 +800,21 @@
             const s = String(now.getSeconds()).padStart(2, '0');
             const timeStr = `${h}:${m}:${s}`;
             
+            // 1. Update elemen jam mandiri (#clock-time di Homepage)
             const clockEl = document.getElementById('clock-time');
             if (clockEl) {
                 clockEl.textContent = timeStr;
             }
+
+            // 2. Update navbar-date-section di Presence, Request, Report, dll
+            try {
+                const lang = getCurrentLanguage();
+                const dateObj = getFormattedDate(lang);
+                const tz = lang === 'id' ? 'WIB' : 'UTC+7';
+                document.querySelectorAll('.realtime-clock, #realtime-clock, .navbar-date-section').forEach(el => {
+                    el.textContent = `${dateObj.display} • ${timeStr} ${tz}`;
+                });
+            } catch(e) {}
 
             // Jika pergantian tengah malam (00:00:01), perbarui status kalender
             if (h === '00' && m === '00' && s === '01') {

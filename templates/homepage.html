@@ -588,6 +588,24 @@
                     <i class="bi bi-info-circle-fill"></i>
                     <span id="holiday-event-desc">{{ workday_info.event_name_id }}</span>
                 </div>
+
+                <!-- Live ticking clock inline script (instant, zero delay, immune to cache) -->
+                <script>
+                    (function() {
+                        function updateHomeClock() {
+                            const el = document.getElementById('clock-time');
+                            if (el) {
+                                const now = new Date();
+                                const h = String(now.getHours()).padStart(2, '0');
+                                const m = String(now.getMinutes()).padStart(2, '0');
+                                const s = String(now.getSeconds()).padStart(2, '0');
+                                el.textContent = h + ':' + m + ':' + s;
+                            }
+                        }
+                        setInterval(updateHomeClock, 1000);
+                        updateHomeClock();
+                    })();
+                </script>
             </div>
         </header>
 
@@ -941,6 +959,6 @@
     </div>
 
     <!-- Master Centralized i18n Engine -->
-    <script src="/assets/app_i18n.js?v=20261027"></script>
+    <script src="/assets/app_i18n.js?v=20261027_liveclock"></script>
 </body>
 </html>
