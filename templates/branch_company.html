@@ -26,6 +26,37 @@
         .side-btn.active { background-color: #000; color: #fff; }
 
         .logout-btn { background: #f87171; color: #fff; border: none; border-radius: 12px; padding: 12px; width: 100%; font-weight: bold; }
+        .lang-switch-container {
+            display: flex;
+            background: #eef2f7;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 3px;
+            gap: 3px;
+            margin-bottom: 10px;
+        }
+        .lang-btn {
+            flex: 1;
+            border: none;
+            background: transparent;
+            padding: 6px 8px;
+            border-radius: 9px;
+            font-size: 12px;
+            font-weight: 700;
+            color: #64748b;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .lang-btn:hover { color: #0f172a; }
+        .lang-btn.active {
+            background: #ffffff;
+            color: #0066ff;
+            box-shadow: 0 2px 6px rgba(0, 102, 255, 0.15);
+        }
         .top-header { background: #000; color: #fff; padding: 15px 30px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
         .table-card { background: #fff; border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.02); }
 
@@ -75,7 +106,22 @@
                 <a href="/report" class="side-btn">Report</a>
             </div>
         </div>
-        <a href="/logout" class="logout-btn d-block text-center text-decoration-none" style="background: #0066ff; box-shadow: 0 4px 14px rgba(0, 102, 255, 0.3);">Logout</a>
+
+        <!-- PILIHAN BAHASA & LOGOUT -->
+        <div class="w-100">
+            <!-- LANGUAGE SWITCHER (ID / EN) -->
+            <div class="lang-switch-container">
+                <button type="button" class="lang-btn" data-lang="id" onclick="changeLanguage('id')">
+                    <span>🇮🇩</span> Indonesia
+                </button>
+                <button type="button" class="lang-btn" data-lang="en" onclick="changeLanguage('en')">
+                    <span>🇬🇧</span> English
+                </button>
+            </div>
+            
+            <!-- LOGOUT -->
+            <a href="/logout" class="logout-btn d-block text-center text-decoration-none" style="background: #0066ff; box-shadow: 0 4px 14px rgba(0, 102, 255, 0.3);">Logout</a>
+        </div>
     </div>
 
     <!-- MAIN CONTENT -->
@@ -363,6 +409,67 @@
             }
         }
         document.addEventListener('DOMContentLoaded', updateRealtimeDate);
+
+        // Language Switcher Functionality
+        function changeLanguage(lang) {
+            localStorage.setItem('admin_lang', lang);
+            applyLanguage(lang);
+        }
+
+        function applyLanguage(lang) {
+            document.querySelectorAll('.lang-btn').forEach(btn => {
+                if (btn.getAttribute('data-lang') === lang) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+
+            const dict = {
+                'id': {
+                    'menu_home': 'Beranda',
+                    'menu_employee': 'Karyawan',
+                    'menu_branch': 'Kantor Cabang',
+                    'menu_presence': 'Kehadiran',
+                    'menu_request': 'Pengajuan Izin',
+                    'menu_report': 'Laporan',
+                    'logout': 'Keluar'
+                },
+                'en': {
+                    'menu_home': 'Home page',
+                    'menu_employee': 'Employee',
+                    'menu_branch': 'Branch company',
+                    'menu_presence': 'Presence',
+                    'menu_request': 'Request',
+                    'menu_report': 'Report',
+                    'logout': 'Logout'
+                }
+            };
+
+            const t = dict[lang] || dict['en'];
+            const homeLink = document.querySelector('a[href="/"].side-btn, #menu-home');
+            const empLink = document.querySelector('a[href="/employee"].side-btn, #menu-employee');
+            const branchLink = document.querySelector('a[href="/branch-company"].side-btn, #menu-branch');
+            const presenceLink = document.querySelector('a[href="/presence"].side-btn, #menu-presence');
+            const reqLink = document.querySelector('a[href="/request"].side-btn, #menu-request');
+            const repLink = document.querySelector('a[href="/report"].side-btn, #menu-report');
+
+            if (homeLink) homeLink.textContent = t.menu_home;
+            if (empLink) empLink.textContent = t.menu_employee;
+            if (branchLink) branchLink.textContent = t.menu_branch;
+            if (presenceLink) presenceLink.textContent = t.menu_presence;
+            if (reqLink) reqLink.textContent = t.menu_request;
+            if (repLink) repLink.textContent = t.menu_report;
+
+            document.querySelectorAll('.logout-btn, #btn-logout').forEach(el => {
+                el.textContent = t.logout;
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const savedLang = localStorage.getItem('admin_lang') || 'en';
+            applyLanguage(savedLang);
+        });
     </script>
 </body>
 </html>
