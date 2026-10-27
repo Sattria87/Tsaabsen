@@ -20,7 +20,7 @@ RUN pip install --no-cache-dir -r requirements_web.txt
 
 # Salin script web admin, modul helper, folder templates, dan folder assets
 COPY admin_app.py .
-COPY logo_fallback.py* ./
+COPY logo_fallback.py* i18n_fallback.py* ./
 COPY templates/ ./templates/
 COPY assets/ ./assets/
 

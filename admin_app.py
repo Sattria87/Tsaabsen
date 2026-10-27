@@ -16,12 +16,28 @@ from reportlab.lib import colors
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ASSETS_DIR = os.path.join(BASE_DIR, 'assets')
 
-# Import fallback data logo TSA jika file di disk tidak ditemukan / tertutup volume Docker
+# Import fallback data logo TSA & script i18n jika file di disk tidak ditemukan / tertutup volume Docker
 try:
     from logo_fallback import TSA_LOGO_BASE64, TSA_LOGO_DATA_URI
 except Exception:
     TSA_LOGO_BASE64 = None
     TSA_LOGO_DATA_URI = None
+
+try:
+    from i18n_fallback import APP_I18N_JS
+except Exception:
+    APP_I18N_JS = None
+
+# Sinkronisasi otomatis app_i18n.js ke folder assets lokal / volume host VPS
+try:
+    if not os.path.exists(ASSETS_DIR):
+        os.makedirs(ASSETS_DIR, exist_ok=True)
+    target_i18n_file = os.path.join(ASSETS_DIR, 'app_i18n.js')
+    if APP_I18N_JS and (not os.path.exists(target_i18n_file) or os.path.getsize(target_i18n_file) < 1000):
+        with open(target_i18n_file, 'w', encoding='utf-8') as f:
+            f.write(APP_I18N_JS)
+except Exception:
+    pass
 
 app = Flask(__name__, static_folder=ASSETS_DIR, static_url_path='/assets')
 app.secret_key = 'projectwg_admin_secret_key_tsa_2026'
@@ -537,17 +553,33 @@ def employee_management():
 
 @app.route('/assets/<path:filename>')
 def serve_assets(filename):
-    # 1. Cek langsung di direktori ASSETS_DIR
+    # 1. Penanganan khusus & aman untuk app_i18n.js (Internationalization)
+    if 'app_i18n' in filename.lower():
+        resp = None
+        for test_dir in [ASSETS_DIR, os.path.join(app.root_path, 'assets')]:
+            test_path = os.path.join(test_dir, 'app_i18n.js')
+            if os.path.isfile(test_path):
+                resp = send_file(test_path, mimetype='application/javascript')
+                break
+        if not resp and APP_I18N_JS:
+            resp = app.response_class(APP_I18N_JS, mimetype='application/javascript')
+        if resp:
+            resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+            resp.headers['Pragma'] = 'no-cache'
+            resp.headers['Expires'] = '0'
+            return resp
+
+    # 2. Cek langsung di direktori ASSETS_DIR
     file_path = os.path.join(ASSETS_DIR, filename)
     if os.path.isfile(file_path):
         return send_from_directory(ASSETS_DIR, filename)
 
-    # 2. Cek di app.root_path/assets jika berbeda
+    # 3. Cek di app.root_path/assets jika berbeda
     root_assets = os.path.join(app.root_path, 'assets')
     if os.path.isfile(os.path.join(root_assets, filename)):
         return send_from_directory(root_assets, filename)
 
-    # 3. Pencarian case-insensitive untuk kompatibilitas sistem Linux
+    # 4. Pencarian case-insensitive untuk kompatibilitas sistem Linux
     base_name = os.path.basename(filename).lower()
     sub_dir = os.path.dirname(filename)
     for s_dir in [ASSETS_DIR, root_assets]:
@@ -560,7 +592,7 @@ def serve_assets(filename):
             except Exception:
                 pass
 
-    # 4. Fallback proteksi tinggi khusus logo TSA jika file fisik tidak ada di disk
+    # 5. Fallback proteksi tinggi khusus logo TSA jika file fisik tidak ada di disk
     if 'tsa_logo' in filename.lower() and TSA_LOGO_BASE64:
         try:
             logo_bytes = base64.b64decode(TSA_LOGO_BASE64)
