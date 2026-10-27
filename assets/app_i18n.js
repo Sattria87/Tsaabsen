@@ -30,6 +30,18 @@
             days: ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"],
             months: ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"],
 
+            // ================= REALTIME WORKDAY & LIBUR NASIONAL =================
+            status_workday: "Hari Kerja",
+            status_holiday: "Libur Nasional (Tanggal Merah)",
+            status_cuti: "Cuti Bersama",
+            status_weekend: "Akhir Pekan",
+            holiday_modal_title: "Kalender Libur Nasional & Cuti Bersama",
+            holiday_modal_subtitle: "Acuan Resmi SKB 3 Menteri Republik Indonesia (Auto-Update)",
+            lbl_status_today: "Status Hari Ini",
+            upcoming_holidays_title: "Hari Libur & Cuti Bersama Terdekat",
+            no_holidays_soon: "Tidak ada hari libur nasional dalam 30 hari ke depan.",
+            close_btn: "Tutup",
+
             // ================= HOMEPAGE =================
             home_metric_emp: "Karyawan",
             home_metric_pres: "Hadir Hari Ini",
@@ -288,6 +300,18 @@
             greet_night: "Good Evening,",
             days: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
             months: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
+
+            // ================= REALTIME WORKDAY & LIBUR NASIONAL =================
+            status_workday: "Working Day",
+            status_holiday: "Public Holiday",
+            status_cuti: "Collective Leave",
+            status_weekend: "Weekend",
+            holiday_modal_title: "National Holiday & Collective Leave Calendar",
+            holiday_modal_subtitle: "Official SKB 3 Ministers of Indonesia (Auto-Update)",
+            lbl_status_today: "Today's Status",
+            upcoming_holidays_title: "Upcoming Holidays & Collective Leaves",
+            no_holidays_soon: "No national holidays in the next 30 days.",
+            close_btn: "Close",
 
             // ================= HOMEPAGE =================
             home_metric_emp: "Employees",
@@ -642,7 +666,30 @@
         const dayBadge = document.getElementById('current-day-label');
         if (dayBadge) dayBadge.textContent = dateObj.dayName;
         const dateBadge = document.getElementById('current-date-badge');
-        if (dateBadge) dateBadge.textContent = dateObj.fullDate;
+        if (dateBadge) {
+            const dateTextEl = document.getElementById('current-date-text');
+            if (dateTextEl) dateTextEl.textContent = dateObj.fullDate;
+            else dateBadge.textContent = dateObj.fullDate;
+        }
+
+        // 7b. Terjemahkan Workday / Tanggal Merah Pill Badge
+        const statusBadge = document.getElementById('workday-status-badge');
+        const statusText = document.getElementById('workday-status-text');
+        if (statusBadge && statusText) {
+            const stType = statusBadge.getAttribute('data-status');
+            if (stType === 'workday') statusText.textContent = t.status_workday;
+            else if (stType === 'national_holiday') statusText.textContent = t.status_holiday;
+            else if (stType === 'cuti_bersama') statusText.textContent = t.status_cuti;
+            else if (stType === 'weekend') statusText.textContent = t.status_weekend;
+        }
+        const modalPillText = document.getElementById('modal-today-pill-text');
+        if (modalPillText && statusBadge) {
+            const stType = statusBadge.getAttribute('data-status');
+            if (stType === 'workday') modalPillText.textContent = t.status_workday;
+            else if (stType === 'national_holiday') modalPillText.textContent = t.status_holiday;
+            else if (stType === 'cuti_bersama') modalPillText.textContent = t.status_cuti;
+            else if (stType === 'weekend') modalPillText.textContent = t.status_weekend;
+        }
 
         // 8. Terjemahkan Greeting Header (Homepage)
         const greetTitle = document.getElementById('greeting-title');
@@ -744,10 +791,74 @@
         }
     }, true);
 
+    // Realtime digital clock ticker (berjalan setiap 1 detik)
+    function startRealtimeClock() {
+        function tick() {
+            const now = new Date();
+            const h = String(now.getHours()).padStart(2, '0');
+            const m = String(now.getMinutes()).padStart(2, '0');
+            const s = String(now.getSeconds()).padStart(2, '0');
+            const timeStr = `${h}:${m}:${s}`;
+            
+            const clockEl = document.getElementById('clock-time');
+            if (clockEl) {
+                clockEl.textContent = timeStr;
+            }
+
+            // Jika pergantian tengah malam (00:00:01), perbarui status kalender
+            if (h === '00' && m === '00' && s === '01') {
+                applyLanguage(getCurrentLanguage());
+                fetchWorkdayStatus();
+            }
+        }
+        setInterval(tick, 1000);
+        tick();
+    }
+
+    // Ambil data status hari kerja & tanggal merah realtime dari backend
+    function fetchWorkdayStatus() {
+        fetch('/api/workday-status')
+            .then(res => res.json())
+            .then(data => {
+                if (!data || data.error) return;
+                const lang = getCurrentLanguage();
+                const badge = document.getElementById('workday-status-badge');
+                const text = document.getElementById('workday-status-text');
+                const icon = document.getElementById('workday-status-icon');
+                const banner = document.getElementById('holiday-note-banner');
+                const desc = document.getElementById('holiday-event-desc');
+
+                if (badge && text) {
+                    badge.setAttribute('data-status', data.status_type);
+                    badge.className = `workday-status-pill ${data.badge_class}`;
+                    text.textContent = lang === 'id' ? data.status_label_id : data.status_label_en;
+                    if (icon && data.icon) {
+                        icon.className = `bi ${data.icon}`;
+                    }
+                }
+
+                if (banner && desc) {
+                    if (data.status_type === 'workday') {
+                        banner.style.display = 'none';
+                    } else {
+                        banner.style.display = 'flex';
+                        desc.textContent = lang === 'id' ? data.event_name_id : data.event_name_en;
+                    }
+                }
+            })
+            .catch(() => {});
+    }
+
     // Inisialisasi otomatis saat DOM siap
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', () => applyLanguage(getCurrentLanguage()));
+        document.addEventListener('DOMContentLoaded', () => {
+            applyLanguage(getCurrentLanguage());
+            startRealtimeClock();
+            fetchWorkdayStatus();
+        });
     } else {
         applyLanguage(getCurrentLanguage());
+        startRealtimeClock();
+        fetchWorkdayStatus();
     }
 })();

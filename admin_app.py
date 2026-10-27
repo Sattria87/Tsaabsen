@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, send_from_directory, send_file, session
+from flask import Flask, render_template, request, redirect, url_for, flash, send_from_directory, send_file, session, jsonify
 import os
 import io
 import base64
@@ -12,6 +12,12 @@ from reportlab.lib.pagesizes import letter, landscape
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
+
+# Layanan Acuan Hari Libur Nasional & Hari Kerja Indonesia
+try:
+    import indonesia_holiday_service
+except Exception as e:
+    indonesia_holiday_service = None
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ASSETS_DIR = os.path.join(BASE_DIR, 'assets')
@@ -261,6 +267,41 @@ def inject_admin_context():
     current_date_formatted = now.strftime('%B %d, %Y')
     current_date_display = now.strftime('%A %B %d, %Y')
 
+    # Dapatkan status Hari Kerja / Tanggal Merah / Cuti Bersama
+    if indonesia_holiday_service:
+        try:
+            workday_info = indonesia_holiday_service.get_workday_status(now)
+        except Exception:
+            workday_info = None
+    else:
+        workday_info = None
+
+    if not workday_info:
+        is_wknd = now.weekday() >= 5
+        workday_info = {
+            'date_iso': now.strftime('%Y-%m-%d'),
+            'time_str': now.strftime('%H:%M:%S'),
+            'day_id': ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'][now.weekday()],
+            'day_en': current_day,
+            'date_id': current_date_formatted,
+            'date_en': current_date_formatted,
+            'display_id': f"{current_day}, {current_date_formatted}",
+            'display_en': f"{current_day}, {current_date_formatted}",
+            'is_working_day': not is_wknd,
+            'is_weekend': is_wknd,
+            'is_holiday': False,
+            'is_cuti_bersama': False,
+            'status_type': 'weekend' if is_wknd else 'workday',
+            'status_label_id': 'Akhir Pekan' if is_wknd else 'Hari Kerja',
+            'status_label_en': 'Weekend' if is_wknd else 'Working Day',
+            'event_name_id': 'Libur Akhir Pekan' if is_wknd else 'Hari Kerja Aktif',
+            'event_name_en': 'Weekend Off' if is_wknd else 'Active Working Day',
+            'badge_color': '#64748b' if is_wknd else '#16a34a',
+            'badge_class': 'pill-weekend' if is_wknd else 'pill-workday',
+            'icon': 'bi-cup-hot-fill' if is_wknd else 'bi-briefcase-fill',
+            'upcoming_holidays': []
+        }
+
     return {
         'current_admin': {
             'logged_in': session.get('admin_logged_in', False),
@@ -272,21 +313,56 @@ def inject_admin_context():
             'avatar': '/assets/tsa_logo.png'
         },
         'tsa_logo_data_uri': TSA_LOGO_DATA_URI,
-        'current_day': current_day,
-        'current_date_formatted': current_date_formatted,
-        'current_date_display': current_date_display,
+        'current_day': workday_info['day_id'],
+        'current_date_formatted': workday_info['date_id'],
+        'current_date_display': workday_info['display_id'],
+        'workday_info': workday_info,
         'greeting': greeting,
         'now': now,
     }
+
+@app.route('/api/workday-status')
+def api_workday_status():
+    """API Realtime: Acuan Hari Kerja, Libur Nasional (Tanggal Merah), & Cuti Bersama Indonesia."""
+    now = datetime.now()
+    if indonesia_holiday_service:
+        try:
+            info = indonesia_holiday_service.get_workday_status(now)
+        except Exception as e:
+            info = {'error': str(e)}
+    else:
+        is_wknd = now.weekday() >= 5
+        info = {
+            'date_iso': now.strftime('%Y-%m-%d'),
+            'time_str': now.strftime('%H:%M:%S'),
+            'day_id': ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'][now.weekday()],
+            'day_en': now.strftime('%A'),
+            'date_id': now.strftime('%d-%m-%Y'),
+            'date_en': now.strftime('%Y-%m-%d'),
+            'is_working_day': not is_wknd,
+            'is_weekend': is_wknd,
+            'is_holiday': False,
+            'is_cuti_bersama': False,
+            'status_type': 'weekend' if is_wknd else 'workday',
+            'status_label_id': 'Akhir Pekan' if is_wknd else 'Hari Kerja',
+            'status_label_en': 'Weekend' if is_wknd else 'Working Day',
+            'event_name_id': 'Libur Akhir Pekan' if is_wknd else 'Hari Kerja Aktif',
+            'event_name_en': 'Weekend Off' if is_wknd else 'Active Working Day',
+            'badge_class': 'pill-weekend' if is_wknd else 'pill-workday',
+            'icon': 'bi-cup-hot-fill' if is_wknd else 'bi-briefcase-fill'
+        }
+    resp = jsonify(info)
+    resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    return resp
 
 @app.before_request
 def require_admin_login():
     """Proteksi route Web Admin: redirect ke /login bila belum terautentikasi."""
     # Rute publik yang boleh diakses tanpa login
-    allowed_endpoints = ['login', 'serve_assets', 'static']
+    allowed_endpoints = ['login', 'serve_assets', 'static', 'api_workday_status']
     if request.endpoint in allowed_endpoints:
         return
-    if request.path.startswith('/assets') or request.path.startswith('/static') or request.path == '/favicon.ico':
+    if request.path.startswith('/assets') or request.path.startswith('/static') or request.path.startswith('/api/workday-status') or request.path == '/favicon.ico':
         return
 
     # Jika session admin belum ada, redirect ke /login

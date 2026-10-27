@@ -202,35 +202,113 @@
 
 
 
-        /* Date Widget (Top Right) */
+        /* Date & Realtime Workday Widget (Top Right) */
         .date-col {
             display: flex;
             flex-direction: column;
             align-items: flex-end;
-            gap: 4px;
+            gap: 6px;
         }
 
         .date-day-label {
             font-size: 14.5px;
-            font-weight: 600;
+            font-weight: 700;
             color: #374151;
-            padding-right: 12px;
+        }
+
+        .realtime-clock-badge {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            color: #0f172a;
+            font-size: 13px;
+            font-weight: 700;
+            padding: 4px 12px;
+            border-radius: 14px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+            font-variant-numeric: tabular-nums;
         }
 
         .date-badge {
             background-color: var(--badge-yellow);
             color: #111827;
-            font-size: 14.5px;
+            font-size: 14px;
             font-weight: 700;
-            padding: 8px 22px;
+            padding: 8px 18px;
             border-radius: 20px;
             box-shadow: 0 4px 12px rgba(245, 158, 11, 0.25);
             user-select: none;
             cursor: pointer;
             transition: transform 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
         }
         .date-badge:hover {
             transform: scale(1.02);
+        }
+
+        .workday-status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            font-weight: 700;
+            padding: 7px 16px;
+            border-radius: 20px;
+            transition: all 0.2s ease;
+            user-select: none;
+            cursor: pointer;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+            text-decoration: none;
+        }
+        .workday-status-pill:hover {
+            transform: translateY(-2px);
+        }
+
+        .pill-workday {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        }
+        .pill-holiday {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.35);
+            animation: pulse-red 2s infinite ease-in-out;
+        }
+        .pill-cuti {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(245, 158, 11, 0.35);
+        }
+        .pill-weekend {
+            background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+            color: #ffffff;
+            box-shadow: 0 4px 10px rgba(100, 116, 139, 0.25);
+        }
+
+        @keyframes pulse-red {
+            0%, 100% { box-shadow: 0 4px 12px rgba(239, 68, 68, 0.35); }
+            50% { box-shadow: 0 4px 20px rgba(239, 68, 68, 0.6); }
+        }
+
+        .holiday-note-banner {
+            font-size: 12.5px;
+            font-weight: 600;
+            color: #dc2626;
+            margin-top: 2px;
+            text-align: right;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            justify-content: flex-end;
+            background: rgba(239, 68, 68, 0.08);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            padding: 3px 10px;
+            border-radius: 8px;
         }
 
         /* ================= 4 METRICS CARDS ROW ================= */
@@ -482,11 +560,33 @@
                 <p id="greeting-subtitle">{{ greeting if greeting else "Selamat Pagi," }}</p>
             </div>
 
-            <!-- Date Widget (Realtime from System/Database) -->
+            <!-- Date & Realtime Workday Widget (Realtime from System & SKB 3 Menteri Acuan Libur Nasional) -->
             <div class="date-col">
-                <div class="date-day-label" id="current-day-label">{{ current_day }}</div>
-                <div class="date-badge" id="current-date-badge" title="Tanggal Realtime Hari Ini">
-                    {{ current_date_formatted }}
+                <div class="d-flex align-items-center gap-2">
+                    <div class="date-day-label" id="current-day-label">{{ workday_info.day_id }}</div>
+                    <div class="realtime-clock-badge" id="live-clock" title="Waktu Realtime Sistem (WIB)">
+                        <i class="bi bi-clock-fill text-primary"></i>
+                        <span id="clock-time">{{ workday_info.time_str }}</span> <span style="font-size: 11px; color: #64748b;">WIB</span>
+                    </div>
+                </div>
+
+                <div class="d-flex align-items-center gap-2">
+                    <div class="date-badge" id="current-date-badge" title="Tanggal Realtime Hari Ini">
+                        <i class="bi bi-calendar3"></i>
+                        <span id="current-date-text">{{ workday_info.date_id }}</span>
+                    </div>
+
+                    <!-- Workday / Tanggal Merah / Cuti Bersama Pill Badge -->
+                    <div class="workday-status-pill {{ workday_info.badge_class }}" id="workday-status-badge" data-status="{{ workday_info.status_type }}" data-bs-toggle="modal" data-bs-target="#holidayModal" title="{{ workday_info.event_name_id }} (Klik untuk kalender libur tahunan)">
+                        <i class="bi {{ workday_info.icon }}" id="workday-status-icon"></i>
+                        <span id="workday-status-text" data-i18n-status="{{ workday_info.status_type }}">{{ workday_info.status_label_id }}</span>
+                    </div>
+                </div>
+
+                <!-- Banner Informasi Tanggal Merah / Cuti Bersama jika hari ini libur -->
+                <div class="holiday-note-banner" id="holiday-note-banner" style="{% if workday_info.status_type == 'workday' %}display: none;{% endif %}">
+                    <i class="bi bi-info-circle-fill"></i>
+                    <span id="holiday-event-desc">{{ workday_info.event_name_id }}</span>
                 </div>
             </div>
         </header>
@@ -760,6 +860,85 @@
             window.monthlyChart = new Chart(ctx, config);
         });
     </script>
+
+    <!-- MODAL KALENDER HARI LIBUR NASIONAL & CUTI BERSAMA INDONESIA -->
+    <div class="modal fade" id="holidayModal" tabindex="-1" aria-labelledby="holidayModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content rounded-4 border-0 shadow">
+                <div class="modal-header border-0 pb-0">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="p-2 bg-danger-subtle rounded-3 text-danger">
+                            <i class="bi bi-calendar-event-fill fs-5"></i>
+                        </div>
+                        <div>
+                            <h5 class="modal-title fw-bold" id="holidayModalLabel" data-i18n="holiday_modal_title">Kalender Libur Nasional & Cuti Bersama</h5>
+                            <p class="text-muted small mb-0" data-i18n="holiday_modal_subtitle">Acuan Resmi SKB 3 Menteri Republik Indonesia (Auto-Update)</p>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="p-3 rounded-3 mb-3" style="background: #f8fafc; border: 1px solid #e2e8f0;">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <span class="badge bg-primary-subtle text-primary fw-semibold px-2 py-1 mb-1" data-i18n="lbl_status_today">Status Hari Ini</span>
+                                <h6 class="fw-bold mb-0 text-dark" id="modal-today-desc">{{ workday_info.event_name_id }}</h6>
+                            </div>
+                            <span class="workday-status-pill {{ workday_info.badge_class }} py-1 px-3" style="font-size: 12px;">
+                                <i class="bi {{ workday_info.icon }}"></i> <span id="modal-today-pill-text">{{ workday_info.status_label_id }}</span>
+                            </span>
+                        </div>
+                    </div>
+
+                    <h6 class="fw-bold text-secondary small text-uppercase mb-2" data-i18n="upcoming_holidays_title">Hari Libur & Cuti Bersama Terdekat</h6>
+                    <div class="list-group list-group-flush rounded-3 border" id="upcoming-holidays-list">
+                        {% if workday_info.upcoming_holidays %}
+                            {% for hol in workday_info.upcoming_holidays %}
+                            <div class="list-group-item d-flex justify-content-between align-items-center py-2 px-3">
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge {% if hol.is_cuti %}bg-warning-subtle text-warning-emphasis{% else %}bg-danger-subtle text-danger{% endif %} rounded-pill px-2 py-1" style="font-size: 11px;">
+                                        {% if hol.is_cuti %}Cuti Bersama{% else %}Libur Nasional{% endif %}
+                                    </span>
+                                    <span class="fw-bold text-dark small">{{ hol.name_id }}</span>
+                                </div>
+                                <div class="text-end">
+                                    <div class="small fw-semibold text-muted">{{ hol.date }}</div>
+                                    <span class="badge bg-light text-secondary border" style="font-size: 10px;">{{ hol.days_left }} hari lagi</span>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="list-group-item text-center text-muted small py-3" data-i18n="no_holidays_soon">
+                                Tidak ada hari libur nasional dalam 30 hari ke depan.
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-secondary w-100 rounded-3 fw-semibold py-2" data-bs-dismiss="modal" data-i18n="close_btn">Tutup</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL LOGOUT -->
+    <div class="modal fade" id="logoutModal" tabindex="-1" aria-labelledby="logoutModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" style="max-width: 380px;">
+            <div class="modal-content rounded-4 border-0 shadow">
+                <div class="modal-body text-center p-4">
+                    <div class="mb-3 text-primary">
+                        <i class="bi bi-box-arrow-right fs-1"></i>
+                    </div>
+                    <h5 class="fw-bold mb-2" id="logout-title" data-i18n="logout_title">Konfirmasi Logout</h5>
+                    <p class="text-muted small mb-4" id="logout-msg" data-i18n="logout_msg">Apakah Anda yakin ingin keluar dari Admin Dashboard TSA?</p>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-light w-50 fw-semibold rounded-3 py-2" data-bs-dismiss="modal" id="logout-btn-cancel" data-i18n="logout_cancel">Batal</button>
+                        <a href="/logout" class="btn btn-primary w-50 fw-semibold rounded-3 py-2" id="logout-btn-confirm" data-i18n="logout_confirm">Ya, Keluar</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Master Centralized i18n Engine -->
     <script src="/assets/app_i18n.js?v=20261027"></script>

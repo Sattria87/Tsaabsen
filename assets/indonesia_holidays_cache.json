@@ -1,0 +1,247 @@
+{
+  "2026-01-01": {
+    "name_id": "Hari Tahun Baru",
+    "name_en": "Hari Tahun Baru",
+    "is_cuti": false
+  },
+  "2026-01-16": {
+    "name_id": "Isra Mikraj Nabi Muhammad",
+    "name_en": "Isra Mikraj Nabi Muhammad",
+    "is_cuti": false
+  },
+  "2026-02-16": {
+    "name_id": "Cuti Bersama Tahun Baru Imlek",
+    "name_en": "Cuti Bersama Tahun Baru Imlek",
+    "is_cuti": true
+  },
+  "2026-02-17": {
+    "name_id": "Tahun Baru Imlek",
+    "name_en": "Tahun Baru Imlek",
+    "is_cuti": false
+  },
+  "2026-03-18": {
+    "name_id": "Cuti Bersama Hari Suci Nyepi (Tahun Baru Saka)",
+    "name_en": "Cuti Bersama Hari Suci Nyepi (Tahun Baru Saka)",
+    "is_cuti": true
+  },
+  "2026-03-19": {
+    "name_id": "Hari Suci Nyepi (Tahun Baru Saka)",
+    "name_en": "Hari Suci Nyepi (Tahun Baru Saka)",
+    "is_cuti": false
+  },
+  "2026-03-20": {
+    "name_id": "Cuti Bersama Idul Fitri",
+    "name_en": "Cuti Bersama Idul Fitri",
+    "is_cuti": true
+  },
+  "2026-03-21": {
+    "name_id": "Hari Idul Fitri",
+    "name_en": "Hari Idul Fitri",
+    "is_cuti": false
+  },
+  "2026-03-22": {
+    "name_id": "Hari Idul Fitri",
+    "name_en": "Hari Idul Fitri",
+    "is_cuti": false
+  },
+  "2026-03-23": {
+    "name_id": "Cuti Bersama Idul Fitri",
+    "name_en": "Cuti Bersama Idul Fitri",
+    "is_cuti": true
+  },
+  "2026-03-24": {
+    "name_id": "Cuti Bersama Idul Fitri",
+    "name_en": "Cuti Bersama Idul Fitri",
+    "is_cuti": true
+  },
+  "2026-04-03": {
+    "name_id": "Wafat Isa Almasih",
+    "name_en": "Wafat Isa Almasih",
+    "is_cuti": false
+  },
+  "2026-04-05": {
+    "name_id": "Hari Paskah",
+    "name_en": "Hari Paskah",
+    "is_cuti": false
+  },
+  "2026-05-01": {
+    "name_id": "Hari Buruh Internasional / Pekerja",
+    "name_en": "Hari Buruh Internasional / Pekerja",
+    "is_cuti": false
+  },
+  "2026-05-14": {
+    "name_id": "Kenaikan Isa Al Masih",
+    "name_en": "Kenaikan Isa Al Masih",
+    "is_cuti": false
+  },
+  "2026-05-15": {
+    "name_id": "Cuti Bersama Kenaikan Isa Al Masih",
+    "name_en": "Cuti Bersama Kenaikan Isa Al Masih",
+    "is_cuti": true
+  },
+  "2026-05-27": {
+    "name_id": "Idul Adha (Lebaran Haji)",
+    "name_en": "Idul Adha (Lebaran Haji)",
+    "is_cuti": false
+  },
+  "2026-05-28": {
+    "name_id": "Idul Adha (Lebaran Haji)",
+    "name_en": "Idul Adha (Lebaran Haji)",
+    "is_cuti": false
+  },
+  "2026-05-31": {
+    "name_id": "Hari Raya Waisak",
+    "name_en": "Hari Raya Waisak",
+    "is_cuti": false
+  },
+  "2026-06-01": {
+    "name_id": "Hari Lahir Pancasila",
+    "name_en": "Hari Lahir Pancasila",
+    "is_cuti": false
+  },
+  "2026-06-16": {
+    "name_id": "Hari Kedua Muharram",
+    "name_en": "Hari Kedua Muharram",
+    "is_cuti": false
+  },
+  "2026-08-17": {
+    "name_id": "Hari Proklamasi Kemerdekaan R.I.",
+    "name_en": "Hari Proklamasi Kemerdekaan R.I.",
+    "is_cuti": false
+  },
+  "2026-08-25": {
+    "name_id": "Maulid Nabi Muhammad",
+    "name_en": "Maulid Nabi Muhammad",
+    "is_cuti": false
+  },
+  "2026-12-24": {
+    "name_id": "Cuti Bersama Natal (Malam Natal)",
+    "name_en": "Cuti Bersama Natal (Malam Natal)",
+    "is_cuti": true
+  },
+  "2026-12-25": {
+    "name_id": "Hari Raya Natal",
+    "name_en": "Hari Raya Natal",
+    "is_cuti": false
+  },
+  "2027-01-01": {
+    "name_id": "Hari Tahun Baru",
+    "name_en": "Hari Tahun Baru",
+    "is_cuti": false
+  },
+  "2027-01-05": {
+    "name_id": "Isra Mikraj Nabi Muhammad (belum pasti)",
+    "name_en": "Isra Mikraj Nabi Muhammad (belum pasti)",
+    "is_cuti": false
+  },
+  "2027-02-05": {
+    "name_id": "Cuti Bersama Tahun Baru Imlek",
+    "name_en": "Cuti Bersama Tahun Baru Imlek",
+    "is_cuti": true
+  },
+  "2027-02-06": {
+    "name_id": "Tahun Baru Imlek",
+    "name_en": "Tahun Baru Imlek",
+    "is_cuti": false
+  },
+  "2027-03-08": {
+    "name_id": "Hari Suci Nyepi (Tahun Baru Saka)",
+    "name_en": "Hari Suci Nyepi (Tahun Baru Saka)",
+    "is_cuti": false
+  },
+  "2027-03-09": {
+    "name_id": "Cuti Bersama Idul Fitri",
+    "name_en": "Cuti Bersama Idul Fitri",
+    "is_cuti": true
+  },
+  "2027-03-10": {
+    "name_id": "Hari Idul Fitri (belum pasti)",
+    "name_en": "Hari Idul Fitri (belum pasti)",
+    "is_cuti": false
+  },
+  "2027-03-11": {
+    "name_id": "Hari Idul Fitri (belum pasti)",
+    "name_en": "Hari Idul Fitri (belum pasti)",
+    "is_cuti": false
+  },
+  "2027-03-12": {
+    "name_id": "Cuti Bersama Idul Fitri",
+    "name_en": "Cuti Bersama Idul Fitri",
+    "is_cuti": true
+  },
+  "2027-03-15": {
+    "name_id": "Cuti Bersama Idul Fitri",
+    "name_en": "Cuti Bersama Idul Fitri",
+    "is_cuti": true
+  },
+  "2027-03-25": {
+    "name_id": "Joint Holiday for Good Friday",
+    "name_en": "Joint Holiday for Good Friday",
+    "is_cuti": false
+  },
+  "2027-03-26": {
+    "name_id": "Wafat Isa Almasih",
+    "name_en": "Wafat Isa Almasih",
+    "is_cuti": false
+  },
+  "2027-05-01": {
+    "name_id": "Hari Buruh Internasional / Pekerja",
+    "name_en": "Hari Buruh Internasional / Pekerja",
+    "is_cuti": false
+  },
+  "2027-05-06": {
+    "name_id": "Kenaikan Isa Al Masih",
+    "name_en": "Kenaikan Isa Al Masih",
+    "is_cuti": false
+  },
+  "2027-05-17": {
+    "name_id": "Idul Adha (Lebaran Haji) (belum pasti)",
+    "name_en": "Idul Adha (Lebaran Haji) (belum pasti)",
+    "is_cuti": false
+  },
+  "2027-05-18": {
+    "name_id": "Idul Adha (Lebaran Haji)",
+    "name_en": "Idul Adha (Lebaran Haji)",
+    "is_cuti": false
+  },
+  "2027-05-19": {
+    "name_id": "Cuti Bersama Waisak",
+    "name_en": "Cuti Bersama Waisak",
+    "is_cuti": true
+  },
+  "2027-05-20": {
+    "name_id": "Hari Raya Waisak",
+    "name_en": "Hari Raya Waisak",
+    "is_cuti": false
+  },
+  "2027-06-01": {
+    "name_id": "Hari Lahir Pancasila",
+    "name_en": "Hari Lahir Pancasila",
+    "is_cuti": false
+  },
+  "2027-06-06": {
+    "name_id": "Satu Muharam / Tahun Baru Hijriah (belum pasti)",
+    "name_en": "Satu Muharam / Tahun Baru Hijriah (belum pasti)",
+    "is_cuti": false
+  },
+  "2027-08-15": {
+    "name_id": "Maulid Nabi Muhammad (belum pasti)",
+    "name_en": "Maulid Nabi Muhammad (belum pasti)",
+    "is_cuti": false
+  },
+  "2027-08-17": {
+    "name_id": "Hari Proklamasi Kemerdekaan R.I.",
+    "name_en": "Hari Proklamasi Kemerdekaan R.I.",
+    "is_cuti": false
+  },
+  "2027-12-24": {
+    "name_id": "Cuti Bersama Natal (Malam Natal)",
+    "name_en": "Cuti Bersama Natal (Malam Natal)",
+    "is_cuti": true
+  },
+  "2027-12-25": {
+    "name_id": "Hari Raya Natal",
+    "name_en": "Hari Raya Natal",
+    "is_cuti": false
+  }
+}
