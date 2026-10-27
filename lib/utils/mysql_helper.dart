@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'app_nav.dart';
 
 /// ============================================================
 /// KONFIGURASI BACKEND API (EXPRESS.JS)
@@ -42,6 +43,121 @@ class MySQLHelper {
 
   static String? lastLoginError;
   static String? lastSaveError;
+  static bool _isMaintenanceDialogShowing = false;
+
+  /// Deteksi apakah respon dari server/Coolify merupakan halaman pemeliharaan (Maintenance Mode)
+  static bool isMaintenanceResponse(http.Response response) {
+    if (response.statusCode == 503) return true;
+    final body = response.body.toLowerCase();
+    if (body.contains('sistem sedang pemeliharaan') ||
+        body.contains('maintenance mode') ||
+        body.contains('sedang dalam pemeliharaan') ||
+        (response.statusCode >= 500 && body.contains('<!doctype html>'))) {
+      return true;
+    }
+    return false;
+  }
+
+  /// Tampilkan Pop-up Dialog Maintenance secara global di aplikasi
+  static void showMaintenanceDialog({BuildContext? context, VoidCallback? onRetry}) {
+    if (_isMaintenanceDialogShowing) return;
+
+    final targetContext = context ?? appNavigatorKey.currentContext;
+    if (targetContext == null) return;
+
+    _isMaintenanceDialogShowing = true;
+
+    showDialog(
+      context: targetContext,
+      barrierDismissible: false,
+      builder: (dialogCtx) {
+        return PopScope(
+          canPop: false,
+          child: AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+            backgroundColor: const Color(0xFF0F172A),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 72,
+                  height: 72,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFEF3C7).withOpacity(0.12),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: const Color(0xFFF59E0B).withOpacity(0.4),
+                      width: 1.5,
+                    ),
+                  ),
+                  child: const Center(
+                    child: Icon(Icons.build_circle_rounded, color: Color(0xFFF59E0B), size: 42),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                const Text(
+                  'Sistem Sedang Maintenance',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.3,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                const Text(
+                  'Server absensi saat ini sedang dalam pemeliharaan berkala atau peningkatan performa sistem.\n\nSilakan coba lagi beberapa saat lagi.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Color(0xFF94A3B8),
+                    fontSize: 13.5,
+                    height: 1.5,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  height: 46,
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF2563EB),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      elevation: 0,
+                    ),
+                    icon: const Icon(Icons.refresh_rounded, color: Colors.white, size: 20),
+                    label: const Text(
+                      'Periksa Kembali',
+                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                    ),
+                    onPressed: () {
+                      _isMaintenanceDialogShowing = false;
+                      Navigator.of(dialogCtx).pop();
+                      if (onRetry != null) onRetry();
+                    },
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextButton(
+                  onPressed: () {
+                    _isMaintenanceDialogShowing = false;
+                    Navigator.of(dialogCtx).pop();
+                  },
+                  child: const Text(
+                    'Tutup',
+                    style: TextStyle(color: Color(0xFF64748B), fontSize: 13),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    ).then((_) {
+      _isMaintenanceDialogShowing = false;
+    });
+  }
 
   /// 1. Autentikasi Login Karyawan
   /// Endpoint: POST /api/login
@@ -65,6 +181,13 @@ class MySQLHelper {
         debugPrint(
           '[API Login] Response code: ${response.statusCode}, body: ${response.body}',
         );
+
+        if (isMaintenanceResponse(response)) {
+          lastLoginError = 'Server sedang dalam pemeliharaan (Maintenance Mode)';
+          showMaintenanceDialog();
+          return null;
+        }
+
         if (response.statusCode == 200) {
           final data = jsonDecode(response.body);
           if (data['success'] == true) {
@@ -188,6 +311,12 @@ class MySQLHelper {
             )
             .timeout(const Duration(seconds: 20));
 
+        if (isMaintenanceResponse(response)) {
+          lastSaveError = 'Server sedang dalam pemeliharaan (Maintenance Mode)';
+          showMaintenanceDialog();
+          return false;
+        }
+
         if (response.statusCode == 200) {
           final data = jsonDecode(response.body);
           if (data['success'] == true) {
@@ -235,6 +364,11 @@ class MySQLHelper {
         final response = await http
             .get(Uri.parse('$url/attendance/status/$username'))
             .timeout(const Duration(seconds: 6));
+
+        if (isMaintenanceResponse(response)) {
+          showMaintenanceDialog();
+          return null;
+        }
 
         if (response.statusCode == 200) {
           final data = jsonDecode(response.body);
@@ -302,6 +436,18 @@ class MySQLHelper {
             .timeout(const Duration(seconds: 8));
 
         debugPrint('[AI Service] Response ($url): ${response.statusCode} - ${response.body}');
+
+        if (isMaintenanceResponse(response)) {
+          showMaintenanceDialog();
+          return {
+            'success': false,
+            'matched': false,
+            'connected': false,
+            'similarity_score': 0.0,
+            'face_detected': false,
+            'message': 'Server sedang dalam pemeliharaan (Maintenance Mode).',
+          };
+        }
 
         if (response.statusCode == 200) {
           final data = jsonDecode(response.body);

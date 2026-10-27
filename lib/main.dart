@@ -4,6 +4,7 @@ import 'package:video_player/video_player.dart';
 import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
 import 'utils/auth_service.dart';
+import 'utils/app_nav.dart';
 
 List<CameraDescription> cameras = [];
 
@@ -15,9 +16,10 @@ Future<void> main() async {
     debugPrint('Error inisialisasi kamera: $e');
   }
 
-  runApp(const MaterialApp(
+  runApp(MaterialApp(
+    navigatorKey: appNavigatorKey,
     debugShowCheckedModeBanner: false,
-    home: SplashRouter(),
+    home: const SplashRouter(),
   ));
 }
 

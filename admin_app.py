@@ -229,7 +229,22 @@ def generate_random_employee_id():
 # ==========================================
 @app.context_processor
 def inject_admin_context():
-    """Menyediakan data profil admin yang sedang login ke seluruh template Jinja2."""
+    """Menyediakan data profil admin dan waktu realtime ke seluruh template Jinja2."""
+    now = datetime.now()
+    hour = now.hour
+    if 5 <= hour < 12:
+        greeting = "Good Morning,"
+    elif 12 <= hour < 17:
+        greeting = "Good Afternoon,"
+    elif 17 <= hour < 21:
+        greeting = "Good Evening,"
+    else:
+        greeting = "Good Night,"
+
+    current_day = now.strftime('%A')
+    current_date_formatted = now.strftime('%B %d, %Y')
+    current_date_display = now.strftime('%A %B %d, %Y')
+
     return {
         'current_admin': {
             'logged_in': session.get('admin_logged_in', False),
@@ -240,7 +255,12 @@ def inject_admin_context():
             'email': session.get('admin_email', 'admin@tsa.co.id'),
             'avatar': '/assets/tsa_logo.png'
         },
-        'tsa_logo_data_uri': TSA_LOGO_DATA_URI
+        'tsa_logo_data_uri': TSA_LOGO_DATA_URI,
+        'current_day': current_day,
+        'current_date_formatted': current_date_formatted,
+        'current_date_display': current_date_display,
+        'greeting': greeting,
+        'now': now,
     }
 
 @app.before_request

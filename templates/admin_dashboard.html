@@ -141,7 +141,7 @@
         <!-- TOP BAR -->
         <div class="top-header">
             <span class="fs-5 fw-semibold">Employee Management</span>
-            <span>{{ current_date_formatted if current_date_formatted else 'Monday October 26, 2026' }}</span>
+            <span class="realtime-clock" id="realtime-clock">{{ current_date_display }}</span>
         </div>
 
         <!-- PESAN FLASH / ALERT -->
@@ -558,6 +558,24 @@
                 startCamera();
             }
         });
+
+        // Realtime Date Updater
+        function updateRealtimeDate() {
+            const now = new Date();
+            const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+            const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+            const dayName = days[now.getDay()];
+            const monthName = months[now.getMonth()];
+            const dayDate = now.getDate();
+            const year = now.getFullYear();
+            const dateStr = `${dayName} ${monthName} ${dayDate}, ${year}`;
+            
+            const clockEl = document.getElementById('realtime-clock');
+            if (clockEl) {
+                clockEl.textContent = dateStr;
+            }
+        }
+        document.addEventListener('DOMContentLoaded', updateRealtimeDate);
     </script>
 </body>
 </html>
