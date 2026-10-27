@@ -478,8 +478,8 @@
         <!-- TOP BAR HEADER -->
         <header class="top-header-row">
             <div class="greeting-col">
-                <h1 id="greeting-title">Holla</h1>
-                <p id="greeting-subtitle">{{ greeting if greeting else "Good Morning," }}</p>
+                <h1 id="greeting-title">Halo</h1>
+                <p id="greeting-subtitle">{{ greeting if greeting else "Selamat Pagi," }}</p>
             </div>
 
             <!-- Date Widget (Realtime from System/Database) -->
@@ -499,7 +499,7 @@
                     <i class="bi bi-people"></i>
                 </div>
                 <div class="metric-value">{{ total_employees }}</div>
-                <div class="metric-label">Employess</div>
+                <div class="metric-label">Karyawan</div>
             </div>
 
             <!-- CARD 2: PRESENCE TODAY -->
@@ -508,7 +508,7 @@
                     <i class="bi bi-clock"></i>
                 </div>
                 <div class="metric-value">{{ presence_today }}</div>
-                <div class="metric-label">Presence Today</div>
+                <div class="metric-label">Hadir Hari Ini</div>
             </div>
 
             <!-- CARD 3: ABSENCE TODAY -->
@@ -517,7 +517,7 @@
                     <i class="bi bi-dash-circle"></i>
                 </div>
                 <div class="metric-value">{{ absence_today }}</div>
-                <div class="metric-label">Absence Today</div>
+                <div class="metric-label">Tidak Hadir Hari Ini</div>
             </div>
 
             <!-- CARD 4: REQUEST OBS -->
@@ -526,7 +526,7 @@
                     <i class="bi bi-arrow-repeat"></i>
                 </div>
                 <div class="metric-value">{{ request_obs }}</div>
-                <div class="metric-label">Request OBS</div>
+                <div class="metric-label">Pengajuan Izin</div>
             </div>
         </section>
 
@@ -536,8 +536,8 @@
             <!-- LEFT: MONTHLY ATTENDANCE RECAP CHART -->
             <section class="chart-card">
                 <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h2 class="panel-title mb-0">Monthly Attendace Recap</h2>
-                    <span class="badge bg-light text-muted border px-2 py-1 small">Rekap Database</span>
+                    <h2 class="panel-title mb-0" id="chart-panel-title">Rekap Kehadiran Bulanan</h2>
+                    <span class="badge bg-light text-muted border px-2 py-1 small" id="chart-badge-recap">Rekap Database</span>
                 </div>
                 <div class="chart-container-wrap">
                     <canvas id="monthlyAttendanceChart"
@@ -551,8 +551,8 @@
             <!-- RIGHT: QUICK ATTENDANCE LIST (REAL DATABASE) -->
             <section class="quick-list-card">
                 <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h2 class="panel-title mb-0">Quick Attendace List</h2>
-                    <span class="badge bg-light text-dark border px-2 py-1 small">{{ total_employees }} Karyawan</span>
+                    <h2 class="panel-title mb-0" id="quick-panel-title">Daftar Presensi Terkini</h2>
+                    <span class="badge bg-light text-dark border px-2 py-1 small" id="quick-badge-total"><span id="quick-emp-count">{{ total_employees }}</span> <span id="quick-emp-unit">Karyawan</span></span>
                 </div>
 
                 <!-- HIGHLIGHT YELLOW BOX (TOP 3) -->
@@ -594,11 +594,11 @@
                             <span class="attendee-team">
                                 {{ emp.team }}
                                 {% if emp.today_type == 'clock_in' %}
-                                    <span class="badge bg-success-subtle text-success border border-success-subtle ms-1" style="font-size: 11px;">Hadir {{ emp.today_clock_in }}</span>
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle ms-1 attendee-status-badge" data-status="hadir" data-time="{{ emp.today_clock_in }}" style="font-size: 11px;">Hadir {{ emp.today_clock_in }}</span>
                                 {% elif emp.today_type in ['izin', 'izin_sakit', 'izin_keperluan', 'cuti', 'sakit'] or (emp.today_type and emp.today_type.startswith('izin')) %}
-                                    <span class="badge bg-warning-subtle text-warning border border-warning-subtle ms-1" style="font-size: 11px;">Izin</span>
+                                    <span class="badge bg-warning-subtle text-warning border border-warning-subtle ms-1 attendee-status-badge" data-status="izin" style="font-size: 11px;">Izin</span>
                                 {% else %}
-                                    <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle ms-1" style="font-size: 11px;">Belum Presensi</span>
+                                    <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle ms-1 attendee-status-badge" data-status="belum" style="font-size: 11px;">Belum Presensi</span>
                                 {% endif %}
                             </span>
                         </div>
@@ -608,7 +608,7 @@
                 {% endif %}
 
                 {% if not top_attendees and not other_attendees %}
-                <div class="text-center py-5 text-muted small">
+                <div class="text-center py-5 text-muted small" id="quick-empty-msg">
                     <i class="bi bi-people fs-1 d-block mb-2 text-secondary"></i>
                     Belum ada data karyawan di database.
                 </div>
@@ -628,11 +628,11 @@
                     <div class="mb-3 text-primary">
                         <i class="bi bi-box-arrow-right fs-1"></i>
                     </div>
-                    <h5 class="fw-bold mb-2">Konfirmasi Logout</h5>
-                    <p class="text-muted small mb-4">Apakah Anda yakin ingin keluar dari Admin Dashboard TSA?</p>
+                    <h5 class="fw-bold mb-2" id="logout-title">Konfirmasi Logout</h5>
+                    <p class="text-muted small mb-4" id="logout-msg">Apakah Anda yakin ingin keluar dari Admin Dashboard TSA?</p>
                     <div class="d-flex gap-2">
-                        <button type="button" class="btn btn-light w-50 fw-semibold rounded-3 py-2" data-bs-dismiss="modal">Batal</button>
-                        <a href="/logout" class="btn btn-primary w-50 fw-semibold rounded-3 py-2">Ya, Keluar</a>
+                        <button type="button" class="btn btn-light w-50 fw-semibold rounded-3 py-2" data-bs-dismiss="modal" id="logout-btn-cancel">Batal</button>
+                        <a href="/logout" class="btn btn-primary w-50 fw-semibold rounded-3 py-2" id="logout-btn-confirm">Ya, Keluar</a>
                     </div>
                 </div>
             </div>
@@ -757,10 +757,10 @@
                 }
             };
 
-            new Chart(ctx, config);
+            window.monthlyChart = new Chart(ctx, config);
         });
 
-        // Language Switcher Functionality
+        // Comprehensive Language Switcher Functionality
         function changeLanguage(lang) {
             localStorage.setItem('admin_lang', lang);
             applyLanguage(lang);
@@ -783,7 +783,29 @@
                     'menu_presence': 'Kehadiran',
                     'menu_request': 'Pengajuan Izin',
                     'menu_report': 'Laporan',
-                    'logout': 'Keluar'
+                    'logout': 'Keluar',
+                    'greeting_title': 'Halo',
+                    'metric_emp': 'Karyawan',
+                    'metric_pres': 'Hadir Hari Ini',
+                    'metric_abs': 'Tidak Hadir Hari Ini',
+                    'metric_req': 'Pengajuan Izin',
+                    'chart_title': 'Rekap Kehadiran Bulanan',
+                    'chart_badge': 'Rekap Database',
+                    'quick_title': 'Daftar Presensi Terkini',
+                    'quick_badge_unit': 'Karyawan',
+                    'status_present': 'Hadir',
+                    'status_leave': 'Izin',
+                    'status_none': 'Belum Presensi',
+                    'quick_empty': 'Belum ada data karyawan di database.',
+                    'logout_title': 'Konfirmasi Logout',
+                    'logout_msg': 'Apakah Anda yakin ingin keluar dari Admin Dashboard TSA?',
+                    'logout_cancel': 'Batal',
+                    'logout_confirm': 'Ya, Keluar',
+                    'chart_lbl_emp': 'Karyawan',
+                    'chart_lbl_pres': 'Hadir',
+                    'chart_lbl_abs': 'Tidak Hadir',
+                    'days': ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'],
+                    'months': ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember']
                 },
                 'en': {
                     'menu_home': 'Home page',
@@ -792,11 +814,35 @@
                     'menu_presence': 'Presence',
                     'menu_request': 'Request',
                     'menu_report': 'Report',
-                    'logout': 'Logout'
+                    'logout': 'Logout',
+                    'greeting_title': 'Holla',
+                    'metric_emp': 'Employees',
+                    'metric_pres': 'Presence Today',
+                    'metric_abs': 'Absence Today',
+                    'metric_req': 'Request OBS',
+                    'chart_title': 'Monthly Attendance Recap',
+                    'chart_badge': 'Database Recap',
+                    'quick_title': 'Quick Attendance List',
+                    'quick_badge_unit': 'Employees',
+                    'status_present': 'Present',
+                    'status_leave': 'Leave',
+                    'status_none': 'Not Checked In',
+                    'quick_empty': 'No employee data in database.',
+                    'logout_title': 'Logout Confirmation',
+                    'logout_msg': 'Are you sure you want to log out of the TSA Admin Dashboard?',
+                    'logout_cancel': 'Cancel',
+                    'logout_confirm': 'Yes, Logout',
+                    'chart_lbl_emp': 'Employees',
+                    'chart_lbl_pres': 'Presence',
+                    'chart_lbl_abs': 'Absence',
+                    'days': ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+                    'months': ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
                 }
             };
 
-            const t = dict[lang] || dict['en'];
+            const t = dict[lang] || dict['id'];
+
+            // 1. Sidebar Menu Links
             const homeLink = document.querySelector('a[href="/"].side-btn, #menu-home');
             const empLink = document.querySelector('a[href="/employee"].side-btn, #menu-employee');
             const branchLink = document.querySelector('a[href="/branch-company"].side-btn, #menu-branch');
@@ -814,10 +860,109 @@
             document.querySelectorAll('.logout-btn, #btn-logout').forEach(el => {
                 el.textContent = t.logout;
             });
+
+            // 2. Greeting Header
+            const greetTitle = document.getElementById('greeting-title');
+            if (greetTitle) greetTitle.textContent = t.greeting_title;
+
+            const now = new Date();
+            const hour = now.getHours();
+            let greetingSubtitle = '';
+            if (lang === 'id') {
+                if (hour >= 4 && hour < 11) greetingSubtitle = 'Selamat Pagi,';
+                else if (hour >= 11 && hour < 15) greetingSubtitle = 'Selamat Siang,';
+                else if (hour >= 15 && hour < 18) greetingSubtitle = 'Selamat Sore,';
+                else greetingSubtitle = 'Selamat Malam,';
+            } else {
+                if (hour >= 4 && hour < 12) greetingSubtitle = 'Good Morning,';
+                else if (hour >= 12 && hour < 18) greetingSubtitle = 'Good Afternoon,';
+                else greetingSubtitle = 'Good Evening,';
+            }
+            const greetSub = document.getElementById('greeting-subtitle');
+            if (greetSub) greetSub.textContent = greetingSubtitle;
+
+            // 3. Date Widget
+            const dayLabel = document.getElementById('current-day-label');
+            if (dayLabel) dayLabel.textContent = t.days[now.getDay()];
+
+            const dateBadge = document.getElementById('current-date-badge');
+            if (dateBadge) {
+                if (lang === 'id') {
+                    dateBadge.textContent = `${now.getDate()} ${t.months[now.getMonth()]} ${now.getFullYear()}`;
+                } else {
+                    dateBadge.textContent = `${t.months[now.getMonth()]} ${now.getDate()}, ${now.getFullYear()}`;
+                }
+            }
+
+            // 4. Metric Cards
+            const cardEmp = document.querySelector('#card-employees .metric-label');
+            if (cardEmp) cardEmp.textContent = t.metric_emp;
+
+            const cardPres = document.querySelector('#card-presence .metric-label');
+            if (cardPres) cardPres.textContent = t.metric_pres;
+
+            const cardAbs = document.querySelector('#card-absence .metric-label');
+            if (cardAbs) cardAbs.textContent = t.metric_abs;
+
+            const cardReq = document.querySelector('#card-request .metric-label');
+            if (cardReq) cardReq.textContent = t.metric_req;
+
+            // 5. Panel Titles & Badges
+            const chartTitle = document.getElementById('chart-panel-title');
+            if (chartTitle) chartTitle.textContent = t.chart_title;
+
+            const chartBadge = document.getElementById('chart-badge-recap');
+            if (chartBadge) chartBadge.textContent = t.chart_badge;
+
+            const quickTitle = document.getElementById('quick-panel-title');
+            if (quickTitle) quickTitle.textContent = t.quick_title;
+
+            const quickUnit = document.getElementById('quick-emp-unit');
+            if (quickUnit) quickUnit.textContent = t.quick_badge_unit;
+
+            // 6. Attendee Status Badges
+            document.querySelectorAll('.attendee-status-badge').forEach(badge => {
+                const status = badge.getAttribute('data-status');
+                const time = badge.getAttribute('data-time') || '';
+                if (status === 'hadir') {
+                    badge.textContent = `${t.status_present} ${time}`.trim();
+                } else if (status === 'izin') {
+                    badge.textContent = t.status_leave;
+                } else if (status === 'belum') {
+                    badge.textContent = t.status_none;
+                }
+            });
+
+            // 7. Empty State
+            const quickEmpty = document.getElementById('quick-empty-msg');
+            if (quickEmpty) {
+                quickEmpty.innerHTML = `<i class="bi bi-people fs-1 d-block mb-2 text-secondary"></i>${t.quick_empty}`;
+            }
+
+            // 8. Logout Modal
+            const logoutTitle = document.getElementById('logout-title');
+            if (logoutTitle) logoutTitle.textContent = t.logout_title;
+
+            const logoutMsg = document.getElementById('logout-msg');
+            if (logoutMsg) logoutMsg.textContent = t.logout_msg;
+
+            const logoutCancel = document.getElementById('logout-btn-cancel');
+            if (logoutCancel) logoutCancel.textContent = t.logout_cancel;
+
+            const logoutConfirm = document.getElementById('logout-btn-confirm');
+            if (logoutConfirm) logoutConfirm.textContent = t.logout_confirm;
+
+            // 9. Chart Legend Update
+            if (window.monthlyChart && window.monthlyChart.data && window.monthlyChart.data.datasets.length >= 3) {
+                window.monthlyChart.data.datasets[0].label = t.chart_lbl_emp;
+                window.monthlyChart.data.datasets[1].label = t.chart_lbl_pres;
+                window.monthlyChart.data.datasets[2].label = t.chart_lbl_abs;
+                window.monthlyChart.update();
+            }
         }
 
         document.addEventListener('DOMContentLoaded', function() {
-            const savedLang = localStorage.getItem('admin_lang') || 'en';
+            const savedLang = localStorage.getItem('admin_lang') || 'id';
             applyLanguage(savedLang);
         });
     </script>
