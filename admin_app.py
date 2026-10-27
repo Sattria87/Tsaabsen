@@ -819,6 +819,12 @@ def delete_branch(id):
         cursor = conn.cursor()
         cursor.execute("SELECT branch_name FROM branch_companies WHERE id = %s", (id,))
         branch = cursor.fetchone()
+        
+        if branch and 'kantor pusat surabaya' in branch.get('branch_name', '').strip().lower():
+            conn.close()
+            flash('Kantor Pusat Surabaya adalah kantor pusat utama dan tidak dapat dihapus!', 'warning')
+            return redirect(url_for('branch_company'))
+
         cursor.execute("DELETE FROM branch_companies WHERE id = %s", (id,))
         conn.commit()
         conn.close()
