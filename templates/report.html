@@ -465,12 +465,12 @@
 
             <!-- MENU TOMBOL SAMPING -->
             <nav class="sidebar-menu">
-                <a href="/" class="side-btn" id="menu-home">Home page</a>
-                <a href="/employee" class="side-btn" id="menu-employee">Employee</a>
-                <a href="/branch-company" class="side-btn" id="menu-branch">Branch company</a>
-                <a href="/presence" class="side-btn" id="menu-presence">Presence</a>
-                <a href="/request" class="side-btn" id="menu-request">Request</a>
-                <a href="/report" class="side-btn active" id="menu-report">Report</a>
+                <a href="/" class="side-btn" id="menu-home" data-i18n="menu_home">Home page</a>
+                <a href="/employee" class="side-btn" id="menu-employee" data-i18n="menu_employee">Employee</a>
+                <a href="/branch-company" class="side-btn" id="menu-branch" data-i18n="menu_branch">Branch company</a>
+                <a href="/presence" class="side-btn" id="menu-presence" data-i18n="menu_presence">Presence</a>
+                <a href="/request" class="side-btn" id="menu-request" data-i18n="menu_request">Request</a>
+                <a href="/report" class="side-btn active" id="menu-report" data-i18n="menu_report">Report</a>
             </nav>
         </div>
 
@@ -486,7 +486,7 @@
                 </button>
             </div>
 
-            <button type="button" class="logout-btn" id="btn-logout" data-bs-toggle="modal" data-bs-target="#logoutModal">
+            <button type="button" class="logout-btn" id="btn-logout" data-bs-toggle="modal" data-bs-target="#logoutModal" data-i18n="logout">
                 Logout
             </button>
         </div>
@@ -499,9 +499,9 @@
         <header class="top-navbar-banner">
             <div class="navbar-brand-section">
                 <i class="bi bi-list fs-3 text-white cursor-pointer" title="Menu"></i>
-                <span class="navbar-brand-title">Report</span>
+                <span class="navbar-brand-title" data-i18n="rep_banner_title">Report</span>
             </div>
-            <div class="navbar-date-section">
+            <div class="navbar-date-section" id="realtime-clock">
                 {{ current_day }} {{ current_date_formatted }}
             </div>
         </header>
@@ -523,8 +523,8 @@
 
             <!-- PAGE TITLE & BREADCRUMB (SESUAI GAMBAR) -->
             <div class="mb-4">
-                <h1 class="page-header-title">Export Laporan Kehadiran</h1>
-                <p class="page-breadcrumb mb-0">Report / Export Laporan Kehadiran</p>
+                <h1 class="page-header-title" data-i18n="rep_page_title">Export Laporan Kehadiran</h1>
+                <p class="page-breadcrumb mb-0" data-i18n="rep_breadcrumb">Report / Export Laporan Kehadiran</p>
             </div>
 
             <!-- FORM EXPORT LAPORAN -->
@@ -532,16 +532,16 @@
 
                 <!-- KARTU 1: PENGATURAN LAPORAN (SESUAI GAMBAR) -->
                 <div class="report-section-card">
-                    <h2 class="card-inner-title">Pengaturan Laporan</h2>
+                    <h2 class="card-inner-title" data-i18n="rep_card_title">Pengaturan Laporan</h2>
 
                     <div class="row g-4">
                         <!-- Kolom 1: Rentang Tanggal -->
                         <div class="col-lg-4 col-md-6">
-                            <label class="field-label">Rentang tanggal</label>
+                            <label class="field-label" data-i18n="rep_lbl_range">Rentang tanggal</label>
                             <div class="pill-control-wrapper">
                                 <div class="date-range-box">
                                     <input type="date" name="start_date" id="startDate" class="date-input-inline" value="{{ start_date }}" required title="Tanggal Mulai">
-                                    <span class="text-muted fw-bold" style="font-size: 11px;">s/d</span>
+                                    <span class="text-muted fw-bold" style="font-size: 11px;" data-i18n="rep_lbl_to">s/d</span>
                                     <input type="date" name="end_date" id="endDate" class="date-input-inline" value="{{ end_date }}" required title="Tanggal Selesai">
                                 </div>
                                 <i class="bi bi-calendar3 pill-icon" title="Kalender"></i>
@@ -550,10 +550,10 @@
 
                         <!-- Kolom 2: Kantor Cabang -->
                         <div class="col-lg-4 col-md-6">
-                            <label class="field-label">Kantor Cabang</label>
+                            <label class="field-label" data-i18n="rep_lbl_branch">Kantor Cabang</label>
                             <div class="pill-control-wrapper">
                                 <select name="branch" class="pill-select" id="branchSelect">
-                                    <option value="all" {% if selected_branch == 'all' %}selected{% endif %}>Semua Kantor Cabang</option>
+                                    <option value="all" {% if selected_branch == 'all' %}selected{% endif %} data-i18n="rep_opt_all_branches">Semua Kantor Cabang</option>
                                     {% for b in branches %}
                                         <option value="{{ b }}" {% if selected_branch == b %}selected{% endif %}>{{ b }}</option>
                                     {% endfor %}
@@ -564,11 +564,11 @@
 
                         <!-- Kolom 3: Format File -->
                         <div class="col-lg-4 col-md-12">
-                            <label class="field-label">Format</label>
+                            <label class="field-label" data-i18n="rep_lbl_format">Format</label>
                             <div class="pill-control-wrapper">
                                 <select name="format" class="pill-select" id="formatSelect">
-                                    <option value="xlsx" {% if selected_format == 'xlsx' %}selected{% endif %}>.XLSX (Excel)</option>
-                                    <option value="pdf" {% if selected_format == 'pdf' %}selected{% endif %}>.PDF (Dokumen PDF)</option>
+                                    <option value="xlsx" {% if selected_format == 'xlsx' %}selected{% endif %} data-i18n="rep_opt_excel">.XLSX (Excel)</option>
+                                    <option value="pdf" {% if selected_format == 'pdf' %}selected{% endif %} data-i18n="rep_opt_pdf">.PDF (Dokumen PDF)</option>
                                 </select>
                                 <i class="bi bi-chevron-down pill-icon" title="Pilih Format"></i>
                             </div>
@@ -578,7 +578,7 @@
                     <!-- TOMBOL GENERATE -->
                     <div class="d-flex justify-content-end mt-4 pt-2">
                         <button type="submit" class="btn-generate-report" id="btnGenerate">
-                            <i class="bi bi-download"></i> Generate
+                            <i class="bi bi-download"></i> <span data-i18n="rep_btn_generate">Generate</span>
                         </button>
                     </div>
                 </div>
@@ -597,11 +597,11 @@
                     <div class="mb-3 text-primary">
                         <i class="bi bi-box-arrow-right fs-1"></i>
                     </div>
-                    <h5 class="fw-bold mb-2">Konfirmasi Logout</h5>
-                    <p class="text-muted small mb-4">Apakah Anda yakin ingin keluar dari Admin Dashboard TSA?</p>
+                    <h5 class="fw-bold mb-2" id="logout-title" data-i18n="logout_title">Konfirmasi Logout</h5>
+                    <p class="text-muted small mb-4" id="logout-msg" data-i18n="logout_msg">Apakah Anda yakin ingin keluar dari Admin Dashboard TSA?</p>
                     <div class="d-flex gap-2">
-                        <button type="button" class="btn btn-light w-50 fw-semibold rounded-3 py-2" data-bs-dismiss="modal">Batal</button>
-                        <a href="/logout" class="btn btn-primary w-50 fw-semibold rounded-3 py-2">Ya, Keluar</a>
+                        <button type="button" class="btn btn-light w-50 fw-semibold rounded-3 py-2" data-bs-dismiss="modal" id="logout-btn-cancel" data-i18n="logout_cancel">Batal</button>
+                        <a href="/logout" class="btn btn-primary w-50 fw-semibold rounded-3 py-2" id="logout-btn-confirm" data-i18n="logout_confirm">Ya, Keluar</a>
                     </div>
                 </div>
             </div>
@@ -610,67 +610,7 @@
 
     <!-- Bootstrap 5 JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        // Language Switcher Functionality
-        function changeLanguage(lang) {
-            localStorage.setItem('admin_lang', lang);
-            applyLanguage(lang);
-        }
-
-        function applyLanguage(lang) {
-            document.querySelectorAll('.lang-btn').forEach(btn => {
-                if (btn.getAttribute('data-lang') === lang) {
-                    btn.classList.add('active');
-                } else {
-                    btn.classList.remove('active');
-                }
-            });
-
-            const dict = {
-                'id': {
-                    'menu_home': 'Beranda',
-                    'menu_employee': 'Karyawan',
-                    'menu_branch': 'Kantor Cabang',
-                    'menu_presence': 'Kehadiran',
-                    'menu_request': 'Pengajuan Izin',
-                    'menu_report': 'Laporan',
-                    'logout': 'Keluar'
-                },
-                'en': {
-                    'menu_home': 'Home page',
-                    'menu_employee': 'Employee',
-                    'menu_branch': 'Branch company',
-                    'menu_presence': 'Presence',
-                    'menu_request': 'Request',
-                    'menu_report': 'Report',
-                    'logout': 'Logout'
-                }
-            };
-
-            const t = dict[lang] || dict['en'];
-            const homeLink = document.querySelector('a[href="/"].side-btn, #menu-home');
-            const empLink = document.querySelector('a[href="/employee"].side-btn, #menu-employee');
-            const branchLink = document.querySelector('a[href="/branch-company"].side-btn, #menu-branch');
-            const presenceLink = document.querySelector('a[href="/presence"].side-btn, #menu-presence');
-            const reqLink = document.querySelector('a[href="/request"].side-btn, #menu-request');
-            const repLink = document.querySelector('a[href="/report"].side-btn, #menu-report');
-
-            if (homeLink) homeLink.textContent = t.menu_home;
-            if (empLink) empLink.textContent = t.menu_employee;
-            if (branchLink) branchLink.textContent = t.menu_branch;
-            if (presenceLink) presenceLink.textContent = t.menu_presence;
-            if (reqLink) reqLink.textContent = t.menu_request;
-            if (repLink) repLink.textContent = t.menu_report;
-
-            document.querySelectorAll('.logout-btn, #btn-logout').forEach(el => {
-                el.textContent = t.logout;
-            });
-        }
-
-        document.addEventListener('DOMContentLoaded', function() {
-            const savedLang = localStorage.getItem('admin_lang') || 'id';
-            applyLanguage(savedLang);
-        });
-    </script>
+    <!-- Master Centralized i18n Engine -->
+    <script src="/assets/app_i18n.js"></script>
 </body>
 </html>

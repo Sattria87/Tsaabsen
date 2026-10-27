@@ -381,6 +381,12 @@
                 width: 100%;
             }
         }
+
+        .lang-btn.active {
+            background: #ffffff !important;
+            color: #2563eb !important;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
     </style>
 </head>
 <body>
@@ -390,10 +396,22 @@
     <div class="login-wrapper">
         <div class="login-card">
             
+            <!-- LANGUAGE SWITCHER (TOP OF CARD) -->
+            <div style="display: flex; justify-content: flex-end; margin-bottom: 12px;">
+                <div class="lang-switch-container" style="display: flex; background: #eef2f7; border: 1px solid #e2e8f0; border-radius: 20px; padding: 2px 4px; gap: 4px;">
+                    <button type="button" class="lang-btn" data-lang="id" onclick="changeLanguage('id')" style="border: none; background: transparent; padding: 4px 10px; border-radius: 14px; font-size: 11px; font-weight: 700; color: #64748b; cursor: pointer; display: flex; align-items: center; gap: 4px; transition: all 0.2s;">
+                        <span>🇮🇩</span> Indonesia
+                    </button>
+                    <button type="button" class="lang-btn" data-lang="en" onclick="changeLanguage('en')" style="border: none; background: transparent; padding: 4px 10px; border-radius: 14px; font-size: 11px; font-weight: 700; color: #64748b; cursor: pointer; display: flex; align-items: center; gap: 4px; transition: all 0.2s;">
+                        <span>🇬🇧</span> English
+                    </button>
+                </div>
+            </div>
+
             <!-- HEADER -->
             <div class="login-header">
                 <h1 class="login-title">LOGIN ADMIN</h1>
-                <p class="login-subtitle">Enter username and password to login</p>
+                <p class="login-subtitle" data-i18n="login_card_subtitle">Sistem Administrasi Presensi & AI TSA</p>
             </div>
 
             <!-- FLASH ALERTS -->
@@ -413,7 +431,7 @@
                 
                 <!-- USERNAME -->
                 <div class="form-group">
-                    <label class="form-label" for="username">Username</label>
+                    <label class="form-label" for="username" data-i18n="login_lbl_username">Username</label>
                     <div class="input-box">
                         <input 
                             type="text" 
@@ -421,7 +439,8 @@
                             name="username" 
                             class="form-input" 
                             value="{{ username if username else '' }}"
-                            placeholder="" 
+                            placeholder="Masukkan username admin"
+                            data-i18n-placeholder="login_ph_username"
                             required 
                             autofocus
                         >
@@ -430,14 +449,15 @@
 
                 <!-- PASSWORD -->
                 <div class="form-group">
-                    <label class="form-label" for="password">Password</label>
+                    <label class="form-label" for="password" data-i18n="login_lbl_password">Password</label>
                     <div class="input-box">
                         <input 
                             type="password" 
                             id="password" 
                             name="password" 
                             class="form-input has-toggle" 
-                            placeholder="" 
+                            placeholder="Masukkan password" 
+                            data-i18n-placeholder="login_ph_password"
                             required
                         >
                         <button type="button" class="toggle-btn" id="togglePassword" aria-label="Toggle password visibility">
@@ -450,15 +470,15 @@
                 <div class="options-row">
                     <label class="remember-label" for="remember">
                         <input type="checkbox" id="remember" name="remember" class="remember-checkbox">
-                        <span>Remember me</span>
+                        <span data-i18n="login_remember">Ingat saya</span>
                     </label>
-                    <a href="javascript:void(0)" class="forgot-link" onclick="openForgotModal()">Forgot password?</a>
+                    <a href="javascript:void(0)" class="forgot-link" onclick="openForgotModal()" data-i18n="login_forgot">Lupa kata sandi?</a>
                 </div>
 
                 <!-- LOGIN BUTTON -->
                 <div class="btn-wrapper">
                     <button type="submit" class="btn-login" id="btnLogin">
-                        <span>Login</span>
+                        <span data-i18n="login_btn">Masuk</span>
                     </button>
                 </div>
 
@@ -473,11 +493,11 @@
             <div class="modal-icon">
                 <i class="bi bi-shield-lock"></i>
             </div>
-            <h3 class="modal-title">Reset Password Admin</h3>
-            <p class="modal-desc">
+            <h3 class="modal-title" data-i18n="login_modal_title">Reset Password Admin</h3>
+            <p class="modal-desc" data-i18n="login_modal_desc">
                 Untuk alasan keamanan sistem, pengaturan ulang kata sandi admin hanya dapat dilakukan oleh Super Admin melalui database atau hubungi tim IT di <strong>admin@tsa.co.id</strong>.
             </p>
-            <button type="button" class="btn-modal-close" onclick="closeForgotModal()">Mengerti</button>
+            <button type="button" class="btn-modal-close" onclick="closeForgotModal()" data-i18n="login_modal_close">Mengerti</button>
         </div>
     </div>
 
@@ -510,5 +530,7 @@
             }
         });
     </script>
+    <!-- Master Centralized i18n Engine -->
+    <script src="/assets/app_i18n.js"></script>
 </body>
 </html>

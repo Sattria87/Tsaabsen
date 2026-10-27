@@ -87,16 +87,16 @@
                 </a>
             </div>
             <nav class="sidebar-menu">
-                <a href="/" class="side-btn">Home page</a>
-                <a href="/employee" class="side-btn">Employee</a>
-                <a href="/branch-company" class="side-btn">Branch company</a>
-                <a href="/presence" class="side-btn {% if page_name == 'Presence' %}active{% endif %}">Presence</a>
-                <a href="/request" class="side-btn {% if page_name == 'Request' %}active{% endif %}">Request</a>
-                <a href="/report" class="side-btn {% if page_name == 'Report' %}active{% endif %}">Report</a>
+                <a href="/" class="side-btn" id="menu-home" data-i18n="menu_home">Home page</a>
+                <a href="/employee" class="side-btn" id="menu-employee" data-i18n="menu_employee">Employee</a>
+                <a href="/branch-company" class="side-btn" id="menu-branch" data-i18n="menu_branch">Branch company</a>
+                <a href="/presence" class="side-btn {% if page_name == 'Presence' %}active{% endif %}" id="menu-presence" data-i18n="menu_presence">Presence</a>
+                <a href="/request" class="side-btn {% if page_name == 'Request' %}active{% endif %}" id="menu-request" data-i18n="menu_request">Request</a>
+                <a href="/report" class="side-btn {% if page_name == 'Report' %}active{% endif %}" id="menu-report" data-i18n="menu_report">Report</a>
             </nav>
         </div>
         <div>
-            <a href="/" class="logout-btn d-block text-center text-decoration-none">Kembali</a>
+            <a href="/" class="logout-btn d-block text-center text-decoration-none" data-i18n="back_btn">Kembali</a>
         </div>
     </div>
 
@@ -108,9 +108,12 @@
             <h3 class="fw-bold mb-2">Modul {{ page_name }}</h3>
             <p class="text-muted mb-4">Halaman ini sedang dalam pengembangan atau konfigurasi lebih lanjut.</p>
             <a href="/" class="btn btn-dark px-4 py-2 rounded-3 fw-bold">
-                <i class="bi bi-arrow-left me-1"></i> Kembali ke Home page
+                <i class="bi bi-arrow-left me-1"></i> <span data-i18n="back_btn">Kembali ke Home page</span>
             </a>
         </div>
     </main>
+
+    <!-- Master Centralized i18n Engine -->
+    <script src="/assets/app_i18n.js"></script>
 </body>
 </html>

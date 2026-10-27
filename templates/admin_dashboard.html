@@ -154,12 +154,12 @@
             
             <!-- MENU TOMBOL SAMPING -->
             <div class="sidebar-menu">
-                <a href="/" class="side-btn">Home page</a>
-                <a href="/employee" class="side-btn active">Employee</a>
-                <a href="/branch-company" class="side-btn">Branch company</a>
-                <a href="/presence" class="side-btn">Presence</a>
-                <a href="/request" class="side-btn">Request</a>
-                <a href="/report" class="side-btn">Report</a>
+                <a href="/" class="side-btn" id="menu-home" data-i18n="menu_home">Home page</a>
+                <a href="/employee" class="side-btn active" id="menu-employee" data-i18n="menu_employee">Employee</a>
+                <a href="/branch-company" class="side-btn" id="menu-branch" data-i18n="menu_branch">Branch company</a>
+                <a href="/presence" class="side-btn" id="menu-presence" data-i18n="menu_presence">Presence</a>
+                <a href="/request" class="side-btn" id="menu-request" data-i18n="menu_request">Request</a>
+                <a href="/report" class="side-btn" id="menu-report" data-i18n="menu_report">Report</a>
             </div>
         </div>
 
@@ -175,8 +175,8 @@
                 </button>
             </div>
             
-            <!-- LOGOUT -->
-            <a href="/logout" class="logout-btn d-block text-center text-decoration-none" style="background: #0066ff; box-shadow: 0 4px 14px rgba(0, 102, 255, 0.3);">Logout</a>
+            <!-- LOGOUT BUTTON -->
+            <button type="button" class="logout-btn d-block text-center text-decoration-none" id="btn-logout" data-bs-toggle="modal" data-bs-target="#logoutModal" data-i18n="logout" style="background: #0066ff; box-shadow: 0 4px 14px rgba(0, 102, 255, 0.3);">Logout</button>
         </div>
     </div>
 
@@ -184,7 +184,7 @@
     <div class="main-content">
         <!-- TOP BAR -->
         <div class="top-header">
-            <span class="fs-5 fw-semibold">Employee Management</span>
+            <span class="fs-5 fw-semibold" data-i18n="emp_mgmt_title">Employee Management</span>
             <span class="realtime-clock" id="realtime-clock">{{ current_date_display }}</span>
         </div>
 
@@ -203,21 +203,21 @@
         <!-- HEADER & INSERT BUTTON -->
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
-                <h3 class="fw-bold mb-0">Data Karyawan</h3>
-                <p class="text-muted small">Employee / Data Karyawan & Acuan AI Face Recognition</p>
+                <h3 class="fw-bold mb-0" data-i18n="emp_header_title">Data Karyawan</h3>
+                <p class="text-muted small" data-i18n="emp_breadcrumb">Employee / Data Karyawan & Acuan AI Face Recognition</p>
             </div>
             <button class="btn btn-warning fw-bold px-4 py-2" data-bs-toggle="modal" data-bs-target="#addEmployeeModal">
-                <i class="bi bi-person-plus-fill me-1"></i> Register
+                <i class="bi bi-person-plus-fill me-1"></i> <span data-i18n="emp_btn_register">Register</span>
             </button>
         </div>
 
         <!-- FORM PENCARIAN -->
         <div class="mb-4">
             <form method="GET" action="/employee" class="d-flex gap-2" style="max-width: 450px;">
-                <input type="text" name="search" class="form-control" placeholder="Cari nama karyawan..." value="{{ search_query }}">
-                <button type="submit" class="btn btn-dark">Cari</button>
+                <input type="text" name="search" class="form-control" placeholder="Cari nama karyawan..." data-i18n-placeholder="emp_search_placeholder" value="{{ search_query }}">
+                <button type="submit" class="btn btn-dark" data-i18n="emp_search_btn">Cari</button>
                 {% if search_query %}
-                    <a href="/employee" class="btn btn-outline-secondary">Reset</a>
+                    <a href="/employee" class="btn btn-outline-secondary" data-i18n="emp_reset_btn">Reset</a>
                 {% endif %}
             </form>
         </div>
@@ -227,13 +227,13 @@
             <table class="table align-middle">
                 <thead>
                     <tr class="text-secondary small">
-                        <th>Foto & Nama</th>
-                        <th>ID Karyawan</th>
-                        <th>Divisi</th>
-                        <th>Kantor Cabang</th>
-                        <th>Status</th>
-                        <th>Acuan AI</th>
-                        <th></th>
+                        <th data-i18n="emp_th_photo_name">Foto & Nama</th>
+                        <th data-i18n="emp_th_id">ID Karyawan</th>
+                        <th data-i18n="emp_th_division">Divisi</th>
+                        <th data-i18n="emp_th_branch">Kantor Cabang</th>
+                        <th data-i18n="emp_th_status">Status</th>
+                        <th data-i18n="emp_th_ai">Acuan AI</th>
+                        <th data-i18n="emp_th_action"></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -275,20 +275,20 @@
                         </td>
                         <td>
                             <a href="/detail/{{ emp.id }}" class="btn btn-sm btn-info text-white px-3">
-                                <i class="bi bi-eye"></i> Detail
+                                <i class="bi bi-eye"></i> <span data-i18n="emp_btn_detail">Detail</span>
                             </a>
                             <form action="/delete/{{ emp.id }}" method="POST" class="d-inline" onsubmit="return confirm('Yakin ingin menghapus karyawan {{ emp.name }}? Data login dan foto wajah juga akan dihapus.');">
                                 <button type="submit" class="btn btn-sm btn-danger px-2">
-                                    <i class="bi bi-trash"></i> Hapus
+                                    <i class="bi bi-trash"></i> <span data-i18n="emp_btn_delete">Hapus</span>
                                 </button>
                             </form>
                         </td>
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="7" class="text-center text-muted py-5">
+                        <td colspan="7" class="text-center text-muted py-5" data-i18n="emp_empty">
                             <i class="bi bi-people fs-1 d-block mb-2 text-secondary"></i>
-                            Belum ada data karyawan di database. Silakan klik tombol <strong>Register</strong> untuk menambahkan akun karyawan beserta foto selfie kamera.
+                            Tidak ada data karyawan yang ditemukan.
                         </td>
                     </tr>
                     {% endfor %}
@@ -304,8 +304,8 @@
                 <form action="/add" method="POST" id="addEmployeeForm">
                     <div class="modal-header bg-light">
                         <div>
-                            <h5 class="modal-title fw-bold text-dark mb-0">Tambah Akun Karyawan Baru</h5>
-                            <small class="text-muted">Wajib menyertakan foto selfie kamera sebagai acuan AI Face Recognition</small>
+                            <h5 class="modal-title fw-bold text-dark mb-0" data-i18n="emp_modal_title">Tambah Karyawan Baru</h5>
+                            <small class="text-muted" data-i18n="emp_modal_subtitle">Daftarkan akun login dan foto acuan AI Face Recognition</small>
                         </div>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" id="btnCloseModalTop"></button>
                     </div>
@@ -314,19 +314,19 @@
                             <!-- KOLOM KIRI: FORM DATA KARYAWAN -->
                             <div class="col-md-6">
                                 <h6 class="fw-bold text-dark border-bottom pb-2 mb-3">
-                                    <i class="bi bi-person-lines-fill text-primary me-1"></i> Informasi Karyawan
+                                    <i class="bi bi-person-lines-fill text-primary me-1"></i> <span data-i18n="emp_sec_profile">Informasi Profil Karyawan</span>
                                 </h6>
                                 <div class="mb-3">
-                                    <label class="form-label small fw-bold">Nama Lengkap <span class="text-danger">*</span></label>
-                                    <input type="text" class="form-control" name="name" placeholder="Contoh: Susi Februari" required>
+                                    <label class="form-label small fw-bold"><span data-i18n="emp_lbl_name">Nama Lengkap</span> <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" name="name" placeholder="Contoh: Susi Febriani" data-i18n-placeholder="emp_ph_name" required>
                                 </div>
                                 <div class="row">
                                     <div class="col-6 mb-3">
-                                        <label class="form-label small fw-bold">Divisi <span class="text-danger">*</span></label>
-                                        <input type="text" class="form-control" name="team" placeholder="Contoh: HR / IT" required>
+                                        <label class="form-label small fw-bold"><span data-i18n="emp_lbl_division">Divisi</span> <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control" name="team" placeholder="Contoh: HR / IT / Marketing" data-i18n-placeholder="emp_ph_division" required>
                                     </div>
                                     <div class="col-6 mb-3">
-                                        <label class="form-label small fw-bold">Kantor Cabang <span class="text-danger">*</span></label>
+                                        <label class="form-label small fw-bold"><span data-i18n="emp_lbl_branch">Kantor Cabang</span> <span class="text-danger">*</span></label>
                                         <select class="form-select" name="branch" required>
                                             {% for b in branches %}
                                                 <option value="{{ b }}" {% if b == 'TUNGGAL SAHABAT ABADI' %}selected{% endif %}>{{ b }}</option>
@@ -335,7 +335,7 @@
                                     </div>
                                 </div>
                                 <div class="mb-3">
-                                    <label class="form-label small fw-bold">Status Kepegawaian</label>
+                                    <label class="form-label small fw-bold" data-i18n="emp_lbl_status">Status Kepegawaian</label>
                                     <select class="form-select" name="status">
                                         <option value="Active">Active</option>
                                         <option value="Inactive">Inactive</option>
@@ -343,32 +343,32 @@
                                 </div>
 
                                 <h6 class="fw-bold text-dark border-bottom pb-2 mt-4 mb-3">
-                                    <i class="bi bi-shield-lock-fill text-primary me-1"></i> Akun Login Aplikasi Flutter
+                                    <i class="bi bi-shield-lock-fill text-primary me-1"></i> <span data-i18n="emp_sec_account">Akun Login Aplikasi Flutter</span>
                                 </h6>
                                 <div class="mb-3">
-                                    <label class="form-label small fw-bold">Username <span class="text-danger">*</span></label>
-                                    <input type="text" class="form-control" name="username" placeholder="Contoh: susi123" required>
+                                    <label class="form-label small fw-bold"><span data-i18n="emp_lbl_username">Username</span> <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" name="username" placeholder="Contoh: susi123" data-i18n-placeholder="emp_ph_username" required>
                                 </div>
                                 <div class="mb-3">
-                                    <label class="form-label small fw-bold">Password <span class="text-danger">*</span></label>
-                                    <input type="password" class="form-control" name="password" placeholder="Password akun" required>
+                                    <label class="form-label small fw-bold"><span data-i18n="emp_lbl_password">Password</span> <span class="text-danger">*</span></label>
+                                    <input type="password" class="form-control" name="password" placeholder="Password akun" data-i18n-placeholder="emp_ph_password" required>
                                 </div>
                             </div>
 
                             <!-- KOLOM KANAN: KAMERA SELFIE ACUAN AI FACE RECOGNITION -->
                             <div class="col-md-6">
                                 <h6 class="fw-bold text-dark border-bottom pb-2 mb-3">
-                                    <i class="bi bi-camera-fill text-danger me-1"></i> Foto Selfie Kamera (Acuan AI) <span class="text-danger">*</span>
+                                    <i class="bi bi-camera-fill text-danger me-1"></i> <span data-i18n="emp_sec_camera">Foto Selfie Kamera (Acuan AI)</span> <span class="text-danger">*</span>
                                 </h6>
-                                <p class="text-muted small mb-2">
-                                    Wajah harus terlihat jelas, tegak lurus, dan menghadap kamera untuk menjadi master acuan sistem AI Face Recognition saat absensi.
+                                <p class="text-muted small mb-2" data-i18n="emp_camera_guide">
+                                    Wajah harus terlihat jelas, tegak lurus, dan menghadap kamera untuk master acuan AI.
                                 </p>
 
                                 <!-- Kotak Kamera & Preview -->
                                 <div class="camera-container mb-2" id="cameraBox">
-                                    <div class="camera-placeholder-text" id="cameraPlaceholder">
+                                    <div class="camera-placeholder-text" id="cameraPlaceholder" data-i18n-html="emp_camera_placeholder">
                                         <i class="bi bi-camera-video-off fs-1 d-block mb-1"></i>
-                                        <span>Kamera belum aktif.<br>Klik tombol <strong>Buka Kamera Selfie</strong> di bawah.</span>
+                                        <span>Kamera belum aktif.<br>Klik tombol <strong>Buka Kamera</strong> di bawah.</span>
                                     </div>
                                     <video id="webcamVideo" autoplay playsinline muted></video>
                                     <div class="face-oval-guide" id="ovalGuide"></div>
@@ -377,19 +377,19 @@
 
                                 <!-- Status Badge Kamera -->
                                 <div id="cameraStatusText" class="badge bg-secondary-subtle text-secondary w-100 py-2 mb-2 text-center border">
-                                    <i class="bi bi-dot"></i> Kamera dalam keadaan non-aktif
+                                    <i class="bi bi-dot"></i> <span data-i18n="emp_camera_status_inactive">Kamera dalam keadaan non-aktif</span>
                                 </div>
 
                                 <!-- Tombol Aksi Kamera -->
                                 <div class="d-flex gap-2 mb-3">
                                     <button type="button" class="btn btn-outline-dark btn-sm flex-fill fw-bold" id="btnStartCamera">
-                                        <i class="bi bi-camera-video me-1"></i> Buka Kamera
+                                        <i class="bi bi-camera-video me-1"></i> <span data-i18n="emp_btn_open_cam">Buka Kamera</span>
                                     </button>
                                     <button type="button" class="btn btn-primary btn-sm flex-fill fw-bold" id="btnCapturePhoto" disabled>
-                                        <i class="bi bi-camera me-1"></i> Ambil Foto
+                                        <i class="bi bi-camera me-1"></i> <span data-i18n="emp_btn_capture">Ambil Foto</span>
                                     </button>
                                     <button type="button" class="btn btn-outline-warning btn-sm fw-bold" id="btnRetakePhoto" style="display: none;">
-                                        <i class="bi bi-arrow-repeat me-1"></i> Foto Ulang
+                                        <i class="bi bi-arrow-repeat me-1"></i> <span data-i18n="emp_btn_retake">Foto Ulang</span>
                                     </button>
                                 </div>
 
@@ -397,7 +397,7 @@
                                 <div class="border rounded-3 p-2 bg-light">
                                     <div class="d-flex justify-content-between align-items-center mb-1">
                                         <label class="form-label small text-muted mb-0 fw-semibold">
-                                            <i class="bi bi-folder2-open me-1"></i> Opsi unggah file foto wajah:
+                                            <i class="bi bi-folder2-open me-1"></i> <span data-i18n="emp_lbl_upload_file">Opsi unggah file foto wajah:</span>
                                         </label>
                                     </div>
                                     <input type="file" id="faceFileInput" accept="image/*" class="form-control form-control-sm">
@@ -407,16 +407,16 @@
                                 <canvas id="photoCanvas" style="display: none;"></canvas>
                                 <input type="hidden" name="face_image" id="faceImageInput" required>
                                 
-                                <div id="faceWarningAlert" class="alert alert-danger py-2 small mt-2 mb-0 d-none">
-                                    <i class="bi bi-exclamation-triangle-fill me-1"></i> Foto selfie kamera wajah wajib diambil sebagai acuan AI sebelum menyimpan!
+                                <div id="faceWarningAlert" class="alert alert-danger py-2 small mt-2 mb-0 d-none" data-i18n="emp_warn_face_required">
+                                    <i class="bi bi-exclamation-triangle-fill me-1"></i> Foto selfie wajah wajib diambil sebagai acuan AI sebelum menyimpan!
                                 </div>
                             </div>
                         </div>
                     </div>
                     <div class="modal-footer bg-light">
-                        <button type="button" class="btn btn-secondary px-3" data-bs-dismiss="modal" id="btnCancelModal">Batal</button>
+                        <button type="button" class="btn btn-secondary px-3" data-bs-dismiss="modal" id="btnCancelModal" data-i18n="emp_btn_cancel">Batal</button>
                         <button type="submit" class="btn btn-warning fw-bold px-4" id="btnSubmitForm">
-                            <i class="bi bi-check-circle-fill me-1"></i> Simpan Karyawan
+                            <i class="bi bi-check-circle-fill me-1"></i> <span data-i18n="emp_btn_save">Simpan Karyawan</span>
                         </button>
                     </div>
                 </form>
@@ -603,91 +603,26 @@
             }
         });
 
-        // Realtime Date Updater
-        function updateRealtimeDate(lang) {
-            const currentLang = lang || localStorage.getItem('admin_lang') || 'id';
-            const now = new Date();
-            const daysId = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
-            const monthsId = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
-            const daysEn = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-            const monthsEn = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    <!-- MODAL LOGOUT -->
+    <div class="modal fade" id="logoutModal" tabindex="-1" aria-labelledby="logoutModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" style="max-width: 380px;">
+            <div class="modal-content rounded-4 border-0 shadow">
+                <div class="modal-body text-center p-4">
+                    <div class="mb-3 text-primary">
+                        <i class="bi bi-box-arrow-right fs-1"></i>
+                    </div>
+                    <h5 class="fw-bold mb-2" id="logout-title" data-i18n="logout_title">Konfirmasi Logout</h5>
+                    <p class="text-muted small mb-4" id="logout-msg" data-i18n="logout_msg">Apakah Anda yakin ingin keluar dari Admin Dashboard TSA?</p>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-light w-50 fw-semibold rounded-3 py-2" data-bs-dismiss="modal" id="logout-btn-cancel" data-i18n="logout_cancel">Batal</button>
+                        <a href="/logout" class="btn btn-primary w-50 fw-semibold rounded-3 py-2" id="logout-btn-confirm" data-i18n="logout_confirm">Ya, Keluar</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
-            let dateStr = '';
-            if (currentLang === 'id') {
-                dateStr = `${daysId[now.getDay()]}, ${now.getDate()} ${monthsId[now.getMonth()]} ${now.getFullYear()}`;
-            } else {
-                dateStr = `${daysEn[now.getDay()]} ${monthsEn[now.getMonth()]} ${now.getDate()}, ${now.getFullYear()}`;
-            }
-            
-            const clockEl = document.getElementById('realtime-clock');
-            if (clockEl) {
-                clockEl.textContent = dateStr;
-            }
-        }
-        document.addEventListener('DOMContentLoaded', () => updateRealtimeDate());
-
-        // Language Switcher Functionality
-        function changeLanguage(lang) {
-            localStorage.setItem('admin_lang', lang);
-            applyLanguage(lang);
-        }
-
-        function applyLanguage(lang) {
-            document.querySelectorAll('.lang-btn').forEach(btn => {
-                if (btn.getAttribute('data-lang') === lang) {
-                    btn.classList.add('active');
-                } else {
-                    btn.classList.remove('active');
-                }
-            });
-
-            const dict = {
-                'id': {
-                    'menu_home': 'Beranda',
-                    'menu_employee': 'Karyawan',
-                    'menu_branch': 'Kantor Cabang',
-                    'menu_presence': 'Kehadiran',
-                    'menu_request': 'Pengajuan Izin',
-                    'menu_report': 'Laporan',
-                    'logout': 'Keluar'
-                },
-                'en': {
-                    'menu_home': 'Home page',
-                    'menu_employee': 'Employee',
-                    'menu_branch': 'Branch company',
-                    'menu_presence': 'Presence',
-                    'menu_request': 'Request',
-                    'menu_report': 'Report',
-                    'logout': 'Logout'
-                }
-            };
-
-            const t = dict[lang] || dict['id'];
-            const homeLink = document.querySelector('a[href="/"].side-btn, #menu-home');
-            const empLink = document.querySelector('a[href="/employee"].side-btn, #menu-employee');
-            const branchLink = document.querySelector('a[href="/branch-company"].side-btn, #menu-branch');
-            const presenceLink = document.querySelector('a[href="/presence"].side-btn, #menu-presence');
-            const reqLink = document.querySelector('a[href="/request"].side-btn, #menu-request');
-            const repLink = document.querySelector('a[href="/report"].side-btn, #menu-report');
-
-            if (homeLink) homeLink.textContent = t.menu_home;
-            if (empLink) empLink.textContent = t.menu_employee;
-            if (branchLink) branchLink.textContent = t.menu_branch;
-            if (presenceLink) presenceLink.textContent = t.menu_presence;
-            if (reqLink) reqLink.textContent = t.menu_request;
-            if (repLink) repLink.textContent = t.menu_report;
-
-            document.querySelectorAll('.logout-btn, #btn-logout').forEach(el => {
-                el.textContent = t.logout;
-            });
-
-            updateRealtimeDate(lang);
-        }
-
-        document.addEventListener('DOMContentLoaded', function() {
-            const savedLang = localStorage.getItem('admin_lang') || 'id';
-            applyLanguage(savedLang);
-        });
-    </script>
+    <!-- Master Centralized i18n Engine -->
+    <script src="/assets/app_i18n.js"></script>
 </body>
 </html>

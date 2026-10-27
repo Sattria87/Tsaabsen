@@ -552,9 +552,9 @@
         <header class="top-navbar-banner">
             <div class="navbar-brand-section">
                 <i class="bi bi-list fs-3 text-white cursor-pointer" title="Menu"></i>
-                <span class="navbar-brand-title">Request</span>
+                <span class="navbar-brand-title" id="top-navbar-title" data-i18n="req_banner_title">Request</span>
             </div>
-            <div class="navbar-date-section">
+            <div class="navbar-date-section" id="realtime-clock">
                 {{ current_day }} {{ current_date_formatted }}
             </div>
         </header>
@@ -577,28 +577,28 @@
             <!-- PAGE TITLE & BREADCRUMB -->
             <div class="d-flex justify-content-between align-items-end mb-4 flex-wrap gap-2">
                 <div>
-                    <h1 class="page-header-title">Data Pengajuan Izin / Sakit</h1>
-                    <p class="page-breadcrumb mb-0">Request / Data Pengajuan Izin Sakit</p>
+                    <h1 class="page-header-title" id="page-header-title" data-i18n="req_page_title">Data Pengajuan Izin / Sakit</h1>
+                    <p class="page-breadcrumb mb-0" id="page-breadcrumb" data-i18n="req_breadcrumb">Request / Data Pengajuan Izin Sakit</p>
                 </div>
                 <div>
-                    <button type="button" class="btn btn-primary rounded-3 fw-bold px-3 py-2 shadow-sm" data-bs-toggle="modal" data-bs-target="#addRequestModal">
-                        <i class="bi bi-plus-lg me-1"></i> Ajukan Izin / Sakit
+                    <button type="button" class="btn btn-primary rounded-3 fw-bold px-3 py-2 shadow-sm" data-bs-toggle="modal" data-bs-target="#addRequestModal" id="btn-open-add-modal">
+                        <i class="bi bi-plus-lg me-1"></i> <span class="btn-text" data-i18n="req_btn_create">Ajukan Izin / Sakit</span>
                     </button>
                 </div>
             </div>
 
             <!-- =============== MACRO UNTUK TABEL PENGAJUAN (SESUAI GAMBAR ACUAN) =============== -->
-            {% macro render_request_table(items, empty_msg) %}
+            {% macro render_request_table(items, empty_msg, empty_key='all') %}
                 {% if items %}
                 <div class="table-responsive">
                     <table class="table request-list-table align-middle">
                         <thead>
                             <tr>
-                                <th style="min-width: 250px;">Karyawan & Keperluan</th>
-                                <th style="min-width: 140px;">Tanggal</th>
-                                <th class="v-divider-left" style="min-width: 110px;">Divisi</th>
-                                <th style="min-width: 120px;">Cabang</th>
-                                <th class="v-divider-left text-center" style="min-width: 120px;">Status</th>
+                                <th class="th-col-emp" style="min-width: 250px;">Karyawan & Keperluan</th>
+                                <th class="th-col-date" style="min-width: 140px;">Tanggal</th>
+                                <th class="th-col-div v-divider-left" style="min-width: 110px;">Divisi</th>
+                                <th class="th-col-branch" style="min-width: 120px;">Cabang</th>
+                                <th class="th-col-status v-divider-left text-center" style="min-width: 120px;">Status</th>
                                 <th class="v-divider-left text-end" style="min-width: 180px;"></th>
                             </tr>
                         </thead>
@@ -716,28 +716,28 @@
                         <li class="nav-item" role="presentation">
                             <button class="nav-link active d-flex align-items-center gap-2 fw-bold" id="pending-tab" data-bs-toggle="tab" data-bs-target="#pending-content" type="button" role="tab" style="font-size: 13.5px; padding: 10px 18px;">
                                 <i class="bi bi-hourglass-split text-warning"></i>
-                                <span>Pending</span>
+                                <span data-i18n="req_tab_pending">Pending</span>
                                 <span class="badge rounded-pill bg-warning text-dark border border-warning-subtle" style="font-size: 11px;">{{ count_pending }}</span>
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
                             <button class="nav-link d-flex align-items-center gap-2 fw-bold" id="approved-tab" data-bs-toggle="tab" data-bs-target="#approved-content" type="button" role="tab" style="font-size: 13.5px; padding: 10px 18px;">
                                 <i class="bi bi-check-circle-fill text-success"></i>
-                                <span>Disetujui</span>
+                                <span data-i18n="req_tab_approved">Disetujui</span>
                                 <span class="badge rounded-pill bg-success-subtle text-success border border-success-subtle" style="font-size: 11px;">{{ count_approved }}</span>
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
                             <button class="nav-link d-flex align-items-center gap-2 fw-bold" id="rejected-tab" data-bs-toggle="tab" data-bs-target="#rejected-content" type="button" role="tab" style="font-size: 13.5px; padding: 10px 18px;">
                                 <i class="bi bi-x-circle-fill text-danger"></i>
-                                <span>Ditolak</span>
+                                <span data-i18n="req_tab_rejected">Ditolak</span>
                                 <span class="badge rounded-pill bg-danger-subtle text-danger border border-danger-subtle" style="font-size: 11px;">{{ count_rejected }}</span>
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
                             <button class="nav-link d-flex align-items-center gap-2 fw-bold" id="all-tab" data-bs-toggle="tab" data-bs-target="#all-content" type="button" role="tab" style="font-size: 13.5px; padding: 10px 18px;">
                                 <i class="bi bi-collection-fill text-primary"></i>
-                                <span>Semua Data</span>
+                                <span data-i18n="req_tab_all">Semua Data</span>
                                 <span class="badge rounded-pill bg-secondary-subtle text-secondary border border-secondary-subtle" style="font-size: 11px;">{{ requests_list|length }}</span>
                             </button>
                         </li>
@@ -987,11 +987,11 @@
                     <div class="mb-3 text-primary">
                         <i class="bi bi-box-arrow-right fs-1"></i>
                     </div>
-                    <h5 class="fw-bold mb-2">Konfirmasi Logout</h5>
-                    <p class="text-muted small mb-4">Apakah Anda yakin ingin keluar dari Admin Dashboard TSA?</p>
+                    <h5 class="fw-bold mb-2" id="logout-title" data-i18n="logout_title">Konfirmasi Logout</h5>
+                    <p class="text-muted small mb-4" id="logout-msg" data-i18n="logout_msg">Apakah Anda yakin ingin keluar dari Admin Dashboard TSA?</p>
                     <div class="d-flex gap-2">
-                        <button type="button" class="btn btn-light w-50 fw-semibold rounded-3 py-2" data-bs-dismiss="modal">Batal</button>
-                        <a href="/logout" class="btn btn-primary w-50 fw-semibold rounded-3 py-2">Ya, Keluar</a>
+                        <button type="button" class="btn btn-light w-50 fw-semibold rounded-3 py-2" data-bs-dismiss="modal" id="logout-btn-cancel" data-i18n="logout_cancel">Batal</button>
+                        <a href="/logout" class="btn btn-primary w-50 fw-semibold rounded-3 py-2" id="logout-btn-confirm" data-i18n="logout_confirm">Ya, Keluar</a>
                     </div>
                 </div>
             </div>
@@ -1000,67 +1000,7 @@
 
     <!-- Bootstrap 5 JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        // Language Switcher Functionality
-        function changeLanguage(lang) {
-            localStorage.setItem('admin_lang', lang);
-            applyLanguage(lang);
-        }
-
-        function applyLanguage(lang) {
-            document.querySelectorAll('.lang-btn').forEach(btn => {
-                if (btn.getAttribute('data-lang') === lang) {
-                    btn.classList.add('active');
-                } else {
-                    btn.classList.remove('active');
-                }
-            });
-
-            const dict = {
-                'id': {
-                    'menu_home': 'Beranda',
-                    'menu_employee': 'Karyawan',
-                    'menu_branch': 'Kantor Cabang',
-                    'menu_presence': 'Kehadiran',
-                    'menu_request': 'Pengajuan Izin',
-                    'menu_report': 'Laporan',
-                    'logout': 'Keluar'
-                },
-                'en': {
-                    'menu_home': 'Home page',
-                    'menu_employee': 'Employee',
-                    'menu_branch': 'Branch company',
-                    'menu_presence': 'Presence',
-                    'menu_request': 'Request',
-                    'menu_report': 'Report',
-                    'logout': 'Logout'
-                }
-            };
-
-            const t = dict[lang] || dict['en'];
-            const homeLink = document.querySelector('a[href="/"].side-btn, #menu-home');
-            const empLink = document.querySelector('a[href="/employee"].side-btn, #menu-employee');
-            const branchLink = document.querySelector('a[href="/branch-company"].side-btn, #menu-branch');
-            const presenceLink = document.querySelector('a[href="/presence"].side-btn, #menu-presence');
-            const reqLink = document.querySelector('a[href="/request"].side-btn, #menu-request');
-            const repLink = document.querySelector('a[href="/report"].side-btn, #menu-report');
-
-            if (homeLink) homeLink.textContent = t.menu_home;
-            if (empLink) empLink.textContent = t.menu_employee;
-            if (branchLink) branchLink.textContent = t.menu_branch;
-            if (presenceLink) presenceLink.textContent = t.menu_presence;
-            if (reqLink) reqLink.textContent = t.menu_request;
-            if (repLink) repLink.textContent = t.menu_report;
-
-            document.querySelectorAll('.logout-btn, #btn-logout').forEach(el => {
-                el.textContent = t.logout;
-            });
-        }
-
-        document.addEventListener('DOMContentLoaded', function() {
-            const savedLang = localStorage.getItem('admin_lang') || 'id';
-            applyLanguage(savedLang);
-        });
-    </script>
+    <!-- Centralized i18n Language Engine -->
+    <script src="/assets/app_i18n.js"></script>
 </body>
 </html>
