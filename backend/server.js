@@ -127,6 +127,89 @@ app.get('/api/health', async (req, res) => {
 });
 
 // ============================================================
+// WORKDAY & INDONESIAN HOLIDAY STATUS
+// GET /api/workday-status
+// ============================================================
+app.get('/api/workday-status', (req, res) => {
+  const now = new Date();
+  const dayOfWeek = now.getDay(); // 0: Minggu, 6: Sabtu
+  const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+
+  // Format YYYY-MM-DD
+  const yyyy = now.getFullYear();
+  const mm = String(now.getMonth() + 1).padStart(2, '0');
+  const dd = String(now.getDate()).padStart(2, '0');
+  const dateKey = `${yyyy}-${mm}-${dd}`;
+  const monthDay = `${mm}-${dd}`;
+
+  const fixedHolidays = {
+    '01-01': { name: 'Tahun Baru Masehi', is_cuti: false },
+    '05-01': { name: 'Hari Buruh Internasional', is_cuti: false },
+    '06-01': { name: 'Hari Lahir Pancasila', is_cuti: false },
+    '08-17': { name: 'Hari Kemerdekaan RI (HUT RI)', is_cuti: false },
+    '12-25': { name: 'Hari Raya Natal', is_cuti: false },
+    '12-26': { name: 'Cuti Bersama Hari Raya Natal', is_cuti: true },
+  };
+
+  const curatedHolidays = {
+    '2026-01-01': { name: 'Tahun Baru 2026 Masehi', is_cuti: false },
+    '2026-01-16': { name: 'Isra Mikraj Nabi Muhammad SAW', is_cuti: false },
+    '2026-02-16': { name: 'Cuti Bersama Tahun Baru Imlek 2577', is_cuti: true },
+    '2026-02-17': { name: 'Tahun Baru Imlek 2577 Kongzili', is_cuti: false },
+    '2026-03-19': { name: 'Cuti Bersama Hari Suci Nyepi', is_cuti: true },
+    '2026-03-20': { name: 'Hari Suci Nyepi Tahun Baru Saka 1948', is_cuti: false },
+    '2026-03-21': { name: 'Hari Raya Idul Fitri 1447 H', is_cuti: false },
+    '2026-03-22': { name: 'Hari Raya Idul Fitri 1447 H', is_cuti: false },
+    '2026-03-23': { name: 'Cuti Bersama Idul Fitri 1447 H', is_cuti: true },
+    '2026-03-24': { name: 'Cuti Bersama Idul Fitri 1447 H', is_cuti: true },
+    '2026-04-03': { name: 'Wafat Yesus Kristus (Jumat Agung)', is_cuti: false },
+    '2026-05-01': { name: 'Hari Buruh Internasional', is_cuti: false },
+    '2026-05-14': { name: 'Kenaikan Yesus Kristus', is_cuti: false },
+    '2026-05-15': { name: 'Cuti Bersama Kenaikan Yesus Kristus', is_cuti: true },
+    '2026-05-27': { name: 'Hari Raya Idul Adha 1447 H', is_cuti: false },
+    '2026-05-31': { name: 'Hari Raya Waisak 2570 BE', is_cuti: false },
+    '2026-06-01': { name: 'Hari Lahir Pancasila', is_cuti: false },
+    '2026-06-16': { name: '1 Muharram Tahun Baru Islam 1448 H', is_cuti: false },
+    '2026-08-17': { name: 'Proklamasi Kemerdekaan RI Ke-81', is_cuti: false },
+    '2026-08-25': { name: 'Maulid Nabi Muhammad SAW', is_cuti: false },
+    '2026-12-25': { name: 'Hari Raya Natal', is_cuti: false },
+    '2026-12-26': { name: 'Cuti Bersama Hari Raya Natal', is_cuti: true },
+  };
+
+  const hol = curatedHolidays[dateKey] || fixedHolidays[monthDay];
+  let statusType = 'workday';
+  let isHoliday = false;
+  let isCuti = false;
+  let eventName = 'Hari Kerja Aktif';
+  let statusLabel = 'Hari Kerja';
+
+  if (hol) {
+    isCuti = hol.is_cuti === true;
+    isHoliday = !isCuti;
+    statusType = isCuti ? 'cuti_bersama' : 'national_holiday';
+    statusLabel = isCuti ? 'Cuti Bersama' : 'Libur Nasional (Tanggal Merah)';
+    eventName = hol.name;
+  } else if (isWeekend) {
+    statusType = 'weekend';
+    statusLabel = 'Akhir Pekan (Libur)';
+    eventName = dayOfWeek === 6 ? 'Hari Sabtu (Libur Mingguan)' : 'Hari Minggu (Libur Mingguan)';
+  }
+
+  res.json({
+    date_iso: dateKey,
+    time_str: now.toTimeString().split(' ')[0],
+    is_working_day: statusType === 'workday',
+    is_weekend: isWeekend,
+    is_holiday: isHoliday,
+    is_cuti_bersama: isCuti,
+    status_type: statusType,
+    status_label_id: statusLabel,
+    event_name_id: eventName,
+    badge_class: statusType === 'workday' ? 'pill-workday' : (isCuti ? 'pill-cuti' : (isHoliday ? 'pill-holiday' : 'pill-weekend'))
+  });
+});
+
+// ============================================================
 // AUTH: Login
 // POST /api/login
 // Body: { username, password }

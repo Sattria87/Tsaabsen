@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../utils/mysql_helper.dart';
 import '../utils/auth_service.dart';
+import '../utils/holiday_helper.dart';
 import '../widgets/employee_avatar.dart';
 import 'login_screen.dart';
 import 'location_verification_screen.dart';
@@ -39,9 +40,12 @@ class _HomeScreenState extends State<HomeScreen> {
   String? _permissionReason;
   String? _permissionTime;
 
+  HolidayInfo get _holidayInfo => HolidayHelper.getHolidayInfo();
+
   @override
   void initState() {
     super.initState();
+    HolidayHelper.syncHolidays();
     _checkAttendanceStatus();
     _scheduleNextResetTimer();
   }
@@ -171,6 +175,115 @@ class _HomeScreenState extends State<HomeScreen> {
       return 'Apa yang kamu perlukan sore ini?';
     } else {
       return 'Apa yang kamu perlukan malam ini?';
+    }
+  }
+
+  // Dialog konfirmasi Clock In saat hari libur nasional / cuti bersama
+  void _handleClockInPress() {
+    final info = _holidayInfo;
+    if (info.isOffDay) {
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Row(
+            children: [
+              Icon(
+                info.isHoliday
+                    ? Icons.calendar_today_rounded
+                    : (info.isCutiBersama
+                        ? Icons.beach_access_rounded
+                        : Icons.coffee_rounded),
+                color: info.isHoliday
+                    ? const Color(0xFFDC2626)
+                    : (info.isCutiBersama
+                        ? const Color(0xFFD97706)
+                        : const Color(0xFF64748B)),
+                size: 24,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  info.isHoliday
+                      ? 'Hari Libur Nasional'
+                      : (info.isCutiBersama ? 'Hari Cuti Bersama' : 'Libur Akhir Pekan'),
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                info.eventName,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14.5,
+                  color: Color(0xFF1E293B),
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Hari ini adalah hari libur resmi. Anda TIDAK DIWAJIBKAN melakukan absensi kehadiran.',
+                style: TextStyle(fontSize: 12.5, color: Color(0xFF475569), height: 1.4),
+              ),
+              const SizedBox(height: 10),
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEFF6FF),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFBFDBFE)),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.info_outline, color: Color(0xFF2563EB), size: 18),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Jika Anda masuk lembur atau piket khusus, Anda tetap dapat melanjutkan absensi.',
+                        style: TextStyle(fontSize: 11.5, color: Color(0xFF1E40AF)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Batal (Disarankan)', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => LocationVerificationScreen(userData: widget.userData),
+                  ),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF007AFF),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: const Text('Lanjutkan Absen Lembur'),
+            ),
+          ],
+        ),
+      );
+    } else {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => LocationVerificationScreen(userData: widget.userData),
+        ),
+      );
     }
   }
 
@@ -472,13 +585,90 @@ class _HomeScreenState extends State<HomeScreen> {
                         width: double.infinity,
                         color: const Color(0xFFE5E7EB),
                       ),
-                      Text(
-                        _getFormattedDate(),
-                        style: const TextStyle(
-                          color: Color(0xFFF97316),
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              _getFormattedDate(),
+                              style: const TextStyle(
+                                color: Color(0xFFF97316),
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: _holidayInfo.isHoliday
+                                  ? const Color(0xFFFEE2E2)
+                                  : (_holidayInfo.isCutiBersama
+                                      ? const Color(0xFFFEF3C7)
+                                      : (_holidayInfo.isWeekend
+                                          ? const Color(0xFFF1F5F9)
+                                          : const Color(0xFFDCFCE7))),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: _holidayInfo.isHoliday
+                                    ? const Color(0xFFFCA5A5)
+                                    : (_holidayInfo.isCutiBersama
+                                        ? const Color(0xFFFCD34D)
+                                        : (_holidayInfo.isWeekend
+                                            ? const Color(0xFFCBD5E1)
+                                            : const Color(0xFF86EFAC))),
+                                width: 0.8,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  _holidayInfo.isHoliday
+                                      ? Icons.calendar_today_rounded
+                                      : (_holidayInfo.isCutiBersama
+                                          ? Icons.beach_access_rounded
+                                          : (_holidayInfo.isWeekend
+                                              ? Icons.coffee_rounded
+                                              : Icons.work_rounded)),
+                                  size: 11,
+                                  color: _holidayInfo.isHoliday
+                                      ? const Color(0xFFDC2626)
+                                      : (_holidayInfo.isCutiBersama
+                                          ? const Color(0xFFD97706)
+                                          : (_holidayInfo.isWeekend
+                                              ? const Color(0xFF475569)
+                                              : const Color(0xFF16A34A))),
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  _holidayInfo.isHoliday
+                                      ? 'Tanggal Merah'
+                                      : (_holidayInfo.isCutiBersama
+                                          ? 'Cuti Bersama'
+                                          : (_holidayInfo.isWeekend
+                                              ? 'Akhir Pekan'
+                                              : 'Hari Kerja')),
+                                  style: TextStyle(
+                                    fontSize: 10.5,
+                                    fontWeight: FontWeight.bold,
+                                    color: _holidayInfo.isHoliday
+                                        ? const Color(0xFFDC2626)
+                                        : (_holidayInfo.isCutiBersama
+                                            ? const Color(0xFFD97706)
+                                            : (_holidayInfo.isWeekend
+                                                ? const Color(0xFF475569)
+                                                : const Color(0xFF16A34A))),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -491,11 +681,137 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  // Widget Banner Informasi Hari Libur Nasional / Cuti Bersama
+  Widget _buildHolidayBanner() {
+    final info = _holidayInfo;
+    if (!info.isOffDay) return const SizedBox.shrink();
+
+    final isHol = info.isHoliday;
+    final isCuti = info.isCutiBersama;
+    final isWknd = info.isWeekend;
+
+    final bgColor = isHol
+        ? const Color(0xFFFEF2F2)
+        : (isCuti ? const Color(0xFFFFFBEB) : const Color(0xFFF8FAFC));
+    final borderColor = isHol
+        ? const Color(0xFFFCA5A5)
+        : (isCuti ? const Color(0xFFFDE68A) : const Color(0xFFE2E8F0));
+    final iconColor = isHol
+        ? const Color(0xFFDC2626)
+        : (isCuti ? const Color(0xFFD97706) : const Color(0xFF64748B));
+    final titleColor = isHol
+        ? const Color(0xFF991B1B)
+        : (isCuti ? const Color(0xFF92400E) : const Color(0xFF334155));
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: borderColor, width: 1.2),
+        boxShadow: [
+          BoxShadow(
+            color: iconColor.withValues(alpha: 0.06),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(7),
+            decoration: BoxDecoration(
+              color: iconColor.withValues(alpha: 0.12),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              isHol
+                  ? Icons.calendar_today_rounded
+                  : (isCuti
+                      ? Icons.beach_access_rounded
+                      : Icons.coffee_rounded),
+              color: iconColor,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      isHol
+                          ? 'HARI LIBUR NASIONAL'
+                          : (isCuti ? 'CUTI BERSAMA' : 'AKHIR PEKAN'),
+                      style: TextStyle(
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w800,
+                        color: titleColor,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 7,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: iconColor,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: const Text(
+                        'Tidak Perlu Absen',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  info.eventName,
+                  style: const TextStyle(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1E293B),
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  isWknd
+                      ? 'Hari ini libur akhir pekan. Anda bebas dari kewajiban absensi harian.'
+                      : 'Hari ini libur resmi pemerintah. Karyawan tidak diwajibkan melakukan absensi kehadiran. Selamat beristirahat!',
+                  style: const TextStyle(
+                    fontSize: 11.5,
+                    color: Color(0xFF475569),
+                    height: 1.3,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   // TAMPILAN 1: BELUM CLOCK IN (Carousel Clock in / Izin)
   Widget _buildClockInView() {
     return Column(
       children: [
-        const SizedBox(height: 14),
+        const SizedBox(height: 10),
+
+        // Banner Hari Libur Nasional / Cuti Bersama
+        _buildHolidayBanner(),
 
         // Teks Sapaan "Apa yang kamu perlukan pagi ini?"
         Text(
@@ -571,13 +887,7 @@ class _HomeScreenState extends State<HomeScreen> {
             child: ElevatedButton(
               onPressed: () {
                 if (_currentIndex == 0) {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) =>
-                          LocationVerificationScreen(userData: widget.userData),
-                    ),
-                  );
+                  _handleClockInPress();
                 } else {
                   Navigator.push(
                     context,
