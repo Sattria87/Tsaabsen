@@ -1508,7 +1508,7 @@ def presence():
         SELECT 
             e.id, e.employee_id, e.name, e.team, e.branch, e.status, e.tag1, e.tag2, e.tag3, e.username, e.face_image,
             a.type AS today_type,
-            SUBSTRING(TIME(a.max_ts), 1, 5) AS today_clock_in,
+            SUBSTRING(TIME(COALESCE(a.clock_in_time, a.max_ts)), 1, 5) AS today_clock_in,
             SUBSTRING(TIME(a.clock_out), 1, 5) AS today_clock_out,
             a.image_path AS today_image,
             a.reason AS today_reason
@@ -1516,9 +1516,14 @@ def presence():
         LEFT JOIN (
             SELECT username,
                    SUBSTRING_INDEX(GROUP_CONCAT(type ORDER BY id DESC), ',', 1) AS type,
+                   MAX(CASE WHEN type IN ('clock_in', 'hadir') THEN timestamp END) AS clock_in_time,
                    MAX(timestamp) AS max_ts,
                    MAX(clock_out) AS clock_out,
-                   SUBSTRING_INDEX(GROUP_CONCAT(COALESCE(image_path, '') ORDER BY id DESC), ',', 1) AS image_path,
+                   -- Ambil foto saat absen hari ini yang tidak kosong (prioritas foto clock_in / kehadiran)
+                   COALESCE(
+                       MAX(CASE WHEN type IN ('clock_in', 'hadir') AND image_path IS NOT NULL AND image_path != '' THEN image_path END),
+                       MAX(CASE WHEN image_path IS NOT NULL AND image_path != '' THEN image_path END)
+                   ) AS image_path,
                    SUBSTRING_INDEX(GROUP_CONCAT(COALESCE(reason, '') ORDER BY id DESC), ',', 1) AS reason
             FROM attendance
             WHERE DATE(timestamp) = CURDATE()
@@ -1541,6 +1546,13 @@ def presence():
     # - 08:50 s/d 09:00 (530 - 540 menit): Baik
     # - diatas 09:00 (> 540 menit): Kurang Baik
     for emp in presence_list:
+        # Jika belum absen hari itu atau tidak ada foto absensi hari ini, pastikan today_image bernilai None
+        raw_today_img = emp.get('today_image')
+        if not raw_today_img or not str(raw_today_img).strip() or not emp.get('today_type'):
+            emp['today_image'] = None
+        else:
+            emp['today_image'] = str(raw_today_img).strip()
+
         # Jika hari ini memiliki permohonan izin/sakit yang approved, tampilkan sebagai 'izin'
         raw_type = (emp.get('today_type') or '').lower()
         if raw_type in ('izin', 'izin_sakit', 'izin_keperluan', 'cuti', 'sakit') or raw_type.startswith('izin'):

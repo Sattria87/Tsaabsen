@@ -366,6 +366,24 @@
             box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
         }
 
+        .presence-avatar-na {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #f1f5f9;
+            border: 2px dashed #94a3b8;
+            color: #64748b;
+            font-size: 13px;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+            user-select: none;
+            flex-shrink: 0;
+        }
+
         /* Action Badges / Tags (Matching Design Screenshot) */
         .tag-pill-badge {
             display: inline-block;
@@ -646,21 +664,24 @@
                         <tbody>
                             {% for emp in presence_list %}
                             <tr>
-                                <!-- KOLOM 1: FOTO -->
+                                <!-- KOLOM 1: FOTO SAAT ABSEN HARI INI -->
                                 <td>
                                     <div class="d-flex align-items-center gap-2">
-                                        {% if emp.face_image %}
-                                            <img src="{% if emp.face_image.startswith('http') or emp.face_image.startswith('data:') %}{{ emp.face_image }}{% elif emp.face_image.startswith('/') %}{{ emp.face_image }}{% else %}/{{ emp.face_image }}{% endif %}" alt="{{ emp.name }}" class="presence-avatar-img" onerror="this.src='/assets/mascot_avatar.png'">
+                                        {% if emp.today_image %}
+                                            <a href="{% if emp.today_image.startswith('http') or emp.today_image.startswith('data:') %}{{ emp.today_image }}{% elif emp.today_image.startswith('/') %}{{ emp.today_image }}{% else %}/{{ emp.today_image }}{% endif %}" target="_blank" title="Foto saat absen hari ini (Klik untuk melihat ukuran penuh)">
+                                                <img src="{% if emp.today_image.startswith('http') or emp.today_image.startswith('data:') %}{{ emp.today_image }}{% elif emp.today_image.startswith('/') %}{{ emp.today_image }}{% else %}/{{ emp.today_image }}{% endif %}" alt="Foto Absen {{ emp.name }}" class="presence-avatar-img border border-2 border-success" onerror="this.src='/assets/mascot_avatar.png'">
+                                            </a>
+                                            <span class="text-secondary small text-truncate" style="max-width: 95px;" title="{{ emp.today_image }}">
+                                                {{ emp.today_image.split('/')[-1] }}
+                                            </span>
                                         {% else %}
-                                            <img src="/assets/mascot_avatar.png" alt="{{ emp.name }}" class="presence-avatar-img">
+                                            <div class="presence-avatar-na" title="Karyawan belum melakukan absensi hari ini">
+                                                N/A
+                                            </div>
+                                            <span class="badge bg-secondary-subtle text-secondary border px-2 py-1 small fw-bold">
+                                                N/A
+                                            </span>
                                         {% endif %}
-                                        <span class="text-secondary small text-truncate" style="max-width: 95px;" title="{{ emp.face_image or 'foto_karyawan.png' }}">
-                                            {% if emp.face_image %}
-                                                {{ emp.face_image.split('/')[-1] }}
-                                            {% else %}
-                                                foto_karyawan
-                                            {% endif %}
-                                        </span>
                                     </div>
                                 </td>
 
@@ -762,12 +783,26 @@
                                         </div>
                                         <div class="modal-body p-4">
                                             <div class="text-center mb-3">
-                                                {% if emp.face_image %}
-                                                    <img src="{% if emp.face_image.startswith('http') or emp.face_image.startswith('data:') %}{{ emp.face_image }}{% elif emp.face_image.startswith('/') %}{{ emp.face_image }}{% else %}/{{ emp.face_image }}{% endif %}" alt="{{ emp.name }}" class="rounded-circle border mb-2 shadow-sm" style="width: 72px; height: 72px; object-fit: cover;" onerror="this.src='/assets/mascot_avatar.png'">
+                                                {% if emp.today_image %}
+                                                    <a href="{% if emp.today_image.startswith('http') or emp.today_image.startswith('data:') %}{{ emp.today_image }}{% elif emp.today_image.startswith('/') %}{{ emp.today_image }}{% else %}/{{ emp.today_image }}{% endif %}" target="_blank" title="Buka foto ukuran penuh">
+                                                        <img src="{% if emp.today_image.startswith('http') or emp.today_image.startswith('data:') %}{{ emp.today_image }}{% elif emp.today_image.startswith('/') %}{{ emp.today_image }}{% else %}/{{ emp.today_image }}{% endif %}" alt="Foto Absen {{ emp.name }}" class="rounded-circle border border-2 border-success mb-2 shadow-sm" style="width: 76px; height: 76px; object-fit: cover;" onerror="this.src='/assets/mascot_avatar.png'">
+                                                    </a>
+                                                    <div>
+                                                        <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 small fw-semibold">
+                                                            <i class="bi bi-camera-fill me-1"></i> Foto Saat Absen Hari Ini
+                                                        </span>
+                                                    </div>
                                                 {% else %}
-                                                    <img src="/assets/mascot_avatar.png" alt="{{ emp.name }}" class="rounded-circle border mb-2 shadow-sm" style="width: 72px; height: 72px; object-fit: cover;">
+                                                    <div class="presence-avatar-na rounded-circle mb-2 shadow-sm mx-auto" style="width: 76px; height: 76px; font-size: 22px;">
+                                                        N/A
+                                                    </div>
+                                                    <div>
+                                                        <span class="badge bg-secondary-subtle text-secondary border px-2 py-1 small fw-semibold">
+                                                            <i class="bi bi-dash-circle me-1"></i> Belum Absen Hari Ini (N/A)
+                                                        </span>
+                                                    </div>
                                                 {% endif %}
-                                                <h5 class="fw-bold mb-0">{{ emp.name }}</h5>
+                                                <h5 class="fw-bold mb-0 mt-2">{{ emp.name }}</h5>
                                                 <small class="text-muted">ID: {{ emp.employee_id }} | @{{ emp.username }}</small>
                                             </div>
                                             <ul class="list-group list-group-flush small mb-3">
