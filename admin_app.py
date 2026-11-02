@@ -753,6 +753,412 @@ def add_employee():
 
     return redirect(url_for('employee_management'))
 
+# ==========================================
+# BULK IMPORT & EXPORT KARYAWAN DARI EXCEL
+# ==========================================
+@app.route('/employee/template-excel')
+@app.route('/employees/template-excel')
+def download_employee_template():
+    """Menghasilkan file template Excel (.xlsx) resmi untuk import data karyawan massal."""
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Template Karyawan"
+
+    # Styling definitions
+    title_font = Font(name="Calibri", size=13, bold=True, color="131B3E")
+    subtitle_font = Font(name="Calibri", size=9, italic=True, color="4B5563")
+    header_fill = PatternFill(start_color="131B3E", end_color="131B3E", fill_type="solid")
+    header_font = Font(name="Calibri", size=10, bold=True, color="FFFFFF")
+    sample_fill = PatternFill(start_color="F8FAFC", end_color="F8FAFC", fill_type="solid")
+    border_thin = Side(border_style="thin", color="D1D5DB")
+    cell_border = Border(left=border_thin, right=border_thin, top=border_thin, bottom=border_thin)
+    center_align = Alignment(horizontal="center", vertical="center", wrap_text=True)
+    left_align = Alignment(horizontal="left", vertical="center")
+
+    # Baris Judul & Catatan Petunjuk
+    ws.merge_cells("A1:I1")
+    ws["A1"] = "TEMPLATE DATA KARYAWAN TSA - IMPORT MASSAL (BULKY)"
+    ws["A1"].font = title_font
+    ws["A1"].alignment = Alignment(horizontal="left", vertical="center")
+    ws.row_dimensions[1].height = 24
+
+    ws.merge_cells("A2:I2")
+    ws["A2"] = "Petunjuk: Kolom bertanda (*) Wajib diisi. Kolom 'ID Karyawan' boleh dikosongkan (otomatis dibuatkan sistem). Status: Active / Inactive."
+    ws["A2"].font = subtitle_font
+    ws["A2"].alignment = Alignment(horizontal="left", vertical="center")
+    ws.row_dimensions[2].height = 18
+
+    # Definisi Kolom Header (Baris 4)
+    headers = [
+        ("No", 8),
+        ("ID Karyawan", 18),
+        ("Nama Lengkap (*)", 26),
+        ("Divisi / Tim (*)", 22),
+        ("Kantor Cabang (*)", 26),
+        ("Status", 14),
+        ("Username (*)", 20),
+        ("Password (*)", 18),
+        ("Email", 26)
+    ]
+
+    ws.row_dimensions[4].height = 26
+    for col_idx, (header_text, width) in enumerate(headers, start=1):
+        cell = ws.cell(row=4, column=col_idx, value=header_text)
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = center_align
+        cell.border = cell_border
+        col_letter = openpyxl.utils.get_column_letter(col_idx)
+        ws.column_dimensions[col_letter].width = width
+
+    # Dapatkan contoh kantor cabang dari database jika tersedia
+    sample_branch = "Kantor Pusat Surabaya"
+    try:
+        conn = get_db_connection()
+        with conn.cursor() as cur:
+            cur.execute("SELECT branch_name FROM branch_companies ORDER BY id ASC LIMIT 1")
+            b_row = cur.fetchone()
+            if b_row and b_row.get('branch_name'):
+                sample_branch = b_row['branch_name']
+        conn.close()
+    except Exception:
+        pass
+
+    # Contoh baris data untuk panduan pengguna
+    sample_rows = [
+        (1, "101.202.01", "Budi Santoso", "IT Support", sample_branch, "Active", "budi.santoso", "tsa123", "budi@tsa.co.id"),
+        (2, "", "Siti Nurhaliza", "Human Resources", sample_branch, "Active", "siti.hr", "tsa123", "siti@tsa.co.id"),
+        (3, "101.202.03", "Kevin Pratama", "Marketing", sample_branch, "Active", "kevin.sales", "tsa123", "kevin@tsa.co.id")
+    ]
+
+    for offset, row_data in enumerate(sample_rows, start=5):
+        ws.row_dimensions[offset].height = 22
+        for col_idx, val in enumerate(row_data, start=1):
+            cell = ws.cell(row=offset, column=col_idx, value=val)
+            cell.font = Font(name="Calibri", size=10)
+            cell.fill = sample_fill
+            cell.border = cell_border
+            if col_idx in [1, 2, 6]:
+                cell.alignment = center_align
+            else:
+                cell.alignment = left_align
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    return send_file(
+        buf,
+        as_attachment=True,
+        download_name="Template_Import_Karyawan_TSA.xlsx",
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+
+@app.route('/employee/import-excel', methods=['POST'])
+@app.route('/employees/import-excel', methods=['POST'])
+def import_employees_excel():
+    """Memproses unggahan file Excel dan mengimpor data karyawan secara bulky."""
+    if 'file' not in request.files:
+        flash('Tidak ada file Excel yang dipilih untuk diunggah!', 'danger')
+        return redirect(url_for('employee_management'))
+
+    file = request.files['file']
+    if not file or file.filename == '':
+        flash('Silakan pilih file Excel (.xlsx atau .xls) terlebih dahulu!', 'danger')
+        return redirect(url_for('employee_management'))
+
+    filename = file.filename.lower()
+    if not (filename.endswith('.xlsx') or filename.endswith('.xls')):
+        flash('Format file tidak didukung! Harap unggah file spreadsheet Excel dengan ekstensi .xlsx atau .xls.', 'danger')
+        return redirect(url_for('employee_management'))
+
+    on_duplicate = request.form.get('on_duplicate', 'skip').strip().lower()
+
+    try:
+        wb = openpyxl.load_workbook(file, data_only=True)
+        ws = wb.active
+    except Exception as e:
+        flash(f'Gagal membaca file Excel: {e}', 'danger')
+        return redirect(url_for('employee_management'))
+
+    # Deteksi otomatis baris header pada rentang 1-15 baris pertama
+    header_row_idx = None
+    col_mapping = {}
+
+    for r in range(1, 15):
+        row_vals = [str(ws.cell(row=r, column=c).value or '').strip().lower() for c in range(1, 25)]
+        has_name = any('nama' in v or 'name' in v for v in row_vals)
+        has_other = any(k in ' '.join(row_vals) for k in ['user', 'divisi', 'team', 'cabang', 'branch', 'id', 'nip', 'password'])
+        if has_name and has_other:
+            header_row_idx = r
+            for c in range(1, len(row_vals) + 1):
+                val = str(ws.cell(row=r, column=c).value or '').strip().lower()
+                if not val:
+                    continue
+                if 'nama' in val or val == 'name' or 'full name' in val:
+                    col_mapping.setdefault('name', c)
+                elif 'user' in val:
+                    col_mapping.setdefault('username', c)
+                elif 'pass' in val or 'sandi' in val:
+                    col_mapping.setdefault('password', c)
+                elif 'divisi' in val or 'team' in val or 'tim' in val or 'dept' in val:
+                    col_mapping.setdefault('team', c)
+                elif 'cabang' in val or 'branch' in val or 'kantor' in val or 'lokasi' in val:
+                    col_mapping.setdefault('branch', c)
+                elif 'status' in val:
+                    col_mapping.setdefault('status', c)
+                elif 'nip' in val or 'id karyawan' in val or 'nik' in val or (val.startswith('id') and 'karyawan' in val):
+                    col_mapping.setdefault('employee_id', c)
+                elif 'email' in val or 'surel' in val:
+                    col_mapping.setdefault('email', c)
+            break
+
+    if not header_row_idx or 'name' not in col_mapping:
+        flash('Format kolom Excel tidak dikenali! Pastikan terdapat kolom "Nama Lengkap" dan "Username" sesuai Template Resmi.', 'danger')
+        return redirect(url_for('employee_management'))
+
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Ambil daftar kantor cabang yang valid di database
+        cursor.execute("SELECT branch_name FROM branch_companies ORDER BY id ASC")
+        db_branches = [r['branch_name'] for r in cursor.fetchall()]
+        default_branch = db_branches[0] if db_branches else 'Kantor Pusat Surabaya'
+
+        # Load seluruh karyawan yang sudah ada untuk pengecekan cepat duplikasi
+        cursor.execute("SELECT LOWER(username) AS u, employee_id FROM employees")
+        existing_emp_map = {r['u']: r['employee_id'] for r in cursor.fetchall()}
+        
+        cursor.execute("SELECT employee_id FROM employees")
+        all_emp_ids = set(r['employee_id'] for r in cursor.fetchall())
+
+        success_count = 0
+        updated_count = 0
+        skipped_count = 0
+        row_errors = []
+
+        def get_cell_str(row_idx, col_key, default_val=''):
+            c_idx = col_mapping.get(col_key)
+            if not c_idx:
+                return default_val
+            val = ws.cell(row=row_idx, column=c_idx).value
+            if val is None:
+                return default_val
+            return str(val).strip()
+
+        max_row = ws.max_row
+        for r in range(header_row_idx + 1, max_row + 1):
+            name = get_cell_str(r, 'name')
+            username = get_cell_str(r, 'username')
+            password = get_cell_str(r, 'password')
+            team = get_cell_str(r, 'team')
+            branch = get_cell_str(r, 'branch')
+            status = get_cell_str(r, 'status')
+            emp_id = get_cell_str(r, 'employee_id')
+            email = get_cell_str(r, 'email')
+
+            # Lewati baris yang kosong total
+            if not name and not username and not team:
+                continue
+
+            if not name:
+                row_errors.append(f"Baris {r}: Nama Lengkap kosong")
+                continue
+
+            # Jika username kosong di Excel, buat otomatis dari nama
+            if not username:
+                clean_name = ''.join(ch for ch in name.lower() if ch.isalnum())
+                username = clean_name if clean_name else f"user{r}"
+                base_u = username
+                counter = 1
+                while username.lower() in existing_emp_map:
+                    username = f"{base_u}{counter}"
+                    counter += 1
+
+            if not password:
+                password = '123'  # Password default standar
+
+            if not team:
+                team = 'Operasional'
+
+            if not branch:
+                branch = default_branch
+            else:
+                # Cocokkan case-insensitive dengan kantor cabang di DB jika ada
+                matched_b = next((b for b in db_branches if b.lower() == branch.lower()), branch)
+                branch = matched_b
+
+            # Normalisasi status (Active / Inactive)
+            if status.lower() in ['active', 'aktif', '1', 'true', 'ya', 'a']:
+                status = 'Active'
+            elif status.lower() in ['inactive', 'nonaktif', 'tidak aktif', '0', 'false', 'i']:
+                status = 'Inactive'
+            else:
+                status = 'Active'
+
+            email_val = email if email else None
+            u_key = username.lower()
+
+            if u_key in existing_emp_map:
+                if on_duplicate == 'update':
+                    try:
+                        cursor.execute("""
+                            UPDATE employees 
+                            SET name = %s, team = %s, branch = %s, status = %s, password = %s, email = COALESCE(%s, email)
+                            WHERE LOWER(username) = %s
+                        """, (name, team, branch, status, password, email_val, u_key))
+
+                        cursor.execute("""
+                            UPDATE users 
+                            SET name = %s, password = %s
+                            WHERE LOWER(username) = %s
+                        """, (name, password, u_key))
+                        updated_count += 1
+                    except Exception as err:
+                        row_errors.append(f"Baris {r} (@{username}): Gagal update ({err})")
+                else:
+                    skipped_count += 1
+            else:
+                # Siapkan ID karyawan unik
+                if not emp_id or emp_id in all_emp_ids:
+                    emp_id = generate_random_employee_id()
+                    while emp_id in all_emp_ids:
+                        emp_id = generate_random_employee_id()
+
+                try:
+                    cursor.execute("""
+                        INSERT INTO employees (employee_id, name, team, branch, status, username, password, email)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                    """, (emp_id, name, team, branch, status, username, password, email_val))
+
+                    cursor.execute("""
+                        INSERT INTO users (username, password, name)
+                        VALUES (%s, %s, %s)
+                        ON DUPLICATE KEY UPDATE name = VALUES(name), password = VALUES(password)
+                    """, (username, password, name))
+
+                    existing_emp_map[u_key] = emp_id
+                    all_emp_ids.add(emp_id)
+                    success_count += 1
+                except Exception as err:
+                    row_errors.append(f"Baris {r} (@{username}): Gagal insert ({err})")
+
+        conn.commit()
+        conn.close()
+
+        # Bentuk pesan notifikasi flash
+        if success_count > 0 or updated_count > 0:
+            msg = f"Bulk Import Berhasil: <b>{success_count}</b> karyawan baru ditambahkan"
+            if updated_count > 0:
+                msg += f", <b>{updated_count}</b> diperbarui"
+            if skipped_count > 0:
+                msg += f", <b>{skipped_count}</b> dilewati (sudah terdaftar)"
+            msg += "."
+            if row_errors:
+                msg += f" Catatan ({len(row_errors)}): {'; '.join(row_errors[:3])}"
+            flash(msg, 'success')
+        elif skipped_count > 0:
+            flash(f"Semua data ({skipped_count} karyawan) dilewati karena username sudah terdaftar. Gunakan opsi 'Perbarui data jika username sudah ada' jika ingin menimpa data.", 'warning')
+        else:
+            err_msg = f": {'; '.join(row_errors[:3])}" if row_errors else "."
+            flash(f"Tidak ada data karyawan yang berhasil diimpor{err_msg}", 'danger')
+
+    except Exception as e:
+        flash(f'Terjadi kendala saat memproses database: {e}', 'danger')
+
+    return redirect(url_for('employee_management'))
+
+@app.route('/employee/export-excel')
+@app.route('/employees/export-excel')
+def export_employees_excel():
+    """Mengekspor seluruh data karyawan aktif & nonaktif ke dalam file Excel (.xlsx)."""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM employees ORDER BY name ASC")
+        employees = cursor.fetchall()
+        conn.close()
+    except Exception as e:
+        flash(f'Gagal mengambil data karyawan: {e}', 'danger')
+        return redirect(url_for('employee_management'))
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Data Karyawan TSA"
+
+    # Styling definitions
+    title_font = Font(name="Calibri", size=13, bold=True, color="131B3E")
+    header_fill = PatternFill(start_color="131B3E", end_color="131B3E", fill_type="solid")
+    header_font = Font(name="Calibri", size=10, bold=True, color="FFFFFF")
+    border_thin = Side(border_style="thin", color="D1D5DB")
+    cell_border = Border(left=border_thin, right=border_thin, top=border_thin, bottom=border_thin)
+    center_align = Alignment(horizontal="center", vertical="center")
+    left_align = Alignment(horizontal="left", vertical="center")
+
+    # Baris Judul
+    ws.merge_cells("A1:J1")
+    ws["A1"] = f"DAFTAR DATA KARYAWAN TSA - DIEKSPOR PADA {datetime.now().strftime('%d/%m/%Y %H:%M')}"
+    ws["A1"].font = title_font
+    ws["A1"].alignment = left_align
+    ws.row_dimensions[1].height = 24
+
+    headers = [
+        ("No", 8),
+        ("ID Karyawan", 18),
+        ("Nama Lengkap", 26),
+        ("Divisi / Tim", 22),
+        ("Kantor Cabang", 26),
+        ("Status", 14),
+        ("Username", 20),
+        ("Password", 18),
+        ("Email", 26),
+        ("Acuan AI", 16)
+    ]
+
+    ws.row_dimensions[3].height = 26
+    for col_idx, (header_text, width) in enumerate(headers, start=1):
+        cell = ws.cell(row=3, column=col_idx, value=header_text)
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = center_align
+        cell.border = cell_border
+        col_letter = openpyxl.utils.get_column_letter(col_idx)
+        ws.column_dimensions[col_letter].width = width
+
+    for row_idx, emp in enumerate(employees, start=4):
+        ws.row_dimensions[row_idx].height = 22
+        ai_status = "Terdaftar" if emp.get('face_image') else "Belum Ada"
+        row_data = [
+            row_idx - 3,
+            emp.get('employee_id', ''),
+            emp.get('name', ''),
+            emp.get('team', ''),
+            emp.get('branch', ''),
+            emp.get('status', 'Active'),
+            emp.get('username', ''),
+            emp.get('password', ''),
+            emp.get('email', '') or '',
+            ai_status
+        ]
+        for col_idx, val in enumerate(row_data, start=1):
+            cell = ws.cell(row=row_idx, column=col_idx, value=val)
+            cell.font = Font(name="Calibri", size=10)
+            cell.border = cell_border
+            if col_idx in [1, 2, 6, 10]:
+                cell.alignment = center_align
+            else:
+                cell.alignment = left_align
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    return send_file(
+        buf,
+        as_attachment=True,
+        download_name=f"Data_Karyawan_TSA_{datetime.now().strftime('%Y%m%d')}.xlsx",
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+
 @app.route('/detail/<int:id>')
 def detail_employee(id):
     conn = get_db_connection()
