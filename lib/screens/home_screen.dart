@@ -185,20 +185,22 @@ class _HomeScreenState extends State<HomeScreen> {
       showDialog(
         context: context,
         builder: (ctx) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
           title: Row(
             children: [
               Icon(
                 info.isHoliday
                     ? Icons.calendar_today_rounded
                     : (info.isCutiBersama
-                        ? Icons.beach_access_rounded
-                        : Icons.coffee_rounded),
+                          ? Icons.beach_access_rounded
+                          : Icons.coffee_rounded),
                 color: info.isHoliday
                     ? const Color(0xFFDC2626)
                     : (info.isCutiBersama
-                        ? const Color(0xFFD97706)
-                        : const Color(0xFF64748B)),
+                          ? const Color(0xFFD97706)
+                          : const Color(0xFF64748B)),
                 size: 24,
               ),
               const SizedBox(width: 10),
@@ -206,8 +208,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Text(
                   info.isHoliday
                       ? 'Hari Libur Nasional'
-                      : (info.isCutiBersama ? 'Hari Cuti Bersama' : 'Libur Akhir Pekan'),
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                      : (info.isCutiBersama
+                            ? 'Hari Cuti Bersama'
+                            : 'Libur Akhir Pekan'),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
                 ),
               ),
             ],
@@ -227,7 +234,11 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(height: 8),
               const Text(
                 'Hari ini adalah hari libur resmi. Anda TIDAK DIWAJIBKAN melakukan absensi kehadiran.',
-                style: TextStyle(fontSize: 12.5, color: Color(0xFF475569), height: 1.4),
+                style: TextStyle(
+                  fontSize: 12.5,
+                  color: Color(0xFF475569),
+                  height: 1.4,
+                ),
               ),
               const SizedBox(height: 10),
               Container(
@@ -239,12 +250,19 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 child: const Row(
                   children: [
-                    Icon(Icons.info_outline, color: Color(0xFF2563EB), size: 18),
+                    Icon(
+                      Icons.info_outline,
+                      color: Color(0xFF2563EB),
+                      size: 18,
+                    ),
                     SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         'Jika Anda masuk lembur atau piket khusus, Anda tetap dapat melanjutkan absensi.',
-                        style: TextStyle(fontSize: 11.5, color: Color(0xFF1E40AF)),
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          color: Color(0xFF1E40AF),
+                        ),
                       ),
                     ),
                   ],
@@ -255,7 +273,13 @@ class _HomeScreenState extends State<HomeScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('Batal (Disarankan)', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+              child: const Text(
+                'Batal (Disarankan)',
+                style: TextStyle(
+                  color: Colors.grey,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
             ElevatedButton(
               onPressed: () {
@@ -263,14 +287,17 @@ class _HomeScreenState extends State<HomeScreen> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => LocationVerificationScreen(userData: widget.userData),
+                    builder: (context) =>
+                        LocationVerificationScreen(userData: widget.userData),
                   ),
                 );
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF007AFF),
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
               child: const Text('Lanjutkan Absen Lembur'),
             ),
@@ -281,7 +308,8 @@ class _HomeScreenState extends State<HomeScreen> {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => LocationVerificationScreen(userData: widget.userData),
+          builder: (context) =>
+              LocationVerificationScreen(userData: widget.userData),
         ),
       );
     }
@@ -360,8 +388,8 @@ class _HomeScreenState extends State<HomeScreen> {
         );
       } else {
         setState(() => _isSubmittingClockOut = false);
-        final errorMsg = MySQLHelper.lastSaveError ??
-            'Gagal melakukan Clock Out ke server!';
+        final errorMsg =
+            MySQLHelper.lastSaveError ?? 'Gagal melakukan Clock Out ke server!';
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(errorMsg),
@@ -413,7 +441,10 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             child: const Text(
               'Logout',
-              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
         ],
@@ -608,19 +639,19 @@ class _HomeScreenState extends State<HomeScreen> {
                               color: _holidayInfo.isHoliday
                                   ? const Color(0xFFFEE2E2)
                                   : (_holidayInfo.isCutiBersama
-                                      ? const Color(0xFFFEF3C7)
-                                      : (_holidayInfo.isWeekend
-                                          ? const Color(0xFFF1F5F9)
-                                          : const Color(0xFFDCFCE7))),
+                                        ? const Color(0xFFFEF3C7)
+                                        : (_holidayInfo.isWeekend
+                                              ? const Color(0xFFF1F5F9)
+                                              : const Color(0xFFDCFCE7))),
                               borderRadius: BorderRadius.circular(10),
                               border: Border.all(
                                 color: _holidayInfo.isHoliday
                                     ? const Color(0xFFFCA5A5)
                                     : (_holidayInfo.isCutiBersama
-                                        ? const Color(0xFFFCD34D)
-                                        : (_holidayInfo.isWeekend
-                                            ? const Color(0xFFCBD5E1)
-                                            : const Color(0xFF86EFAC))),
+                                          ? const Color(0xFFFCD34D)
+                                          : (_holidayInfo.isWeekend
+                                                ? const Color(0xFFCBD5E1)
+                                                : const Color(0xFF86EFAC))),
                                 width: 0.8,
                               ),
                             ),
@@ -631,38 +662,38 @@ class _HomeScreenState extends State<HomeScreen> {
                                   _holidayInfo.isHoliday
                                       ? Icons.calendar_today_rounded
                                       : (_holidayInfo.isCutiBersama
-                                          ? Icons.beach_access_rounded
-                                          : (_holidayInfo.isWeekend
-                                              ? Icons.coffee_rounded
-                                              : Icons.work_rounded)),
+                                            ? Icons.beach_access_rounded
+                                            : (_holidayInfo.isWeekend
+                                                  ? Icons.coffee_rounded
+                                                  : Icons.work_rounded)),
                                   size: 11,
                                   color: _holidayInfo.isHoliday
                                       ? const Color(0xFFDC2626)
                                       : (_holidayInfo.isCutiBersama
-                                          ? const Color(0xFFD97706)
-                                          : (_holidayInfo.isWeekend
-                                              ? const Color(0xFF475569)
-                                              : const Color(0xFF16A34A))),
+                                            ? const Color(0xFFD97706)
+                                            : (_holidayInfo.isWeekend
+                                                  ? const Color(0xFF475569)
+                                                  : const Color(0xFF16A34A))),
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
                                   _holidayInfo.isHoliday
                                       ? 'Tanggal Merah'
                                       : (_holidayInfo.isCutiBersama
-                                          ? 'Cuti Bersama'
-                                          : (_holidayInfo.isWeekend
-                                              ? 'Akhir Pekan'
-                                              : 'Hari Kerja')),
+                                            ? 'Cuti Bersama'
+                                            : (_holidayInfo.isWeekend
+                                                  ? 'Akhir Pekan'
+                                                  : 'Hari Kerja')),
                                   style: TextStyle(
                                     fontSize: 10.5,
                                     fontWeight: FontWeight.bold,
                                     color: _holidayInfo.isHoliday
                                         ? const Color(0xFFDC2626)
                                         : (_holidayInfo.isCutiBersama
-                                            ? const Color(0xFFD97706)
-                                            : (_holidayInfo.isWeekend
-                                                ? const Color(0xFF475569)
-                                                : const Color(0xFF16A34A))),
+                                              ? const Color(0xFFD97706)
+                                              : (_holidayInfo.isWeekend
+                                                    ? const Color(0xFF475569)
+                                                    : const Color(0xFF16A34A))),
                                   ),
                                 ),
                               ],
@@ -731,8 +762,8 @@ class _HomeScreenState extends State<HomeScreen> {
               isHol
                   ? Icons.calendar_today_rounded
                   : (isCuti
-                      ? Icons.beach_access_rounded
-                      : Icons.coffee_rounded),
+                        ? Icons.beach_access_rounded
+                        : Icons.coffee_rounded),
               color: iconColor,
               size: 20,
             ),
@@ -1114,7 +1145,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
 
                 // Baris 3: Keterangan Kehadiran (Sangat Baik / Baik / Kurang Baik)
-                if (_clockInKeterangan != null && _clockInKeterangan!.isNotEmpty) ...[
+                if (_clockInKeterangan != null &&
+                    _clockInKeterangan!.isNotEmpty) ...[
                   const Divider(
                     height: 28,
                     color: Color(0xFFF1F5F9),
@@ -1237,8 +1269,13 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ],
                 ),
-                if (_clockInKeterangan != null && _clockInKeterangan!.isNotEmpty) ...[
-                  Container(width: 1, height: 32, color: const Color(0xFFE5E7EB)),
+                if (_clockInKeterangan != null &&
+                    _clockInKeterangan!.isNotEmpty) ...[
+                  Container(
+                    width: 1,
+                    height: 32,
+                    color: const Color(0xFFE5E7EB),
+                  ),
                   Column(
                     children: [
                       const Text(
@@ -1331,21 +1368,24 @@ class _HomeScreenState extends State<HomeScreen> {
     final String statusSubtitle;
     final String badgeText;
 
+    final bool isCuti =
+        _permissionType != null && _permissionType!.contains('cuti');
+
     if (isApproved) {
       themeColor = const Color(0xFF10B981); // Emerald Hijau
       bgLightColor = const Color(0xFFECFDF5);
       statusIcon = Icons.check_circle_rounded;
-      mainStatusText = 'Absen Izin';
-      statusSubtitle =
-          'Pengajuan izin Anda telah disetujui oleh admin di web dashboard. Kehadiran Anda hari ini terekam sebagai Absen Izin.';
+      mainStatusText = isCuti ? 'Absen Cuti' : 'Absen Izin';
+      statusSubtitle = isCuti
+          ? 'Pengajuan cuti Anda telah disetujui oleh admin di web dashboard. Status kehadiran Anda tercatat sebagai Absen Cuti.'
+          : 'Pengajuan izin Anda telah disetujui oleh admin di web dashboard. Kehadiran Anda hari ini terekam sebagai Absen Izin.';
       badgeText = 'DISETUJUI ADMIN';
     } else if (isRejected) {
       themeColor = const Color(0xFFEF4444); // Merah Terang
       bgLightColor = const Color(0xFFFEF2F2);
       statusIcon = Icons.cancel_rounded;
       mainStatusText = 'Alpha (Tidak Hadir)';
-      statusSubtitle =
-          'Pengajuan izin Anda tidak disetujui oleh admin. Status kehadiran Anda untuk hari ini tercatat sebagai Alpha / Tidak Hadir.';
+      statusSubtitle = 'Pengajuan izin Anda tidak disetujui oleh admin. Status kehadiran Anda untuk hari ini tercatat sebagai Alpha / Tidak Hadir.';
       badgeText = 'TIDAK DISETUJUI';
     } else {
       // Pending
@@ -1353,8 +1393,9 @@ class _HomeScreenState extends State<HomeScreen> {
       bgLightColor = const Color(0xFFFFFBEB);
       statusIcon = Icons.hourglass_top_rounded;
       mainStatusText = 'Status: Pending';
-      statusSubtitle =
-          'Pengajuan izin Anda telah terkirim dan sedang menunggu persetujuan dari admin di web. Mohon menunggu atau segarkan status secara berkala.';
+      statusSubtitle = isCuti
+          ? 'Pengajuan cuti Anda telah terkirim dan sedang menunggu persetujuan dari admin di web. Mohon menunggu atau segarkan status secara berkala.'
+          : 'Pengajuan izin Anda telah terkirim dan sedang menunggu persetujuan dari admin di web. Mohon menunggu atau segarkan status secara berkala.';
       badgeText = 'MENUNGGU PERSETUJUAN';
     }
 
@@ -1383,11 +1424,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ],
             ),
-            child: Icon(
-              statusIcon,
-              size: 46,
-              color: themeColor,
-            ),
+            child: Icon(statusIcon, size: 46, color: themeColor),
           ),
 
           const SizedBox(height: 18),
@@ -1422,7 +1459,9 @@ class _HomeScreenState extends State<HomeScreen> {
               fontWeight: FontWeight.w900,
               color: isRejected
                   ? const Color(0xFFDC2626)
-                  : (isApproved ? const Color(0xFF047857) : const Color(0xFF1E293B)),
+                  : (isApproved
+                        ? const Color(0xFF047857)
+                        : const Color(0xFF1E293B)),
               letterSpacing: 0.3,
             ),
           ),
@@ -1531,7 +1570,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       child: Text(
                         isApproved
-                            ? 'Absen Izin'
+                            ? (isCuti ? 'Absen Cuti' : 'Absen Izin')
                             : (isRejected ? 'Alpha' : 'Pending'),
                         style: TextStyle(
                           color: themeColor,
@@ -1593,7 +1632,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   icon: const Icon(Icons.refresh_rounded, size: 20),
                   label: const Text(
                     'Segarkan Status',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14.5),
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14.5,
+                    ),
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF0F1A3A),
@@ -1659,7 +1701,11 @@ class _HomeScreenState extends State<HomeScreen> {
             Center(
               child: TextButton.icon(
                 onPressed: _checkAttendanceStatus,
-                icon: const Icon(Icons.sync_rounded, size: 18, color: Color(0xFF6B7280)),
+                icon: const Icon(
+                  Icons.sync_rounded,
+                  size: 18,
+                  color: Color(0xFF6B7280),
+                ),
                 label: const Text(
                   'Perbarui Data',
                   style: TextStyle(color: Color(0xFF6B7280), fontSize: 12.5),

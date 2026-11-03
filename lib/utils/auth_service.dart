@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -11,7 +12,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// Sesi dihapus hanya ketika user menekan tombol Logout.
 class AuthService {
   static const _keyIsLoggedIn = 'is_logged_in';
-  static const _keyUserData   = 'user_data';
+  static const _keyUserData = 'user_data';
 
   static final _prefs = SharedPreferencesAsync();
 
@@ -22,7 +23,9 @@ class AuthService {
     try {
       await _prefs.setBool(_keyIsLoggedIn, true);
       await _prefs.setString(_keyUserData, jsonEncode(userData));
-      debugPrint('[AuthService] Sesi berhasil disimpan untuk ${userData['username']}');
+      debugPrint(
+        '[AuthService] Sesi berhasil disimpan untuk ${userData['username']}',
+      );
       return true;
     } catch (e, stack) {
       debugPrint('[AuthService Error saveSession] $e\n$stack');
@@ -53,7 +56,9 @@ class AuthService {
       }
       final decoded = jsonDecode(raw);
       if (decoded is Map<String, dynamic>) {
-        debugPrint('[AuthService] Sesi aktif ditemukan untuk: ${decoded['username']}');
+        debugPrint(
+          '[AuthService] Sesi aktif ditemukan untuk: ${decoded['username']}',
+        );
         return decoded;
       }
       return null;

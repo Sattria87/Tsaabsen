@@ -508,7 +508,7 @@ def index():
             SELECT COUNT(*) AS total 
             FROM attendance 
             WHERE DATE(timestamp) = CURDATE() 
-              AND ((reason IS NOT NULL AND reason != '') OR type IN ('izin', 'sakit', 'cuti', 'sick_leave', 'necessity_leave'))
+              AND ((reason IS NOT NULL AND reason != '') OR type IN ('izin', 'sakit', 'cuti', 'sick_leave', 'necessity_leave', 'izin_cuti', 'izin_sakit', 'izin_keperluan') OR type LIKE 'izin_%')
         """)
         obs_res = cursor.fetchone()
         request_obs = obs_res['total'] if obs_res else 0
@@ -1496,7 +1496,8 @@ def presence():
         elif selected_status == 'sakit':
             where_conditions.append("(a.type IN ('sakit', 'izin_sakit') OR a.type LIKE '%%sakit%%')")
         elif selected_status == 'belum_hadir':
-            where_conditions.append("(a.type IS NULL OR a.type = '')")
+            where_conditions.append(
+                "(a.type IS NULL OR a.type = '')")
             
     if selected_tag:
         where_conditions.append("(e.tag1 = %s OR e.tag2 = %s OR e.tag3 = %s)")
@@ -1652,7 +1653,8 @@ def request_page():
                 e.tag1, e.tag2
             FROM attendance a
             LEFT JOIN employees e ON a.username = e.username
-            WHERE a.type IN ('izin', 'sakit', 'izin_sakit', 'izin_keperluan', 'cuti')
+            WHERE a.type IN ('izin', 'sakit', 'izin_sakit', 'izin_keperluan', 'cuti', 'izin_cuti')
+               OR a.type LIKE 'izin_%'
                OR (a.reason IS NOT NULL AND a.reason != '' AND a.type NOT IN ('clock_in', 'clock_out', 'hadir'))
             ORDER BY 
                 CASE 
@@ -1672,7 +1674,11 @@ def request_page():
             r_type = r['type'].lower() if r['type'] else ''
             if 'sakit' in r_type:
                 display_type = 'Sakit'
-            elif 'izin' in r_type or 'cuti' in r_type:
+            elif 'cuti' in r_type:
+                display_type = 'Cuti'
+            elif 'keperluan' in r_type:
+                display_type = 'Izin Keperluan'
+            elif 'izin' in r_type:
                 display_type = 'Izin'
             else:
                 display_type = 'Izin'

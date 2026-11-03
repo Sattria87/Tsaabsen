@@ -1,8 +1,10 @@
 import 'dart:io';
 import 'dart:convert';
 import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
+
 import '../utils/mysql_helper.dart';
 import '../main.dart'; // Akses variabel list 'cameras' dari main.dart
 import 'clock_in_success_screen.dart';
@@ -13,7 +15,7 @@ class FaceCaptureScreen extends StatefulWidget {
   final int distance;
 
   const FaceCaptureScreen({
-    super.key, 
+    super.key,
     required this.userData,
     this.locationName = 'Kantor Pusat',
     this.distance = 30,
@@ -57,13 +59,14 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
         }
 
         // Jika belum ketemu tapi ada lebih dari 1 kamera, ambil kamera depan
-        if (selectedCamera.lensDirection != CameraLensDirection.front && cameras.length > 1) {
+        if (selectedCamera.lensDirection != CameraLensDirection.front &&
+            cameras.length > 1) {
           selectedCamera = cameras[1];
         }
 
         final controller = CameraController(
-          selectedCamera, 
-          ResolutionPreset.medium, 
+          selectedCamera,
+          ResolutionPreset.medium,
           enableAudio: false,
         );
 
@@ -87,7 +90,10 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
 
   // 1. Ambil Foto Selfie (menampilkan opsi Ganti Foto atau Verifikasi AI)
   Future<void> _takePicture() async {
-    if (_controller == null || !_controller!.value.isInitialized || _isCapturing) return;
+    if (_controller == null ||
+        !_controller!.value.isInitialized ||
+        _isCapturing)
+      return;
 
     setState(() => _isCapturing = true);
 
@@ -132,14 +138,20 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
       final bytes = await file.readAsBytes();
       final codec = await ui.instantiateImageCodec(bytes, targetWidth: 480);
       final frame = await codec.getNextFrame();
-      final byteData = await frame.image.toByteData(format: ui.ImageByteFormat.png);
+      final byteData = await frame.image.toByteData(
+        format: ui.ImageByteFormat.png,
+      );
       if (byteData != null) {
         final compressed = byteData.buffer.asUint8List();
-        debugPrint('[FaceCapture] Foto dioptimasi: ${(bytes.length / 1024).toStringAsFixed(1)} KB -> ${(compressed.length / 1024).toStringAsFixed(1)} KB');
+        debugPrint(
+          '[FaceCapture] Foto dioptimasi: ${(bytes.length / 1024).toStringAsFixed(1)} KB -> ${(compressed.length / 1024).toStringAsFixed(1)} KB',
+        );
         return 'data:image/png;base64,${base64Encode(compressed)}';
       }
     } catch (e) {
-      debugPrint('[FaceCapture] Fallback kompresi gagal ($e), gunakan foto asli');
+      debugPrint(
+        '[FaceCapture] Fallback kompresi gagal ($e), gunakan foto asli',
+      );
     }
     final rawBytes = await file.readAsBytes();
     return 'data:image/jpeg;base64,${base64Encode(rawBytes)}';
@@ -157,7 +169,9 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
 
     try {
       // 1. Kompres foto selfie ke ukuran optimal sebelum dikirim via internet
-      final imageBase64 = await _compressAndEncodeImage(File(_capturedImage!.path));
+      final imageBase64 = await _compressAndEncodeImage(
+        File(_capturedImage!.path),
+      );
       final username = (widget.userData['username'] ?? '').toString();
 
       // 2. Verifikasi Wajah dengan Microservice AI (Face Recognition Engine)
@@ -165,12 +179,16 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
         _aiVerificationStatus = 'Menganalisis wajah dengan Model AI...';
       });
 
-      final aiResult = await MySQLHelper.verifyFaceWithAI(username, imageBase64);
+      final aiResult = await MySQLHelper.verifyFaceWithAI(
+        username,
+        imageBase64,
+      );
 
       if (!mounted) return;
 
       final bool matched = aiResult['matched'] == true;
-      final double score = (aiResult['similarity_score'] as num?)?.toDouble() ?? 0.0;
+      final double score =
+          (aiResult['similarity_score'] as num?)?.toDouble() ?? 0.0;
       final String aiMsg = aiResult['message']?.toString() ?? '';
 
       setState(() {
@@ -188,12 +206,17 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
           context: context,
           barrierDismissible: false,
           builder: (ctx) => AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(22),
+            ),
             title: Row(
               children: const [
                 Icon(Icons.cancel_rounded, color: Color(0xFFEF4444), size: 28),
                 SizedBox(width: 10),
-                Text('Verifikasi AI Gagal', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
+                Text(
+                  'Verifikasi AI Gagal',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
+                ),
               ],
             ),
             content: Column(
@@ -202,12 +225,19 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
               children: [
                 Text(
                   aiMsg,
-                  style: const TextStyle(fontSize: 14, color: Color(0xFF334155), height: 1.4),
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: Color(0xFF334155),
+                    height: 1.4,
+                  ),
                 ),
                 if (score > 0) ...[
                   const SizedBox(height: 12),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
                     decoration: BoxDecoration(
                       color: const Color(0xFFFEF2F2),
                       borderRadius: BorderRadius.circular(10),
@@ -216,10 +246,20 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text('Skor Kemiripan Wajah:', style: TextStyle(fontSize: 12.5, color: Color(0xFFB91C1C))),
+                        const Text(
+                          'Skor Kemiripan Wajah:',
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            color: Color(0xFFB91C1C),
+                          ),
+                        ),
                         Text(
                           '${score.toStringAsFixed(1)}%',
-                          style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold, color: Color(0xFFB91C1C)),
+                          style: const TextStyle(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFFB91C1C),
+                          ),
                         ),
                       ],
                     ),
@@ -228,7 +268,11 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
                 const SizedBox(height: 12),
                 const Text(
                   'Tips: Posisikan wajah Anda tegak lurus ke kamera dengan pencahayaan terang dan tanpa masker.',
-                  style: TextStyle(fontSize: 12, color: Color(0xFF64748B), fontStyle: FontStyle.italic),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFF64748B),
+                    fontStyle: FontStyle.italic,
+                  ),
                 ),
               ],
             ),
@@ -238,7 +282,13 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
                   Navigator.pop(ctx);
                   _retakePicture();
                 },
-                child: const Text('Ambil Ulang Foto', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF007AFF))),
+                child: const Text(
+                  'Ambil Ulang Foto',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF007AFF),
+                  ),
+                ),
               ),
             ],
           ),
@@ -248,11 +298,12 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
 
       // 3. JIKA WAJAH TERVERIFIKASI OLEH MODEL AI: SIMPAN KE DATABASE
       setState(() {
-        _aiVerificationStatus = 'Wajah Cocok (${score.toStringAsFixed(1)}%)! Menyimpan absensi...';
+        _aiVerificationStatus =
+            'Wajah Cocok (${score.toStringAsFixed(1)}%)! Menyimpan absensi...';
       });
 
       bool success = await MySQLHelper.saveAttendance(
-        username, 
+        username,
         'clock_in',
         reason: widget.locationName,
         image: imageBase64,
@@ -267,10 +318,16 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
             backgroundColor: const Color(0xFF16A34A),
             content: Row(
               children: [
-                const Icon(Icons.verified_rounded, color: Colors.white, size: 20),
+                const Icon(
+                  Icons.verified_rounded,
+                  color: Colors.white,
+                  size: 20,
+                ),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: Text('Verifikasi AI Berhasil: Kemiripan ${score.toStringAsFixed(1)}%!'),
+                  child: Text(
+                    'Verifikasi AI Berhasil: Kemiripan ${score.toStringAsFixed(1)}%!',
+                  ),
                 ),
               ],
             ),
@@ -280,7 +337,7 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
 
         // Pindah ke layar Clock In Berhasil
         Navigator.pushReplacement(
-          context, 
+          context,
           MaterialPageRoute(
             builder: (context) => ClockInSuccessScreen(
               userData: widget.userData,
@@ -291,7 +348,8 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
           ),
         );
       } else {
-        final errorMsg = MySQLHelper.lastSaveError ??
+        final errorMsg =
+            MySQLHelper.lastSaveError ??
             'Gagal menyimpan absensi ke server! Silakan coba lagi.';
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -307,7 +365,7 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Terjadi kesalahan verifikasi: $e'), 
+            content: Text('Terjadi kesalahan verifikasi: $e'),
             backgroundColor: Colors.red,
           ),
         );
@@ -334,15 +392,18 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
                 children: [
                   // HEADER ATAS (Tombol Close/Back & Judul)
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 10,
+                    ),
                     child: Row(
                       children: [
                         IconButton(
                           icon: Icon(
-                            hasCaptured ? Icons.arrow_back : Icons.close, 
-                            color: Colors.black, 
+                            hasCaptured ? Icons.arrow_back : Icons.close,
+                            color: Colors.black,
                             size: 28,
-                          ), 
+                          ),
                           onPressed: () {
                             if (hasCaptured) {
                               _retakePicture();
@@ -353,17 +414,26 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          hasCaptured ? 'Preview Foto Kehadiran' : 'Ambil Foto Kehadiran',
-                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black),
+                          hasCaptured
+                              ? 'Preview Foto Kehadiran'
+                              : 'Ambil Foto Kehadiran',
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
+                          ),
                         ),
                       ],
                     ),
                   ),
-                  
+
                   // AREA KAMERA / PREVIEW FOTO
                   Expanded(
                     child: Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                      margin: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 16,
+                      ),
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(24),
                         color: Colors.black,
@@ -392,10 +462,12 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
                               // PREVIEW LIVE KAMERA DEPAN (MIRROR)
                               Transform(
                                 alignment: Alignment.center,
-                                transform: Matrix4.rotationY(3.14159), 
-                                child: _controller != null 
-                                    ? CameraPreview(_controller!) 
-                                    : const Center(child: CircularProgressIndicator()),
+                                transform: Matrix4.rotationY(3.14159),
+                                child: _controller != null
+                                    ? CameraPreview(_controller!)
+                                    : const Center(
+                                        child: CircularProgressIndicator(),
+                                      ),
                               ),
 
                             // PANDUAN BINGKAI FOTO (HANYA SAAT BELUM JEPRET)
@@ -412,7 +484,8 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
                                     ),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: const Color(0xFF007AFF).withValues(alpha: 0.25),
+                                        color: const Color(0xFF007AFF)
+                                            .withValues(alpha: 0.25),
                                         blurRadius: 15,
                                         spreadRadius: 2,
                                       ),
@@ -427,7 +500,10 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
                               left: 16,
                               right: 16,
                               child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 8,
+                                ),
                                 decoration: BoxDecoration(
                                   color: Colors.black.withValues(alpha: 0.7),
                                   borderRadius: BorderRadius.circular(20),
@@ -439,11 +515,19 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
                                       _isVerifyingAI
                                           ? Icons.psychology_rounded
                                           : (_isAiMatched == true
-                                              ? Icons.verified_rounded
-                                              : (hasCaptured ? Icons.check_circle_outline : Icons.camera_alt_outlined)),
+                                                ? Icons.verified_rounded
+                                                : (hasCaptured
+                                                      ? Icons
+                                                            .check_circle_outline
+                                                      : Icons
+                                                            .camera_alt_outlined)),
                                       color: _isAiMatched == true
                                           ? const Color(0xFF4ADE80)
-                                          : (_isVerifyingAI ? const Color(0xFF60A5FA) : (hasCaptured ? const Color(0xFF4ADE80) : Colors.white)),
+                                          : (_isVerifyingAI
+                                                ? const Color(0xFF60A5FA)
+                                                : (hasCaptured
+                                                      ? const Color(0xFF4ADE80)
+                                                      : Colors.white)),
                                       size: 18,
                                     ),
                                     const SizedBox(width: 8),
@@ -452,11 +536,15 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
                                         _isVerifyingAI
                                             ? _aiVerificationStatus
                                             : (_isAiMatched == true
-                                                ? 'Wajah Cocok (${_similarityScore!.toStringAsFixed(1)}%)'
-                                                : (hasCaptured 
-                                                    ? 'Foto siap diverifikasi Model AI' 
-                                                    : 'Posisikan wajah Anda pada lingkaran')),
-                                        style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
+                                                  ? 'Wajah Cocok (${_similarityScore!.toStringAsFixed(1)}%)'
+                                                  : (hasCaptured
+                                                        ? 'Foto siap diverifikasi Model AI'
+                                                        : 'Posisikan wajah Anda pada lingkaran')),
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                        ),
                                         overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
@@ -476,30 +564,50 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
                                       Container(
                                         padding: const EdgeInsets.all(16),
                                         decoration: BoxDecoration(
-                                          color: Colors.black.withValues(alpha: 0.5),
+                                          color: Colors.black.withValues(
+                                            alpha: 0.5,
+                                          ),
                                           shape: BoxShape.circle,
-                                          border: Border.all(color: const Color(0xFF007AFF), width: 2.5),
+                                          border: Border.all(
+                                            color: const Color(0xFF007AFF),
+                                            width: 2.5,
+                                          ),
                                           boxShadow: [
                                             BoxShadow(
-                                              color: const Color(0xFF007AFF).withValues(alpha: 0.35),
+                                              color: const Color(0xFF007AFF)
+                                                  .withValues(alpha: 0.35),
                                               blurRadius: 20,
                                               spreadRadius: 4,
                                             ),
                                           ],
                                         ),
-                                        child: const Icon(Icons.face_retouching_natural_rounded, color: Color(0xFF007AFF), size: 48),
+                                        child: const Icon(
+                                          Icons.face_retouching_natural_rounded,
+                                          color: Color(0xFF007AFF),
+                                          size: 48,
+                                        ),
                                       ),
                                       const SizedBox(height: 16),
                                       const Text(
                                         'MODEL AI FACE RECOGNITION',
-                                        style: TextStyle(color: Colors.white, fontSize: 13.5, fontWeight: FontWeight.bold, letterSpacing: 0.8),
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 13.5,
+                                          fontWeight: FontWeight.bold,
+                                          letterSpacing: 0.8,
+                                        ),
                                       ),
                                       const SizedBox(height: 8),
                                       Padding(
-                                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 24,
+                                        ),
                                         child: Text(
                                           _aiVerificationStatus,
-                                          style: const TextStyle(color: Color(0xFF93C5FD), fontSize: 12.5),
+                                          style: const TextStyle(
+                                            color: Color(0xFF93C5FD),
+                                            fontSize: 12.5,
+                                          ),
                                           textAlign: TextAlign.center,
                                         ),
                                       ),
@@ -508,7 +616,10 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
                                         width: 130,
                                         child: LinearProgressIndicator(
                                           backgroundColor: Colors.white24,
-                                          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF007AFF)),
+                                          valueColor:
+                                              AlwaysStoppedAnimation<Color>(
+                                                Color(0xFF007AFF),
+                                              ),
                                         ),
                                       ),
                                     ],
@@ -517,25 +628,38 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
                               ),
 
                             // BADGE SUKSES KEMIRIPAN AI SETELAH VERIFIKASI
-                            if (_similarityScore != null && _isAiMatched == true)
+                            if (_similarityScore != null &&
+                                _isAiMatched == true)
                               Positioned(
                                 bottom: 16,
                                 left: 16,
                                 right: 16,
                                 child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 8,
+                                  ),
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFF16A34A).withValues(alpha: 0.92),
+                                    color: const Color(0xFF16A34A)
+                                        .withValues(alpha: 0.92),
                                     borderRadius: BorderRadius.circular(16),
                                   ),
                                   child: Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
-                                      const Icon(Icons.verified_rounded, color: Colors.white, size: 18),
+                                      const Icon(
+                                        Icons.verified_rounded,
+                                        color: Colors.white,
+                                        size: 18,
+                                      ),
                                       const SizedBox(width: 8),
                                       Text(
                                         'Wajah Terverifikasi (${_similarityScore!.toStringAsFixed(1)}%)',
-                                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 13,
+                                        ),
                                       ),
                                     ],
                                   ),
@@ -560,13 +684,21 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
                                   height: 55,
                                   child: OutlinedButton.icon(
                                     style: OutlinedButton.styleFrom(
-                                      side: const BorderSide(color: Color(0xFF007AFF), width: 1.8),
+                                      side: const BorderSide(
+                                        color: Color(0xFF007AFF),
+                                        width: 1.8,
+                                      ),
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(30),
                                       ),
                                     ),
-                                    onPressed: _isSubmitting ? null : _retakePicture,
-                                    icon: const Icon(Icons.refresh_rounded, color: Color(0xFF007AFF)),
+                                    onPressed: _isSubmitting
+                                        ? null
+                                        : _retakePicture,
+                                    icon: const Icon(
+                                      Icons.refresh_rounded,
+                                      color: Color(0xFF007AFF),
+                                    ),
                                     label: const Text(
                                       'Ganti Foto',
                                       style: TextStyle(
@@ -593,28 +725,36 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
                                       ),
                                       elevation: 0,
                                     ),
-                                    onPressed: _isSubmitting ? null : _submitClockIn,
+                                    onPressed: _isSubmitting
+                                        ? null
+                                        : _submitClockIn,
                                     icon: _isSubmitting
                                         ? const SizedBox.shrink()
-                                        : const Icon(Icons.verified_user_rounded, color: Colors.white, size: 20),
+                                        : const Icon(
+                                            Icons.verified_user_rounded,
+                                            color: Colors.white,
+                                            size: 20,
+                                          ),
                                     label: _isSubmitting
                                         ? const Row(
-                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
                                             children: [
                                               SizedBox(
                                                 width: 18,
                                                 height: 18,
-                                                child: CircularProgressIndicator(
-                                                  color: Colors.white, 
-                                                  strokeWidth: 2,
-                                                ),
+                                                child:
+                                                    CircularProgressIndicator(
+                                                      color: Colors.white,
+                                                      strokeWidth: 2,
+                                                    ),
                                               ),
                                               SizedBox(width: 8),
                                               Text(
                                                 'Verifikasi AI...',
                                                 style: TextStyle(
-                                                  fontSize: 13, 
-                                                  fontWeight: FontWeight.bold, 
+                                                  fontSize: 13,
+                                                  fontWeight: FontWeight.bold,
                                                   color: Colors.white,
                                                 ),
                                               ),
@@ -651,16 +791,21 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
                                       width: 20,
                                       height: 20,
                                       child: CircularProgressIndicator(
-                                        color: Colors.white, 
+                                        color: Colors.white,
                                         strokeWidth: 2,
                                       ),
                                     )
-                                  : const Icon(Icons.camera_alt, color: Colors.white),
+                                  : const Icon(
+                                      Icons.camera_alt,
+                                      color: Colors.white,
+                                    ),
                               label: Text(
-                                _isCapturing ? 'Mengambil Foto...' : 'Ambil Foto',
+                                _isCapturing
+                                    ? 'Mengambil Foto...'
+                                    : 'Ambil Foto',
                                 style: const TextStyle(
-                                  fontSize: 16, 
-                                  fontWeight: FontWeight.bold, 
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
                                   color: Colors.white,
                                 ),
                               ),

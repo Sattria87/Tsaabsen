@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+
 import 'app_nav.dart';
 
 /// ============================================================
@@ -10,13 +11,14 @@ import 'app_nav.dart';
 /// KONFIGURASI BACKEND API (EXPRESS.JS VPS)
 /// ============================================================
 const String apiBaseUrl = 'http://208.76.40.204:5000/api';
-const String defaultAiBaseUrl = apiBaseUrl; // Menggunakan jalur aktif yang sama dengan login
+const String defaultAiBaseUrl =
+    apiBaseUrl; // Menggunakan jalur aktif yang sama dengan login
 
 const List<String> candidateApiUrls = [
-  'http://208.76.40.204:5000/api',    // VPS Port 5000
-  'http://208.76.40.204:3000/api',    // VPS Port 3000 (Fallback)
-  'http://127.0.0.1:3000/api',        // Jalur USB Cable via 'adb reverse'
-  'http://10.0.2.2:3000/api',         // Android Emulator
+  'http://208.76.40.204:5000/api', // VPS Port 5000
+  'http://208.76.40.204:3000/api', // VPS Port 3000 (Fallback)
+  'http://127.0.0.1:3000/api', // Jalur USB Cable via 'adb reverse'
+  'http://10.0.2.2:3000/api', // Android Emulator
 ];
 
 const List<String> candidateAiUrls = [
@@ -59,7 +61,10 @@ class MySQLHelper {
   }
 
   /// Tampilkan Pop-up Dialog Maintenance secara global di aplikasi
-  static void showMaintenanceDialog({BuildContext? context, VoidCallback? onRetry}) {
+  static void showMaintenanceDialog({
+    BuildContext? context,
+    VoidCallback? onRetry,
+  }) {
     if (_isMaintenanceDialogShowing) return;
 
     final targetContext = context ?? appNavigatorKey.currentContext;
@@ -74,9 +79,14 @@ class MySQLHelper {
         return PopScope(
           canPop: false,
           child: AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(24),
+            ),
             backgroundColor: const Color(0xFF0F172A),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 24,
+              vertical: 28,
+            ),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -84,15 +94,19 @@ class MySQLHelper {
                   width: 72,
                   height: 72,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFEF3C7).withOpacity(0.12),
+                    color: const Color(0xFFFEF3C7).withValues(alpha: 0.12),
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: const Color(0xFFF59E0B).withOpacity(0.4),
+                      color: const Color(0xFFF59E0B).withValues(alpha: 0.4),
                       width: 1.5,
                     ),
                   ),
                   child: const Center(
-                    child: Icon(Icons.build_circle_rounded, color: Color(0xFFF59E0B), size: 42),
+                    child: Icon(
+                      Icons.build_circle_rounded,
+                      color: Color(0xFFF59E0B),
+                      size: 42,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -123,13 +137,23 @@ class MySQLHelper {
                   child: ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF2563EB),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
                       elevation: 0,
                     ),
-                    icon: const Icon(Icons.refresh_rounded, color: Colors.white, size: 20),
+                    icon: const Icon(
+                      Icons.refresh_rounded,
+                      color: Colors.white,
+                      size: 20,
+                    ),
                     label: const Text(
                       'Periksa Kembali',
-                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
                     ),
                     onPressed: () {
                       _isMaintenanceDialogShowing = false;
@@ -183,7 +207,8 @@ class MySQLHelper {
         );
 
         if (isMaintenanceResponse(response)) {
-          lastLoginError = 'Server sedang dalam pemeliharaan (Maintenance Mode)';
+          lastLoginError =
+              'Server sedang dalam pemeliharaan (Maintenance Mode)';
           showMaintenanceDialog();
           return null;
         }
@@ -416,7 +441,8 @@ class MySQLHelper {
   ) async {
     final urls = <String>[];
     if (baseUrl.isNotEmpty) urls.add(baseUrl);
-    if (!urls.contains(apiBaseUrl) && apiBaseUrl.isNotEmpty) urls.add(apiBaseUrl);
+    if (!urls.contains(apiBaseUrl) && apiBaseUrl.isNotEmpty)
+      urls.add(apiBaseUrl);
     for (final u in candidateAiUrls) {
       if (!urls.contains(u)) urls.add(u);
     }
@@ -428,14 +454,13 @@ class MySQLHelper {
             .post(
               Uri.parse('$url/verify'),
               headers: {'Content-Type': 'application/json'},
-              body: jsonEncode({
-                'username': username,
-                'image': selfieBase64,
-              }),
+              body: jsonEncode({'username': username, 'image': selfieBase64}),
             )
             .timeout(const Duration(seconds: 8));
 
-        debugPrint('[AI Service] Response ($url): ${response.statusCode} - ${response.body}');
+        debugPrint(
+          '[AI Service] Response ($url): ${response.statusCode} - ${response.body}',
+        );
 
         if (isMaintenanceResponse(response)) {
           showMaintenanceDialog();
@@ -453,14 +478,19 @@ class MySQLHelper {
           final data = jsonDecode(response.body);
           aiBaseUrl = url;
           final bool matched = data['matched'] == true;
-          final double similarity = (data['similarity_score'] as num?)?.toDouble() ?? 0.0;
+          final double similarity =
+              (data['similarity_score'] as num?)?.toDouble() ?? 0.0;
           return {
             'success': true,
             'matched': matched,
             'similarity_score': similarity,
             'distance': (data['distance'] as num?)?.toDouble() ?? 1.0,
             'face_detected': data['face_detected'] ?? true,
-            'message': data['message'] ?? (matched ? 'Wajah Cocok & Terverifikasi!' : 'Wajah Tidak Cocok!'),
+            'message':
+                data['message'] ??
+                (matched
+                    ? 'Wajah Cocok & Terverifikasi!'
+                    : 'Wajah Tidak Cocok!'),
           };
         } else if (response.statusCode == 400 || response.statusCode == 404) {
           final data = jsonDecode(response.body);
@@ -469,11 +499,15 @@ class MySQLHelper {
             'matched': false,
             'similarity_score': 0.0,
             'face_detected': data['face_detected'] ?? false,
-            'message': data['message'] ?? 'Verifikasi AI gagal (${response.statusCode})',
+            'message':
+                data['message'] ??
+                'Verifikasi AI gagal (${response.statusCode})',
           };
         }
       } catch (e) {
-        debugPrint('[AI Service] URL $url gagal dihubungi ($e), mencoba kandidat berikutnya...');
+        debugPrint(
+          '[AI Service] URL $url gagal dihubungi ($e), mencoba kandidat berikutnya...',
+        );
       }
     }
 

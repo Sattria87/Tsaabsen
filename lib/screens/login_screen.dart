@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../utils/mysql_helper.dart';
 import '../utils/auth_service.dart';
 import 'home_screen.dart';
@@ -50,17 +51,13 @@ class _LoginScreenState extends State<LoginScreen> {
         MaterialPageRoute(builder: (context) => HomeScreen(userData: user)),
       );
     } else {
-      _showMsg(
-        MySQLHelper.lastLoginError ?? 'Gagal login!',
-        Colors.red,
-      );
+      _showMsg(MySQLHelper.lastLoginError ?? 'Gagal login!', Colors.red);
     }
   }
 
   void _showMsg(String text, Color color) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(text), backgroundColor: color),
-    );
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(text), backgroundColor: color));
   }
 
   @override
@@ -93,7 +90,10 @@ class _LoginScreenState extends State<LoginScreen> {
           SafeArea(
             child: Center(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 20,
+                ),
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 380),
                   child: Container(
@@ -166,7 +166,10 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           child: TextField(
                             controller: _usernameCtrl,
-                            style: const TextStyle(fontSize: 14, color: Colors.black87),
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: Colors.black87,
+                            ),
                             decoration: const InputDecoration(
                               border: InputBorder.none,
                               contentPadding: EdgeInsets.symmetric(
@@ -206,7 +209,10 @@ class _LoginScreenState extends State<LoginScreen> {
                           child: TextField(
                             controller: _passwordCtrl,
                             obscureText: true,
-                            style: const TextStyle(fontSize: 14, color: Colors.black87),
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: Colors.black87,
+                            ),
                             decoration: const InputDecoration(
                               border: InputBorder.none,
                               contentPadding: EdgeInsets.symmetric(

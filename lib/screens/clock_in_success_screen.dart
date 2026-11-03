@@ -215,7 +215,10 @@ class ClockInSuccessScreen extends StatelessWidget {
                         _buildInfoRow('Jarak', '$distance meter'),
                         if (similarity != null) ...[
                           const Divider(height: 28, color: Color(0xFFEEEEEE)),
-                          _buildInfoRow('Verifikasi AI', 'Cocok (${similarity!.toStringAsFixed(1)}%)'),
+                          _buildInfoRow(
+                            'Verifikasi AI',
+                            'Cocok (${similarity!.toStringAsFixed(1)}%)',
+                          ),
                         ],
                         const Divider(height: 28, color: Color(0xFFEEEEEE)),
                         _buildKeteranganRow(keteranganData),

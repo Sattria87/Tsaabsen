@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:video_player/video_player.dart';
+
 import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
 import 'utils/auth_service.dart';
@@ -16,11 +17,13 @@ Future<void> main() async {
     debugPrint('Error inisialisasi kamera: $e');
   }
 
-  runApp(MaterialApp(
-    navigatorKey: appNavigatorKey,
-    debugShowCheckedModeBanner: false,
-    home: const SplashRouter(),
-  ));
+  runApp(
+    MaterialApp(
+      navigatorKey: appNavigatorKey,
+      debugShowCheckedModeBanner: false,
+      home: const SplashRouter(),
+    ),
+  );
 }
 
 /// ============================================================
@@ -51,13 +54,15 @@ class _SplashRouterState extends State<SplashRouter> {
 
   Future<void> _initVideoAndSession() async {
     // 1. Baca sesi login user dari penyimpanan lokal
-    AuthService.getSavedUser().then((userData) {
-      if (mounted) {
-        _savedUser = userData;
-      }
-    }).catchError((e) {
-      debugPrint('[Splash Session Error]: $e');
-    });
+    AuthService.getSavedUser()
+        .then((userData) {
+          if (mounted) {
+            _savedUser = userData;
+          }
+        })
+        .catchError((e) {
+          debugPrint('[Splash Session Error]: $e');
+        });
 
     // 2. Inisialisasi pemutar video splash1.mp4 dari assets
     try {
@@ -113,15 +118,17 @@ class _SplashRouterState extends State<SplashRouter> {
         userData.isNotEmpty &&
         userData['username'] != null &&
         userData['username'].toString().trim().isNotEmpty) {
-      debugPrint('[Splash] Sesi aktif ditemukan untuk: ${userData['username']}. Langsung ke HomeScreen.');
+      debugPrint(
+        '[Splash] Sesi aktif ditemukan untuk: ${userData['username']}. Langsung ke HomeScreen.',
+      );
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(
-          builder: (context) => HomeScreen(userData: userData),
-        ),
+        MaterialPageRoute(builder: (context) => HomeScreen(userData: userData)),
       );
     } else {
-      debugPrint('[Splash] Tidak ada sesi login tersimpan. Masuk ke LoginScreen.');
+      debugPrint(
+        '[Splash] Tidak ada sesi login tersimpan. Masuk ke LoginScreen.',
+      );
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const LoginScreen()),
@@ -138,7 +145,9 @@ class _SplashRouterState extends State<SplashRouter> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0E143C), // Warna latar belakang navy serasi video
+      backgroundColor: const Color(
+        0xFF0E143C,
+      ), // Warna latar belakang navy serasi video
       body: Stack(
         fit: StackFit.expand,
         children: [
@@ -219,7 +228,10 @@ class _SplashRouterState extends State<SplashRouter> {
             child: GestureDetector(
               onTap: _proceedToNextScreen,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.black.withValues(alpha: 0.35),
                   borderRadius: BorderRadius.circular(20),

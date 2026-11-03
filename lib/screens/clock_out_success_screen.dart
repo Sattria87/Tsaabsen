@@ -1,5 +1,7 @@
 import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
+
 import '../utils/mysql_helper.dart';
 import 'home_screen.dart';
 
@@ -27,7 +29,9 @@ class _ClockOutSuccessScreenState extends State<ClockOutSuccessScreen> {
   void _navigateToHome(BuildContext context) {
     Navigator.pushAndRemoveUntil(
       context,
-      MaterialPageRoute(builder: (context) => HomeScreen(userData: widget.userData)),
+      MaterialPageRoute(
+        builder: (context) => HomeScreen(userData: widget.userData),
+      ),
       (route) => false,
     );
   }
@@ -55,7 +59,8 @@ class _ClockOutSuccessScreenState extends State<ClockOutSuccessScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final String displayClockIn = widget.clockInTime.isNotEmpty && widget.clockInTime != '--:--'
+    final String displayClockIn =
+        widget.clockInTime.isNotEmpty && widget.clockInTime != '--:--'
         ? widget.clockInTime
         : '08:50';
 
@@ -101,7 +106,10 @@ class _ClockOutSuccessScreenState extends State<ClockOutSuccessScreen> {
             SafeArea(
               child: Center(
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24.0,
+                    vertical: 20.0,
+                  ),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.center,
@@ -134,7 +142,9 @@ class _ClockOutSuccessScreenState extends State<ClockOutSuccessScreen> {
                         child: ElevatedButton(
                           onPressed: () => _navigateToHome(context),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF007AFF), // Biru persis referensi
+                            backgroundColor: const Color(
+                              0xFF007AFF,
+                            ), // Biru persis referensi
                             foregroundColor: Colors.white,
                             elevation: 0,
                             shape: RoundedRectangleBorder(
@@ -158,13 +168,16 @@ class _ClockOutSuccessScreenState extends State<ClockOutSuccessScreen> {
                       Container(
                         width: double.infinity,
                         margin: const EdgeInsets.symmetric(horizontal: 16),
-                        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 20),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 22,
+                          vertical: 20,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(24),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.06),
+                              color: Colors.black.withValues(alpha: 0.06),
                               blurRadius: 24,
                               offset: const Offset(0, 8),
                             ),
@@ -271,10 +284,7 @@ class ClockOutRefreshIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CustomPaint(
-      size: Size(size, size),
-      painter: _ClockOutIconPainter(),
-    );
+    return CustomPaint(size: Size(size, size), painter: _ClockOutIconPainter());
   }
 }
 

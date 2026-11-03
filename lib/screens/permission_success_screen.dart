@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
+
 import '../widgets/employee_avatar.dart';
 import 'home_screen.dart';
 
 class PermissionSuccessScreen extends StatelessWidget {
   final Map<String, dynamic> userData;
   final String izinType; // 'Sakit' atau 'Keperluan'
-  final String date;     // Tanggal pengajuan
+  final String date; // Tanggal pengajuan
 
   const PermissionSuccessScreen({
     super.key,
@@ -19,8 +20,18 @@ class PermissionSuccessScreen extends StatelessWidget {
     if (rawDate.trim().isEmpty) {
       final now = DateTime.now();
       const List<String> months = [
-        'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
+        'May',
+        'Jun',
+        'Jul',
+        'Aug',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Dec',
       ];
       return '${now.day} ${months[now.month - 1]} ${now.year}';
     }
@@ -28,8 +39,18 @@ class PermissionSuccessScreen extends StatelessWidget {
     try {
       DateTime parsed = DateTime.parse(rawDate.trim());
       const List<String> months = [
-        'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
+        'May',
+        'Jun',
+        'Jul',
+        'Aug',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Dec',
       ];
       return '${parsed.day} ${months[parsed.month - 1]} ${parsed.year}';
     } catch (_) {
@@ -42,8 +63,8 @@ class PermissionSuccessScreen extends StatelessWidget {
     final String displayName = userData['name']?.toString().isNotEmpty == true
         ? userData['name'].toString()
         : (userData['username']?.toString().isNotEmpty == true
-            ? userData['username'].toString()
-            : 'Bagas Rudiyanto');
+              ? userData['username'].toString()
+              : 'Bagas Rudiyanto');
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -73,19 +94,28 @@ class PermissionSuccessScreen extends StatelessWidget {
 
                   // Kartu Profil Mengambang dengan Garis Kuning Emas
                   Padding(
-                    padding: const EdgeInsets.only(top: 52, left: 24, right: 24),
+                    padding: const EdgeInsets.only(
+                      top: 52,
+                      left: 24,
+                      right: 24,
+                    ),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 18,
+                        vertical: 16,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(24),
                         border: Border.all(
-                          color: const Color(0xFFFFD166), // Garis emas/kuning persis gambar
+                          color: const Color(
+                            0xFFFFD166,
+                          ), // Garis emas/kuning persis gambar
                           width: 1.5,
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.06),
+                            color: Colors.black.withValues(alpha: 0.06),
                             blurRadius: 18,
                             offset: const Offset(0, 8),
                           ),
@@ -97,7 +127,10 @@ class PermissionSuccessScreen extends StatelessWidget {
                           Container(
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              border: Border.all(color: Colors.grey.shade200, width: 1),
+                              border: Border.all(
+                                color: Colors.grey.shade200,
+                                width: 1,
+                              ),
                             ),
                             child: EmployeeAvatarWidget(
                               userData: userData,
@@ -139,7 +172,9 @@ class PermissionSuccessScreen extends StatelessWidget {
                                 const Text(
                                   'Izin',
                                   style: TextStyle(
-                                    color: Color(0xFFFF7A00), // Oranye status Izin persis gambar
+                                    color: Color(
+                                      0xFFFF7A00,
+                                    ), // Oranye status Izin persis gambar
                                     fontSize: 13,
                                     fontWeight: FontWeight.w600,
                                   ),
@@ -181,8 +216,11 @@ class PermissionSuccessScreen extends StatelessWidget {
                       'assets/Cheerful_TSA_Mascot_Thumbs_Up-removebg-preview.png',
                       height: 140,
                       fit: BoxFit.contain,
-                      errorBuilder: (context, error, stackTrace) =>
-                          const Icon(Icons.check_circle_outline, size: 85, color: Color(0xFF007AFF)),
+                      errorBuilder: (context, error, stackTrace) => const Icon(
+                        Icons.check_circle_outline,
+                        size: 85,
+                        color: Color(0xFF007AFF),
+                      ),
                     ),
                   ],
                 ),
@@ -212,13 +250,16 @@ class PermissionSuccessScreen extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 26.0),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 20),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 22,
+                    vertical: 20,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(24),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.06),
+                        color: Colors.black.withValues(alpha: 0.06),
                         blurRadius: 18,
                         offset: const Offset(0, 8),
                       ),
@@ -295,7 +336,9 @@ class PermissionSuccessScreen extends StatelessWidget {
                           const Text(
                             'Waiting Approval',
                             style: TextStyle(
-                              color: Color(0xFFFF4D4F), // Merah terang persis gambar
+                              color: Color(
+                                0xFFFF4D4F,
+                              ), // Merah terang persis gambar
                               fontSize: 14,
                               fontWeight: FontWeight.bold,
                             ),
@@ -327,7 +370,9 @@ class PermissionSuccessScreen extends StatelessWidget {
                       );
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF007AFF), // Biru cerah persis tombol
+                      backgroundColor: const Color(
+                        0xFF007AFF,
+                      ), // Biru cerah persis tombol
                       elevation: 0,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(26),

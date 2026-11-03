@@ -1,7 +1,9 @@
 import 'dart:io';
 import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+
 import '../utils/mysql_helper.dart';
 import '../widgets/employee_avatar.dart';
 import 'permission_success_screen.dart';
@@ -79,7 +81,9 @@ class _SickPermissionScreenState extends State<SickPermissionScreen> {
     if (_selectedImage == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Foto surat dokter wajib dilampirkan! Ketuk kotak foto untuk membuka kamera.'),
+          content: Text(
+            'Foto surat dokter wajib dilampirkan! Ketuk kotak foto untuk membuka kamera.',
+          ),
           backgroundColor: Colors.orange,
           duration: Duration(seconds: 3),
         ),
@@ -89,7 +93,8 @@ class _SickPermissionScreenState extends State<SickPermissionScreen> {
 
     setState(() => _isLoading = true);
 
-    String fullReason = 'Tanggal: ${_dateController.text} | Alasan: ${_reasonController.text.trim()} | [Lampiran Surat Dokter Terlampir]';
+    String fullReason =
+        'Tanggal: ${_dateController.text} | Alasan: ${_reasonController.text.trim()} | [Lampiran Surat Dokter Terlampir]';
 
     // Konversi foto ke base64 untuk dikirim ke backend
     String? imageBase64;
@@ -122,7 +127,8 @@ class _SickPermissionScreenState extends State<SickPermissionScreen> {
         ),
       );
     } else {
-      final errorMsg = MySQLHelper.lastSaveError ??
+      final errorMsg =
+          MySQLHelper.lastSaveError ??
           'Gagal menyimpan ke database! Pastikan server aktif.';
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -136,11 +142,12 @@ class _SickPermissionScreenState extends State<SickPermissionScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final String displayName = widget.userData['name']?.toString().isNotEmpty == true
+    final String displayName =
+        widget.userData['name']?.toString().isNotEmpty == true
         ? widget.userData['name'].toString()
         : (widget.userData['username']?.toString().isNotEmpty == true
-            ? widget.userData['username'].toString()
-            : 'Bagas Rudiyanto');
+              ? widget.userData['username'].toString()
+              : 'Bagas Rudiyanto');
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -166,12 +173,20 @@ class _SickPermissionScreenState extends State<SickPermissionScreen> {
                         bottomRight: Radius.circular(36),
                       ),
                     ),
-                    padding: const EdgeInsets.only(top: 44, left: 16, right: 16),
+                    padding: const EdgeInsets.only(
+                      top: 44,
+                      left: 16,
+                      right: 16,
+                    ),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         IconButton(
-                          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 20),
+                          icon: const Icon(
+                            Icons.arrow_back_ios_new,
+                            color: Colors.white,
+                            size: 20,
+                          ),
                           onPressed: () => Navigator.pop(context),
                           tooltip: 'Kembali',
                         ),
@@ -181,19 +196,28 @@ class _SickPermissionScreenState extends State<SickPermissionScreen> {
 
                   // Kartu Profil Mengambang dengan Garis Kuning Emas
                   Padding(
-                    padding: const EdgeInsets.only(top: 52, left: 24, right: 24),
+                    padding: const EdgeInsets.only(
+                      top: 52,
+                      left: 24,
+                      right: 24,
+                    ),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 18,
+                        vertical: 16,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(24),
                         border: Border.all(
-                          color: const Color(0xFFFFD166), // Garis emas/kuning persis gambar
+                          color: const Color(
+                            0xFFFFD166,
+                          ), // Garis emas/kuning persis gambar
                           width: 1.5,
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.06),
+                            color: Colors.black.withValues(alpha: 0.06),
                             blurRadius: 18,
                             offset: const Offset(0, 8),
                           ),
@@ -205,7 +229,10 @@ class _SickPermissionScreenState extends State<SickPermissionScreen> {
                           Container(
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              border: Border.all(color: Colors.grey.shade200, width: 1),
+                              border: Border.all(
+                                color: Colors.grey.shade200,
+                                width: 1,
+                              ),
                             ),
                             child: EmployeeAvatarWidget(
                               userData: widget.userData,
@@ -247,7 +274,9 @@ class _SickPermissionScreenState extends State<SickPermissionScreen> {
                                 const Text(
                                   'Izin',
                                   style: TextStyle(
-                                    color: Color(0xFFFF7A00), // Oranye status Izin persis gambar
+                                    color: Color(
+                                      0xFFFF7A00,
+                                    ), // Oranye status Izin persis gambar
                                     fontSize: 13,
                                     fontWeight: FontWeight.w600,
                                   ),
@@ -421,11 +450,18 @@ class _SickPermissionScreenState extends State<SickPermissionScreen> {
                         ),
                         const SizedBox(width: 6),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFFF3B30).withOpacity(0.1),
+                            color: const Color(0xFFFF3B30)
+                                .withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: const Color(0xFFFF3B30), width: 0.8),
+                            border: Border.all(
+                              color: const Color(0xFFFF3B30),
+                              width: 0.8,
+                            ),
                           ),
                           child: const Text(
                             'Wajib',
@@ -441,7 +477,10 @@ class _SickPermissionScreenState extends State<SickPermissionScreen> {
                     const SizedBox(height: 6),
                     const Text(
                       'Ketuk untuk membuka kamera',
-                      style: TextStyle(fontSize: 11.5, color: Color(0xFF94A3B8)),
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        color: Color(0xFF94A3B8),
+                      ),
                     ),
                     const SizedBox(height: 8),
                     InkWell(
@@ -478,14 +517,21 @@ class _SickPermissionScreenState extends State<SickPermissionScreen> {
                                     top: 6,
                                     right: 6,
                                     child: GestureDetector(
-                                      onTap: () => setState(() => _selectedImage = null),
+                                      onTap: () =>
+                                          setState(() => _selectedImage = null),
                                       child: Container(
                                         padding: const EdgeInsets.all(4),
                                         decoration: BoxDecoration(
                                           color: Colors.black54,
-                                          borderRadius: BorderRadius.circular(20),
+                                          borderRadius: BorderRadius.circular(
+                                            20,
+                                          ),
                                         ),
-                                        child: const Icon(Icons.close, size: 16, color: Colors.white),
+                                        child: const Icon(
+                                          Icons.close,
+                                          size: 16,
+                                          color: Colors.white,
+                                        ),
                                       ),
                                     ),
                                   ),
@@ -495,14 +541,23 @@ class _SickPermissionScreenState extends State<SickPermissionScreen> {
                                     right: 0,
                                     child: Center(
                                       child: Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 10,
+                                          vertical: 4,
+                                        ),
                                         decoration: BoxDecoration(
                                           color: const Color(0xFF34C759),
-                                          borderRadius: BorderRadius.circular(20),
+                                          borderRadius: BorderRadius.circular(
+                                            20,
+                                          ),
                                         ),
                                         child: const Text(
                                           '✓ Foto Terlampir — Ketuk untuk ganti',
-                                          style: TextStyle(fontSize: 11, color: Colors.white, fontWeight: FontWeight.w600),
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.w600,
+                                          ),
                                         ),
                                       ),
                                     ),
@@ -529,7 +584,10 @@ class _SickPermissionScreenState extends State<SickPermissionScreen> {
                                   const SizedBox(height: 2),
                                   Text(
                                     'Foto surat dokter diperlukan',
-                                    style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: Colors.grey.shade500,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -548,7 +606,9 @@ class _SickPermissionScreenState extends State<SickPermissionScreen> {
                         child: ElevatedButton(
                           onPressed: _isLoading ? null : _submitSickPermission,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF007AFF), // Biru cerah persis tombol Ajukan
+                            backgroundColor: const Color(
+                              0xFF007AFF,
+                            ), // Biru cerah persis tombol Ajukan
                             elevation: 0,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(26),

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+
 import '../widgets/employee_avatar.dart';
 import 'sick_permission_screen.dart';
 import 'necessity_permission_screen.dart';
+import 'leave_permission_screen.dart';
 
 class PermissionScreen extends StatelessWidget {
   final Map<String, dynamic> userData;
@@ -12,8 +14,8 @@ class PermissionScreen extends StatelessWidget {
     final String displayName = userData['name']?.toString().isNotEmpty == true
         ? userData['name'].toString()
         : (userData['username']?.toString().isNotEmpty == true
-            ? userData['username'].toString()
-            : 'Bagas Rudiyanto');
+              ? userData['username'].toString()
+              : 'Bagas Rudiyanto');
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -39,12 +41,20 @@ class PermissionScreen extends StatelessWidget {
                         bottomRight: Radius.circular(36),
                       ),
                     ),
-                    padding: const EdgeInsets.only(top: 44, left: 16, right: 16),
+                    padding: const EdgeInsets.only(
+                      top: 44,
+                      left: 16,
+                      right: 16,
+                    ),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         IconButton(
-                          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 20),
+                          icon: const Icon(
+                            Icons.arrow_back_ios_new,
+                            color: Colors.white,
+                            size: 20,
+                          ),
                           onPressed: () => Navigator.pop(context),
                           tooltip: 'Kembali',
                         ),
@@ -54,19 +64,28 @@ class PermissionScreen extends StatelessWidget {
 
                   // Kartu Profil Mengambang dengan Garis Kuning Emas
                   Padding(
-                    padding: const EdgeInsets.only(top: 52, left: 24, right: 24),
+                    padding: const EdgeInsets.only(
+                      top: 52,
+                      left: 24,
+                      right: 24,
+                    ),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 18,
+                        vertical: 16,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(24),
                         border: Border.all(
-                          color: const Color(0xFFFFD166), // Garis emas/kuning persis gambar
+                          color: const Color(
+                            0xFFFFD166,
+                          ), // Garis emas/kuning persis gambar
                           width: 1.5,
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.06),
+                            color: Colors.black.withValues(alpha: 0.06),
                             blurRadius: 18,
                             offset: const Offset(0, 8),
                           ),
@@ -78,7 +97,10 @@ class PermissionScreen extends StatelessWidget {
                           Container(
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              border: Border.all(color: Colors.grey.shade200, width: 1),
+                              border: Border.all(
+                                color: Colors.grey.shade200,
+                                width: 1,
+                              ),
                             ),
                             child: EmployeeAvatarWidget(
                               userData: userData,
@@ -120,7 +142,9 @@ class PermissionScreen extends StatelessWidget {
                                 const Text(
                                   'Izin',
                                   style: TextStyle(
-                                    color: Color(0xFFFF7A00), // Oranye status Izin persis gambar
+                                    color: Color(
+                                      0xFFFF7A00,
+                                    ), // Oranye status Izin persis gambar
                                     fontSize: 13,
                                     fontWeight: FontWeight.w600,
                                   ),
@@ -188,7 +212,11 @@ class PermissionScreen extends StatelessWidget {
                           height: 170,
                           fit: BoxFit.contain,
                           errorBuilder: (c, e, s) {
-                            return const Icon(Icons.help_outline, size: 80, color: Color(0xFF007AFF));
+                            return const Icon(
+                              Icons.help_outline,
+                              size: 80,
+                              color: Color(0xFF007AFF),
+                            );
                           },
                         );
                       },
@@ -200,10 +228,10 @@ class PermissionScreen extends StatelessWidget {
               const SizedBox(height: 18),
 
               // ========================================================
-              // 4. KARTU PILIHAN: SAKIT & KEPERLUAN
+              // 4. KARTU PILIHAN: SAKIT, KEPERLUAN, & CUTI
               // ========================================================
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
                 child: Row(
                   children: [
                     // A. KARTU PILIHAN "SAKIT"
@@ -213,19 +241,26 @@ class PermissionScreen extends StatelessWidget {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => SickPermissionScreen(userData: userData),
+                              builder: (context) =>
+                                  SickPermissionScreen(userData: userData),
                             ),
                           );
                         },
                         child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 14),
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 18,
+                            horizontal: 8,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(24),
-                            border: Border.all(color: const Color(0xFFF1F5F9), width: 1.2),
+                            border: Border.all(
+                              color: const Color(0xFFF1F5F9),
+                              width: 1.2,
+                            ),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.05),
+                                color: Colors.black.withValues(alpha: 0.05),
                                 blurRadius: 18,
                                 offset: const Offset(0, 6),
                               ),
@@ -235,24 +270,27 @@ class PermissionScreen extends StatelessWidget {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               SizedBox(
-                                height: 86,
+                                height: 72,
                                 child: Image.asset(
                                   'assets/sick.png',
                                   fit: BoxFit.contain,
                                   errorBuilder: (c, e, s) => const Icon(
                                     Icons.sick_outlined,
-                                    size: 48,
+                                    size: 44,
                                     color: Colors.orange,
                                   ),
                                 ),
                               ),
-                              const SizedBox(height: 14),
-                              const Text(
-                                'Sakit',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 15,
-                                  color: Color(0xFF1E293B),
+                              const SizedBox(height: 12),
+                              const FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Text(
+                                  'Sakit',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14.5,
+                                    color: Color(0xFF1E293B),
+                                  ),
                                 ),
                               ),
                             ],
@@ -261,7 +299,7 @@ class PermissionScreen extends StatelessWidget {
                       ),
                     ),
 
-                    const SizedBox(width: 18),
+                    const SizedBox(width: 12),
 
                     // B. KARTU PILIHAN "KEPERLUAN"
                     Expanded(
@@ -270,19 +308,26 @@ class PermissionScreen extends StatelessWidget {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => NecessityPermissionScreen(userData: userData),
+                              builder: (context) =>
+                                  NecessityPermissionScreen(userData: userData),
                             ),
                           );
                         },
                         child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 14),
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 18,
+                            horizontal: 8,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(24),
-                            border: Border.all(color: const Color(0xFFF1F5F9), width: 1.2),
+                            border: Border.all(
+                              color: const Color(0xFFF1F5F9),
+                              width: 1.2,
+                            ),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.05),
+                                color: Colors.black.withValues(alpha: 0.05),
                                 blurRadius: 18,
                                 offset: const Offset(0, 6),
                               ),
@@ -292,7 +337,7 @@ class PermissionScreen extends StatelessWidget {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               SizedBox(
-                                height: 86,
+                                height: 72,
                                 child: Image.asset(
                                   'assets/Worried_TSA_Officer_Holding_Family_Photo-removebg-preview.png',
                                   fit: BoxFit.contain,
@@ -301,19 +346,89 @@ class PermissionScreen extends StatelessWidget {
                                     fit: BoxFit.contain,
                                     errorBuilder: (c2, e2, s2) => const Icon(
                                       Icons.badge_outlined,
-                                      size: 48,
+                                      size: 44,
                                       color: Colors.blue,
                                     ),
                                   ),
                                 ),
                               ),
-                              const SizedBox(height: 14),
-                              const Text(
-                                'Keperluan',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 15,
-                                  color: Color(0xFF1E293B),
+                              const SizedBox(height: 12),
+                              const FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Text(
+                                  'Keperluan',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14.5,
+                                    color: Color(0xFF1E293B),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(width: 12),
+
+                    // C. KARTU PILIHAN "CUTI"
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  LeavePermissionScreen(userData: userData),
+                            ),
+                          );
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 18,
+                            horizontal: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(24),
+                            border: Border.all(
+                              color: const Color(0xFFF1F5F9),
+                              width: 1.2,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.05),
+                                blurRadius: 18,
+                                offset: const Offset(0, 6),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              SizedBox(
+                                height: 72,
+                                child: Image.asset(
+                                  'assets/Cheerful_TSA_Mascot_Thumbs_Up-removebg-preview.png',
+                                  fit: BoxFit.contain,
+                                  errorBuilder: (c, e, s) => const Icon(
+                                    Icons.beach_access_rounded,
+                                    size: 44,
+                                    color: Color(0xFF007AFF),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              const FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Text(
+                                  'Cuti',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14.5,
+                                    color: Color(0xFF1E293B),
+                                  ),
                                 ),
                               ),
                             ],

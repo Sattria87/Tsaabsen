@@ -1,8 +1,10 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+
 import '../utils/mysql_helper.dart';
 import '../widgets/employee_avatar.dart';
 import 'face_capture_screen.dart';
@@ -12,17 +14,20 @@ class LocationVerificationScreen extends StatefulWidget {
   const LocationVerificationScreen({super.key, required this.userData});
 
   @override
-  State<LocationVerificationScreen> createState() => _LocationVerificationScreenState();
+  State<LocationVerificationScreen> createState() =>
+      _LocationVerificationScreenState();
 }
 
-class _LocationVerificationScreenState extends State<LocationVerificationScreen> {
+class _LocationVerificationScreenState
+    extends State<LocationVerificationScreen> {
   late final MapController _mapController;
 
   bool _isCheckingLocation = false;
   List<Map<String, dynamic>> _branches = [];
   Map<String, dynamic>? _selectedBranch;
   String _statusMessage = 'Memuat data kantor cabang...';
-  bool _isWithinRadius = false; // Ketat: harus diverifikasi GPS secara nyata (tanpa bypass)
+  bool _isWithinRadius =
+      false; // Ketat: harus diverifikasi GPS secara nyata (tanpa bypass)
   double _currentDistance = 0.0;
   Position? _currentUserPosition;
 
@@ -79,10 +84,13 @@ class _LocationVerificationScreenState extends State<LocationVerificationScreen>
 
       if (status != null &&
           status['hasPermission'] == true &&
-          (status['permissionStatus'] ?? '').toString().toLowerCase() == 'rejected') {
+          (status['permissionStatus'] ?? '').toString().toLowerCase() ==
+              'rejected') {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Pengajuan izin Anda hari ini telah ditolak (Alpha). Anda tidak dapat melakukan Clock In Hadir.'),
+            content: Text(
+              'Pengajuan izin Anda hari ini telah ditolak (Alpha). Anda tidak dapat melakukan Clock In Hadir.',
+            ),
             backgroundColor: Colors.red,
           ),
         );
@@ -90,10 +98,14 @@ class _LocationVerificationScreenState extends State<LocationVerificationScreen>
         return;
       }
 
-      if (status != null && status['hasClockedIn'] == true && status['hasClockedOut'] == false) {
+      if (status != null &&
+          status['hasClockedIn'] == true &&
+          status['hasClockedOut'] == false) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Anda sedang dalam status Clock In! Silakan Clock Out terlebih dahulu.'),
+            content: Text(
+              'Anda sedang dalam status Clock In! Silakan Clock Out terlebih dahulu.',
+            ),
             backgroundColor: Colors.orange,
           ),
         );
@@ -114,12 +126,15 @@ class _LocationVerificationScreenState extends State<LocationVerificationScreen>
         }
 
         // Cari cabang yang cocok dengan profil karyawan
-        final userBranch = (widget.userData['branch'] ?? '').toString().toLowerCase();
+        final userBranch = (widget.userData['branch'] ?? '')
+            .toString()
+            .toLowerCase();
         Map<String, dynamic>? matched;
         for (var b in _branches) {
           final bName = (b['branch_name'] ?? '').toString().toLowerCase();
           final bCity = (b['city'] ?? '').toString().toLowerCase();
-          if (userBranch.isNotEmpty && (bName.contains(userBranch) || bCity.contains(userBranch))) {
+          if (userBranch.isNotEmpty &&
+              (bName.contains(userBranch) || bCity.contains(userBranch))) {
             matched = b;
             break;
           }
@@ -167,10 +182,12 @@ class _LocationVerificationScreenState extends State<LocationVerificationScreen>
         _currentDistance = dist;
         if (dist <= allowedRadius) {
           _isWithinRadius = true;
-          _statusMessage = 'Lokasi Terverifikasi: Berada dalam radius ${branch['branch_name']} ($allowedRadius meter)';
+          _statusMessage =
+              'Lokasi Terverifikasi: Berada dalam radius ${branch['branch_name']} ($allowedRadius meter)';
         } else {
           _isWithinRadius = false;
-          _statusMessage = 'Di luar radius ${branch['branch_name']}! Jarak: ${dist.toStringAsFixed(0)}m (Maks: ${allowedRadius}m)';
+          _statusMessage =
+              'Di luar radius ${branch['branch_name']}! Jarak: ${dist.toStringAsFixed(0)}m (Maks: ${allowedRadius}m)';
         }
       });
     } else {
@@ -193,7 +210,10 @@ class _LocationVerificationScreenState extends State<LocationVerificationScreen>
   void _recenterMap() {
     if (_selectedBranch != null) {
       final targetLat = _parseDouble(_selectedBranch!['latitude'], -7.3402015);
-      final targetLon = _parseDouble(_selectedBranch!['longitude'], 112.7202620);
+      final targetLon = _parseDouble(
+        _selectedBranch!['longitude'],
+        112.7202620,
+      );
       try {
         _mapController.move(LatLng(targetLat, targetLon), 16.5);
       } catch (_) {}
@@ -216,7 +236,8 @@ class _LocationVerificationScreenState extends State<LocationVerificationScreen>
         setState(() {
           _isCheckingLocation = false;
           _isWithinRadius = false;
-          _statusMessage = 'GPS perangkat belum aktif. Harap aktifkan GPS HP Anda!';
+          _statusMessage =
+              'GPS perangkat belum aktif. Harap aktifkan GPS HP Anda!';
         });
         return;
       }
@@ -229,7 +250,8 @@ class _LocationVerificationScreenState extends State<LocationVerificationScreen>
           setState(() {
             _isCheckingLocation = false;
             _isWithinRadius = false;
-            _statusMessage = 'Izin lokasi ditolak! Diperlukan akses GPS untuk Clock In.';
+            _statusMessage =
+                'Izin lokasi ditolak! Diperlukan akses GPS untuk Clock In.';
           });
           return;
         }
@@ -272,7 +294,9 @@ class _LocationVerificationScreenState extends State<LocationVerificationScreen>
         );
 
         // Jika user berada di dalam radius cabang yang sedang dipilih, utamakan cabang tersebut
-        if (_selectedBranch != null && b['id'] == _selectedBranch!['id'] && dist <= bRad) {
+        if (_selectedBranch != null &&
+            b['id'] == _selectedBranch!['id'] &&
+            dist <= bRad) {
           withinRadiusBranch = b;
           break;
         }
@@ -306,7 +330,8 @@ class _LocationVerificationScreenState extends State<LocationVerificationScreen>
           _currentDistance = dist;
           _isWithinRadius = true;
           _isCheckingLocation = false;
-          _statusMessage = 'Terverifikasi di ${withinRadiusBranch!['branch_name']}: Jarak ${dist.toStringAsFixed(0)}m (Maks: ${activeRad}m)';
+          _statusMessage =
+              'Terverifikasi di ${withinRadiusBranch!['branch_name']}: Jarak ${dist.toStringAsFixed(0)}m (Maks: ${activeRad}m)';
         });
         _recenterMap();
         return;
@@ -331,7 +356,8 @@ class _LocationVerificationScreenState extends State<LocationVerificationScreen>
         _currentDistance = distanceInMeters;
         _isCheckingLocation = false;
         _isWithinRadius = false;
-        _statusMessage = 'Di luar radius ${activeTarget['branch_name']} (${distanceInMeters.toStringAsFixed(0)}m). Terdekat: ${nearestBranch?['branch_name'] ?? activeTarget['branch_name']} (${minDistance.toStringAsFixed(0)}m)';
+        _statusMessage =
+            'Di luar radius ${activeTarget['branch_name']} (${distanceInMeters.toStringAsFixed(0)}m). Terdekat: ${nearestBranch?['branch_name'] ?? activeTarget['branch_name']} (${minDistance.toStringAsFixed(0)}m)';
       });
       _recenterMap();
     } on TimeoutException {
@@ -370,15 +396,25 @@ class _LocationVerificationScreenState extends State<LocationVerificationScreen>
 
   @override
   Widget build(BuildContext context) {
-    final double targetLat = _parseDouble(_selectedBranch?['latitude'] ?? _defaultBranch['latitude'], -7.3402015);
-    final double targetLon = _parseDouble(_selectedBranch?['longitude'] ?? _defaultBranch['longitude'], 112.7202620);
-    final int allowedRadius = _parseInt(_selectedBranch?['radius'] ?? _defaultBranch['radius'], 100);
+    final double targetLat = _parseDouble(
+      _selectedBranch?['latitude'] ?? _defaultBranch['latitude'],
+      -7.3402015,
+    );
+    final double targetLon = _parseDouble(
+      _selectedBranch?['longitude'] ?? _defaultBranch['longitude'],
+      112.7202620,
+    );
+    final int allowedRadius = _parseInt(
+      _selectedBranch?['radius'] ?? _defaultBranch['radius'],
+      100,
+    );
 
-    final String displayName = widget.userData['name']?.toString().isNotEmpty == true
+    final String displayName =
+        widget.userData['name']?.toString().isNotEmpty == true
         ? widget.userData['name'].toString()
         : (widget.userData['username']?.toString().isNotEmpty == true
-            ? widget.userData['username'].toString()
-            : 'Bagas Rudiyanto');
+              ? widget.userData['username'].toString()
+              : 'Bagas Rudiyanto');
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -402,12 +438,20 @@ class _LocationVerificationScreenState extends State<LocationVerificationScreen>
                         bottomRight: Radius.circular(36),
                       ),
                     ),
-                    padding: const EdgeInsets.only(top: 44, left: 16, right: 16),
+                    padding: const EdgeInsets.only(
+                      top: 44,
+                      left: 16,
+                      right: 16,
+                    ),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         IconButton(
-                          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 20),
+                          icon: const Icon(
+                            Icons.arrow_back_ios_new,
+                            color: Colors.white,
+                            size: 20,
+                          ),
                           onPressed: () => Navigator.pop(context),
                           tooltip: 'Kembali',
                         ),
@@ -417,14 +461,23 @@ class _LocationVerificationScreenState extends State<LocationVerificationScreen>
 
                   // Kartu Profil Mengambang dengan Garis Kuning Keemasan (Sesuai Desain)
                   Padding(
-                    padding: const EdgeInsets.only(top: 52, left: 24, right: 24),
+                    padding: const EdgeInsets.only(
+                      top: 52,
+                      left: 24,
+                      right: 24,
+                    ),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 18,
+                        vertical: 16,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(24),
                         border: Border.all(
-                          color: const Color(0xFFFFD166), // Garis emas/kuning persis gambar
+                          color: const Color(
+                            0xFFFFD166,
+                          ), // Garis emas/kuning persis gambar
                           width: 1.5,
                         ),
                         boxShadow: [
@@ -441,7 +494,10 @@ class _LocationVerificationScreenState extends State<LocationVerificationScreen>
                           Container(
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              border: Border.all(color: Colors.grey.shade200, width: 1),
+                              border: Border.all(
+                                color: Colors.grey.shade200,
+                                width: 1,
+                              ),
                             ),
                             child: EmployeeAvatarWidget(
                               userData: widget.userData,
@@ -593,7 +649,10 @@ class _LocationVerificationScreenState extends State<LocationVerificationScreen>
                       onTap: _checkUserLocation,
                       borderRadius: BorderRadius.circular(6),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 5,
+                        ),
                         decoration: BoxDecoration(
                           color: const Color(0xFF10B981), // Emerald green
                           borderRadius: BorderRadius.circular(6),
@@ -625,21 +684,32 @@ class _LocationVerificationScreenState extends State<LocationVerificationScreen>
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 22),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: const Color(0xFFF8FAFC),
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFFE2E8F0), width: 1.2),
+                    border: Border.all(
+                      color: const Color(0xFFE2E8F0),
+                      width: 1.2,
+                    ),
                   ),
                   child: Row(
                     children: [
                       Container(
                         padding: const EdgeInsets.all(7),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF007AFF).withValues(alpha: 0.12),
+                          color: const Color(0xFF007AFF)
+                              .withValues(alpha: 0.12),
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(Icons.business_rounded, color: Color(0xFF007AFF), size: 18),
+                        child: const Icon(
+                          Icons.business_rounded,
+                          color: Color(0xFF007AFF),
+                          size: 18,
+                        ),
                       ),
                       const SizedBox(width: 10),
                       Expanded(
@@ -660,9 +730,13 @@ class _LocationVerificationScreenState extends State<LocationVerificationScreen>
                                 ),
                                 const SizedBox(width: 6),
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 1,
+                                  ),
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFF10B981).withValues(alpha: 0.15),
+                                    color: const Color(0xFF10B981)
+                                        .withValues(alpha: 0.15),
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   child: const Text(
@@ -681,11 +755,18 @@ class _LocationVerificationScreenState extends State<LocationVerificationScreen>
                                 value: _selectedBranch?['id'],
                                 isDense: true,
                                 isExpanded: true,
-                                icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF1E293B), size: 20),
+                                icon: const Icon(
+                                  Icons.keyboard_arrow_down_rounded,
+                                  color: Color(0xFF1E293B),
+                                  size: 20,
+                                ),
                                 items: _branches.map((b) {
-                                  final bName = b['branch_name']?.toString() ?? 'Cabang';
+                                  final bName =
+                                      b['branch_name']?.toString() ?? 'Cabang';
                                   final bCity = b['city']?.toString() ?? '';
-                                  final label = bCity.isNotEmpty ? '$bName ($bCity)' : bName;
+                                  final label = bCity.isNotEmpty
+                                      ? '$bName ($bCity)'
+                                      : bName;
                                   return DropdownMenuItem<dynamic>(
                                     value: b['id'],
                                     child: Text(
@@ -727,7 +808,10 @@ class _LocationVerificationScreenState extends State<LocationVerificationScreen>
                   height: 220,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(22),
-                    border: Border.all(color: const Color(0xFFE2E8F0), width: 1.2),
+                    border: Border.all(
+                      color: const Color(0xFFE2E8F0),
+                      width: 1.2,
+                    ),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withValues(alpha: 0.04),
@@ -761,7 +845,9 @@ class _LocationVerificationScreenState extends State<LocationVerificationScreen>
                               circles: [
                                 CircleMarker(
                                   point: LatLng(targetLat, targetLon),
-                                  color: const Color(0x4D4ADE80), // Hijau transparan
+                                  color: const Color(
+                                    0x4D4ADE80,
+                                  ), // Hijau transparan
                                   borderColor: const Color(0xFF22C55E),
                                   borderStrokeWidth: 1.5,
                                   useRadiusInMeter: true,
@@ -779,7 +865,10 @@ class _LocationVerificationScreenState extends State<LocationVerificationScreen>
                                     Marker(
                                       point: LatLng(
                                         _parseDouble(b['latitude'], -7.3402015),
-                                        _parseDouble(b['longitude'], 112.7202620),
+                                        _parseDouble(
+                                          b['longitude'],
+                                          112.7202620,
+                                        ),
                                       ),
                                       width: 32,
                                       height: 32,
@@ -787,7 +876,9 @@ class _LocationVerificationScreenState extends State<LocationVerificationScreen>
                                         onTap: () => _onBranchSelected(b),
                                         child: const Icon(
                                           Icons.location_on,
-                                          color: Color(0xFF94A3B8), // Abu-abu elegan cabang lain
+                                          color: Color(
+                                            0xFF94A3B8,
+                                          ), // Abu-abu elegan cabang lain
                                           size: 28,
                                         ),
                                       ),
@@ -800,24 +891,34 @@ class _LocationVerificationScreenState extends State<LocationVerificationScreen>
                                   height: 44,
                                   child: const Icon(
                                     Icons.location_on,
-                                    color: Color(0xFF06B6D4), // Cyan/Teal Pin persis di gambar
+                                    color: Color(
+                                      0xFF06B6D4,
+                                    ), // Cyan/Teal Pin persis di gambar
                                     size: 42,
                                   ),
                                 ),
                                 // Marker posisi pengguna saat ini (jika ada)
                                 if (_currentUserPosition != null)
                                   Marker(
-                                    point: LatLng(_currentUserPosition!.latitude, _currentUserPosition!.longitude),
+                                    point: LatLng(
+                                      _currentUserPosition!.latitude,
+                                      _currentUserPosition!.longitude,
+                                    ),
                                     width: 18,
                                     height: 18,
                                     child: Container(
                                       decoration: BoxDecoration(
                                         color: const Color(0xFF007AFF),
                                         shape: BoxShape.circle,
-                                        border: Border.all(color: Colors.white, width: 2),
+                                        border: Border.all(
+                                          color: Colors.white,
+                                          width: 2,
+                                        ),
                                         boxShadow: [
                                           BoxShadow(
-                                            color: Colors.black.withValues(alpha: 0.2),
+                                            color: Colors.black.withValues(
+                                              alpha: 0.2,
+                                            ),
                                             blurRadius: 4,
                                           ),
                                         ],
@@ -835,7 +936,10 @@ class _LocationVerificationScreenState extends State<LocationVerificationScreen>
                             top: 12,
                             right: 12,
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 6,
+                              ),
                               decoration: BoxDecoration(
                                 color: Colors.white.withValues(alpha: 0.9),
                                 borderRadius: BorderRadius.circular(20),
@@ -843,7 +947,7 @@ class _LocationVerificationScreenState extends State<LocationVerificationScreen>
                                   BoxShadow(
                                     color: Colors.black.withValues(alpha: 0.08),
                                     blurRadius: 6,
-                                  )
+                                  ),
                                 ],
                               ),
                               child: Row(
@@ -852,12 +956,19 @@ class _LocationVerificationScreenState extends State<LocationVerificationScreen>
                                   SizedBox(
                                     width: 12,
                                     height: 12,
-                                    child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF007AFF)),
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Color(0xFF007AFF),
+                                    ),
                                   ),
                                   SizedBox(width: 6),
                                   Text(
                                     'Memindai GPS...',
-                                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF1E293B)),
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFF1E293B),
+                                    ),
                                   ),
                                 ],
                               ),
@@ -878,8 +989,12 @@ class _LocationVerificationScreenState extends State<LocationVerificationScreen>
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Icon(
-                      _isWithinRadius ? Icons.check_circle_outline : Icons.info_outline,
-                      color: _isWithinRadius ? const Color(0xFF22C55E) : const Color(0xFFEF4444),
+                      _isWithinRadius
+                          ? Icons.check_circle_outline
+                          : Icons.info_outline,
+                      color: _isWithinRadius
+                          ? const Color(0xFF22C55E)
+                          : const Color(0xFFEF4444),
                       size: 20,
                     ),
                     const SizedBox(width: 8),
@@ -888,10 +1003,12 @@ class _LocationVerificationScreenState extends State<LocationVerificationScreen>
                         _isWithinRadius
                             ? 'Anda berada dalam radius $allowedRadius meter'
                             : (_isCheckingLocation
-                                ? 'Mendeteksi posisi GPS Anda...'
-                                : 'Anda berada di luar radius ($allowedRadius m). Silakan mendekat ke lokasi kantor.'),
+                                  ? 'Mendeteksi posisi GPS Anda...'
+                                  : 'Anda berada di luar radius ($allowedRadius m). Silakan mendekat ke lokasi kantor.'),
                         style: TextStyle(
-                          color: _isWithinRadius ? const Color(0xFF16A34A) : const Color(0xFFEF4444),
+                          color: _isWithinRadius
+                              ? const Color(0xFF16A34A)
+                              : const Color(0xFFEF4444),
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
                         ),
@@ -927,8 +1044,12 @@ class _LocationVerificationScreenState extends State<LocationVerificationScreen>
                           },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: (_isWithinRadius && !_isCheckingLocation)
-                          ? const Color(0xFF007AFF) // Biru aktif jika di dalam radius
-                          : const Color(0xFF94A3B8), // Abu-abu tegas jika di luar radius
+                          ? const Color(
+                              0xFF007AFF,
+                            ) // Biru aktif jika di dalam radius
+                          : const Color(
+                              0xFF94A3B8,
+                            ), // Abu-abu tegas jika di luar radius
                       elevation: 0,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(24),
@@ -937,7 +1058,11 @@ class _LocationVerificationScreenState extends State<LocationVerificationScreen>
                     child: const Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.camera_alt_outlined, color: Colors.white, size: 20),
+                        Icon(
+                          Icons.camera_alt_outlined,
+                          color: Colors.white,
+                          size: 20,
+                        ),
                         SizedBox(width: 8),
                         Text(
                           'Lanjut Selfie',

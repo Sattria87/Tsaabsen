@@ -463,7 +463,7 @@ app.post('/api/attendance', async (req, res) => {
       );
     } else {
       // clock_in atau izin (izin_sakit, izin_keperluan, dll)
-      const isPermission = ['izin', 'sakit', 'izin_sakit', 'izin_keperluan', 'cuti'].includes(type) ||
+      const isPermission = ['izin', 'sakit', 'izin_sakit', 'izin_keperluan', 'cuti', 'izin_cuti'].includes(type) ||
                            type.startsWith('izin_');
 
       if (type === 'clock_in') {
@@ -492,7 +492,7 @@ app.post('/api/attendance', async (req, res) => {
           await pool.execute(
             `DELETE FROM attendance 
              WHERE username = ? AND status = 'Rejected' 
-               AND (type IN ('izin', 'sakit', 'izin_sakit', 'izin_keperluan', 'cuti') OR type LIKE 'izin_%')`,
+               AND (type IN ('izin', 'sakit', 'izin_sakit', 'izin_keperluan', 'cuti', 'izin_cuti') OR type LIKE 'izin_%')`,
             [username]
           );
           console.log(`[Permission Cleanup] Pengajuan izin yang ditolak untuk @${username} berhasil dihapus.`);
@@ -551,8 +551,8 @@ app.get('/api/attendance/status/:username', async (req, res) => {
       const ts   = row.timestamp ? new Date(row.timestamp) : null;
       const status = row.status ?? 'Pending';
 
-      // Deteksi pengajuan izin/sakit
-      if (['izin', 'sakit', 'izin_sakit', 'izin_keperluan', 'cuti'].includes(type) ||
+      // Deteksi pengajuan izin/sakit/cuti
+      if (['izin', 'sakit', 'izin_sakit', 'izin_keperluan', 'cuti', 'izin_cuti'].includes(type) ||
           type.startsWith('izin_')) {
         hasPermission    = true;
         permissionId      = row.id;

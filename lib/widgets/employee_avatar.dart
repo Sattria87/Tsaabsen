@@ -86,17 +86,22 @@ class _EmployeeAvatarWidgetState extends State<EmployeeAvatarWidget> {
       }
 
       // 2. Jika sudah merupakan full URL
-      if (_facePath!.startsWith('http://') || _facePath!.startsWith('https://')) {
+      if (_facePath!.startsWith('http://') ||
+          _facePath!.startsWith('https://')) {
         _candidateUrls.add(_facePath!);
       } else {
         // Path relatif, contoh: "assets/foto_karyawan/110_196_18_rfky.jpg"
-        final clean = _facePath!.startsWith('/') ? _facePath!.substring(1) : _facePath!;
+        final clean = _facePath!.startsWith('/')
+            ? _facePath!.substring(1)
+            : _facePath!;
 
         // Kandidat A: Endpoint stream backend khusus user (Paling aman & akurat)
         if (username.isNotEmpty) {
           _candidateUrls.add('$host/api/user/photo/$username');
           if (host.contains(':5000')) {
-            _candidateUrls.add('${host.replaceAll(':5000', ':3000')}/api/user/photo/$username');
+            _candidateUrls.add(
+              '${host.replaceAll(':5000', ':3000')}/api/user/photo/$username',
+            );
           }
         }
 
@@ -114,14 +119,18 @@ class _EmployeeAvatarWidgetState extends State<EmployeeAvatarWidget> {
 
         // Kandidat D: Fallback IP VPS langsung
         if (baseHost != '208.76.40.204') {
-          _candidateUrls.add('http://208.76.40.204:5000/api/user/photo/$username');
+          _candidateUrls.add(
+            'http://208.76.40.204:5000/api/user/photo/$username',
+          );
           _candidateUrls.add('http://208.76.40.204:8085/$clean');
         }
       }
     } else if (username.isNotEmpty) {
       // Jika face_image belum ada di session lokal, prioritaskan endpoint foto dan fetch referensi
       _candidateUrls.add('$host/api/user/photo/$username');
-      _candidateUrls.add('$scheme://$baseHost:8085/assets/foto_karyawan/$username.jpg');
+      _candidateUrls.add(
+        '$scheme://$baseHost:8085/assets/foto_karyawan/$username.jpg',
+      );
       _fetchFaceReference(username);
     }
   }
@@ -144,11 +153,8 @@ class _EmployeeAvatarWidgetState extends State<EmployeeAvatarWidget> {
     return Image.asset(
       'assets/avatar_employee_tie.png',
       fit: BoxFit.cover,
-      errorBuilder: (_, __, ___) => const Icon(
-        Icons.person_rounded,
-        color: Color(0xFF94A3B8),
-        size: 28,
-      ),
+      errorBuilder: (_, _, _) =>
+          const Icon(Icons.person_rounded, color: Color(0xFF94A3B8), size: 28),
     );
   }
 
@@ -184,13 +190,18 @@ class _EmployeeAvatarWidgetState extends State<EmployeeAvatarWidget> {
       return Image.memory(
         _base64Bytes!,
         fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => _buildFallbackAvatar(),
+        errorBuilder: (_, _, _) => _buildFallbackAvatar(),
       );
     }
 
     // B. Prioritas Utama: Coba Local Asset Bundle (Instan 0ms jika file ada di dalam aplikasi)
-    if (_tryAsset && _facePath != null && _facePath!.isNotEmpty && !_facePath!.startsWith('http')) {
-      final clean = _facePath!.startsWith('/') ? _facePath!.substring(1) : _facePath!;
+    if (_tryAsset &&
+        _facePath != null &&
+        _facePath!.isNotEmpty &&
+        !_facePath!.startsWith('http')) {
+      final clean = _facePath!.startsWith('/')
+          ? _facePath!.substring(1)
+          : _facePath!;
       return Image.asset(
         clean,
         fit: BoxFit.cover,
@@ -226,11 +237,7 @@ class _EmployeeAvatarWidgetState extends State<EmployeeAvatarWidget> {
         ),
       ),
       child: ClipOval(
-        child: SizedBox(
-          width: size,
-          height: size,
-          child: _buildImageContent(),
-        ),
+        child: SizedBox(width: size, height: size, child: _buildImageContent()),
       ),
     );
   }
