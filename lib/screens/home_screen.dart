@@ -6,6 +6,7 @@ import '../utils/mysql_helper.dart';
 import '../utils/auth_service.dart';
 import '../utils/holiday_helper.dart';
 import '../widgets/employee_avatar.dart';
+import '../utils/notification_helper.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'login_screen.dart';
 import 'location_verification_screen.dart';
@@ -49,6 +50,8 @@ class _HomeScreenState extends State<HomeScreen> {
   Timer? _reminderPeriodicTimer;
   DateTime? _lastPendingReminderShown;
   DateTime? _lastClockInReminderShown;
+  int? _lastNotifiedAnnouncementId;
+  Timer? _announcementPeriodicTimer;
 
   HolidayInfo get _holidayInfo => HolidayHelper.getHolidayInfo();
 
@@ -58,14 +61,17 @@ class _HomeScreenState extends State<HomeScreen> {
     HolidayHelper.syncHolidays();
     _checkAttendanceStatus();
     _loadHrdConfigAndAnnouncements();
+    NotificationHelper.init();
     _scheduleNextResetTimer();
     _startPeriodicReminders();
+    _startAnnouncementPolling();
   }
 
   @override
   void dispose() {
     _dailyResetTimer?.cancel();
     _reminderPeriodicTimer?.cancel();
+    _announcementPeriodicTimer?.cancel();
     _pageController.dispose();
     super.dispose();
   }
@@ -1872,9 +1878,163 @@ class _HomeScreenState extends State<HomeScreen> {
         _hrdName = config['hrd_name'] ?? 'HRD PT TSA';
         _announcements = anns;
       });
+
+      // Deteksi notifikasi pengumuman baru dari HRD
+      if (anns.isNotEmpty) {
+        final latestAnn = anns.first;
+        final int latestId = (latestAnn['id'] as num?)?.toInt() ?? 0;
+        if (_lastNotifiedAnnouncementId != latestId) {
+          _lastNotifiedAnnouncementId = latestId;
+
+          // 1. Munculkan notifikasi Android di bar atas HP (Status Bar)
+          NotificationHelper.showAnnouncementNotification(
+            id: latestId,
+            title: latestAnn['title']?.toString() ?? 'Pemberitahuan HRD',
+            body: latestAnn['content']?.toString() ?? '',
+            category: latestAnn['type']?.toString().toLowerCase(),
+          );
+
+          // 2. Munculkan Modal Pop-up Dialog informatif di layar HP
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) _showAnnouncementModal(latestAnn);
+          });
+        }
+      }
     } catch (e) {
       debugPrint('[Config/Announcements Error]: $e');
     }
+  }
+
+  void _startAnnouncementPolling() {
+    _announcementPeriodicTimer?.cancel();
+    _announcementPeriodicTimer = Timer.periodic(const Duration(seconds: 15), (timer) {
+      if (mounted) {
+        _loadHrdConfigAndAnnouncements();
+      }
+    });
+  }
+
+  void _showAnnouncementModal(Map<String, dynamic> ann) {
+    if (!mounted) return;
+    final title = ann['title']?.toString() ?? 'Pemberitahuan HRD';
+    final content = ann['content']?.toString() ?? '';
+    final date = ann['formatted_date']?.toString() ?? '';
+    final type = (ann['type']?.toString() ?? 'info').toLowerCase();
+
+    Color headerColor;
+    IconData headerIcon;
+    String typeLabel;
+
+    if (type == 'libur') {
+      headerColor = const Color(0xFFEF4444);
+      headerIcon = Icons.beach_access_rounded;
+      typeLabel = 'INFORMASI HARI LIBUR';
+    } else if (type == 'acara') {
+      headerColor = const Color(0xFF3B82F6);
+      headerIcon = Icons.celebration_rounded;
+      typeLabel = 'ACARA PERUSAHAAN';
+    } else if (type == 'pengingat') {
+      headerColor = const Color(0xFFF59E0B);
+      headerIcon = Icons.alarm_rounded;
+      typeLabel = 'PENGINGAT KHUSUS';
+    } else {
+      headerColor = const Color(0xFF0EA5E9);
+      headerIcon = Icons.campaign_rounded;
+      typeLabel = 'PEMBERITAHUAN HRD';
+    }
+
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        contentPadding: EdgeInsets.zero,
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              decoration: BoxDecoration(
+                color: headerColor,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              child: Row(
+                children: [
+                  Icon(headerIcon, color: Colors.white, size: 24),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      typeLabel,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF1E293B),
+                    ),
+                  ),
+                  if (date.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      '$date WIB',
+                      style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
+                    ),
+                  ],
+                  const SizedBox(height: 12),
+                  Text(
+                    content,
+                    style: const TextStyle(
+                      fontSize: 13.5,
+                      color: Color(0xFF334155),
+                      height: 1.45,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: headerColor,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      onPressed: () => Navigator.of(ctx).pop(),
+                      child: const Text(
+                        'Saya Mengerti',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _contactHrdViaWhatsApp() async {

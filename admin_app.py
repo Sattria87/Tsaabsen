@@ -641,13 +641,40 @@ def index():
         except Exception:
             pass
 
-        # Ambil pengumuman aktif dari HRD
+        # 8. Data Pengumuman HRD (Aktif & Riwayat History Notifikasi)
         announcements = []
+        announcement_history = []
         try:
-            cursor.execute("SELECT id, title, content, type, DATE_FORMAT(created_at, '%%d %%b %%Y %%H:%%i') AS formatted_date FROM announcements WHERE is_active = 1 ORDER BY id DESC")
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS announcements (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    title VARCHAR(255) NOT NULL,
+                    content TEXT NOT NULL,
+                    type VARCHAR(50) DEFAULT 'info',
+                    is_active TINYINT(1) DEFAULT 1,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    INDEX idx_ann_active (is_active)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+            """)
+            cursor.execute("""
+                SELECT id, title, content, type, is_active,
+                       DATE_FORMAT(created_at, '%d %b %Y %H:%i') AS formatted_date
+                FROM announcements
+                WHERE is_active = 1
+                ORDER BY id DESC
+            """)
             announcements = cursor.fetchall()
-        except Exception:
-            pass
+
+            cursor.execute("""
+                SELECT id, title, content, type, is_active,
+                       DATE_FORMAT(created_at, '%d %b %Y %H:%i') AS formatted_date
+                FROM announcements
+                ORDER BY id DESC
+                LIMIT 50
+            """)
+            announcement_history = cursor.fetchall()
+        except Exception as ann_err:
+            print(f"[Announcements Fetch Error]: {ann_err}")
 
     except Exception as dash_err:
         print(f"[Dashboard DB Error]: {dash_err}")
@@ -669,7 +696,8 @@ def index():
         other_attendees=other_attendees,
         hrd_whatsapp=hrd_whatsapp if 'hrd_whatsapp' in locals() else '+62 851-9616-7691',
         hrd_name=hrd_name if 'hrd_name' in locals() else 'HRD PT TSA',
-        announcements=announcements if 'announcements' in locals() else []
+        announcements=announcements if 'announcements' in locals() else [],
+        announcement_history=announcement_history if 'announcement_history' in locals() else []
     )
 
 # ==========================================
@@ -2209,14 +2237,39 @@ def add_announcement():
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute("""
+            CREATE TABLE IF NOT EXISTS announcements (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                title VARCHAR(255) NOT NULL,
+                content TEXT NOT NULL,
+                type VARCHAR(50) DEFAULT 'info',
+                is_active TINYINT(1) DEFAULT 1,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_ann_active (is_active)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+        """)
+        cursor.execute("""
             INSERT INTO announcements (title, content, type, is_active)
             VALUES (%s, %s, %s, 1)
         """, (title, content, ann_type))
         conn.commit()
         conn.close()
-        flash(f'Pemberitahuan "{title}" berhasil dibuat dan dikirim ke aplikasi karyawan!', 'success')
+        flash(f'Pemberitahuan "{title}" berhasil dikirim ke HP seluruh karyawan & tersimpan di Riwayat!', 'success')
     except Exception as e:
         flash(f'Gagal membuat pemberitahuan: {e}', 'danger')
+
+    return redirect(url_for('index'))
+
+@app.route('/admin/announcement/toggle/<int:id>', methods=['POST', 'GET'])
+def toggle_announcement(id):
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("UPDATE announcements SET is_active = CASE WHEN is_active = 1 THEN 0 ELSE 1 END WHERE id = %s", (id,))
+        conn.commit()
+        conn.close()
+        flash('Status aktif pemberitahuan berhasil diperbarui!', 'success')
+    except Exception as e:
+        flash(f'Gagal mengubah status: {e}', 'danger')
 
     return redirect(url_for('index'))
 
@@ -2228,7 +2281,7 @@ def delete_announcement(id):
         cursor.execute("DELETE FROM announcements WHERE id = %s", (id,))
         conn.commit()
         conn.close()
-        flash('Pemberitahuan berhasil dihapus dari sistem!', 'success')
+        flash('Pemberitahuan berhasil dihapus dari riwayat sistem!', 'success')
     except Exception as e:
         flash(f'Gagal menghapus pemberitahuan: {e}', 'danger')
 
@@ -2272,13 +2325,23 @@ def api_get_announcements():
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute("""
-            SELECT id, title, content, type,
-                   DATE_FORMAT(created_at, '%%d %%b %%Y %%H:%%i') AS formatted_date,
-                   created_at
+            CREATE TABLE IF NOT EXISTS announcements (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                title VARCHAR(255) NOT NULL,
+                content TEXT NOT NULL,
+                type VARCHAR(50) DEFAULT 'info',
+                is_active TINYINT(1) DEFAULT 1,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_ann_active (is_active)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+        """)
+        cursor.execute("""
+            SELECT id, title, content, type, is_active,
+                   DATE_FORMAT(created_at, '%d %b %Y %H:%i') AS formatted_date
             FROM announcements
             WHERE is_active = 1
             ORDER BY id DESC
-            LIMIT 10
+            LIMIT 15
         """)
         announcements = cursor.fetchall()
         conn.close()

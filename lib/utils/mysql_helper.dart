@@ -17,8 +17,11 @@ const String defaultAiBaseUrl =
 const List<String> candidateApiUrls = [
   'http://208.76.40.204:5000/api', // VPS Port 5000
   'http://208.76.40.204:3000/api', // VPS Port 3000 (Fallback)
+  'http://208.76.40.204:8085/api', // VPS Port 8085 (Web Admin Flask)
   'http://127.0.0.1:3000/api', // Jalur USB Cable via 'adb reverse'
-  'http://10.0.2.2:3000/api', // Android Emulator
+  'http://127.0.0.1:8085/api', // Jalur USB Cable Web Admin
+  'http://10.0.2.2:3000/api', // Android Emulator Express
+  'http://10.0.2.2:8085/api', // Android Emulator Web Admin
 ];
 
 const List<String> candidateAiUrls = [

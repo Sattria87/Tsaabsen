@@ -31,6 +31,34 @@ const DB_CONFIG = {
 
 const pool = mysql.createPool(DB_CONFIG);
 
+// Pastikan tabel app_settings dan announcements tersedia
+async function ensureTables() {
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS app_settings (
+        setting_key VARCHAR(100) PRIMARY KEY,
+        setting_value TEXT NOT NULL,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS announcements (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        title VARCHAR(255) NOT NULL,
+        content TEXT NOT NULL,
+        type VARCHAR(50) DEFAULT 'info',
+        is_active TINYINT(1) DEFAULT 1,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_ann_active (is_active)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+    console.log('[DB Tables Init] Tabel app_settings dan announcements siap.');
+  } catch (err) {
+    console.log('[DB Tables Init Info]', err.message);
+  }
+}
+ensureTables();
+
 // ============================================================
 // MIDDLEWARE
 // ============================================================

@@ -553,6 +553,21 @@
     <!-- ================= MAIN WRAPPER ================= -->
     <main class="main-wrapper">
 
+        <!-- FLASH NOTIFICATION ALERTS -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            <div class="px-2 pt-2 pb-0">
+              {% for category, message in messages %}
+                <div class="alert alert-{{ category if category != 'error' else 'danger' }} alert-dismissible fade show rounded-4 shadow-sm border-0 d-flex align-items-center mb-3" role="alert">
+                  <i class="bi bi-info-circle-fill me-2 fs-5"></i>
+                  <div class="flex-grow-1 fw-semibold small">{{ message | safe }}</div>
+                  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+              {% endfor %}
+            </div>
+          {% endif %}
+        {% endwith %}
+
         <!-- TOP BAR HEADER -->
         <header class="top-header-row">
             <div class="greeting-col">
@@ -794,7 +809,7 @@
                 </div>
             </div>
 
-            <!-- KOLOM KANAN: BROADCAST PEMBERITAHUAN DARI HRD (LIBUR, ACARA, INFO) -->
+            <!-- KOLOM KANAN: BROADCAST PEMBERITAHUAN DARI HRD (LIBUR, ACARA, INFO, HISTORY) -->
             <div class="col-xl-7 col-lg-6 col-12">
                 <div class="card border-0 shadow-sm rounded-4 h-100 p-4 bg-white">
                     <div class="d-flex align-items-center justify-content-between pb-3 mb-3 border-bottom">
@@ -804,7 +819,7 @@
                             </div>
                             <div>
                                 <h5 class="fw-bold mb-0 text-dark" style="font-size: 16px;">Buat Pemberitahuan / Pengumuman HRD</h5>
-                                <small class="text-muted">Muncul sebagai notifikasi & banner di HP karyawan</small>
+                                <small class="text-muted">Muncul sebagai notifikasi & banner di HP seluruh karyawan</small>
                             </div>
                         </div>
                         <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1" data-bs-toggle="collapse" data-bs-target="#formAnnouncement">
@@ -812,7 +827,7 @@
                         </button>
                     </div>
 
-                    <!-- FORM TAMBAH PENGUMUMAN (COLLAPSIBLE / DEFAULT OPEN JIKA KOSONG) -->
+                    <!-- FORM TAMBAH PENGUMUMAN -->
                     <div class="collapse show mb-3" id="formAnnouncement">
                         <form action="/admin/announcement/add" method="POST" class="p-3 rounded-3 bg-light border">
                             <div class="row g-2 mb-2">
@@ -840,41 +855,106 @@
                         </form>
                     </div>
 
-                    <!-- DAFTAR PENGUMUMAN AKTIF -->
-                    <div class="d-flex align-items-center justify-content-between mb-2">
-                        <span class="fw-bold small text-muted text-uppercase" style="font-size: 11px;">Pemberitahuan Aktif Saat Ini:</span>
-                        <span class="badge bg-secondary-subtle text-secondary small">{{ announcements | length }} Pengumuman</span>
-                    </div>
+                    <!-- TABS: PENGUMUMAN AKTIF & RIWAYAT / HISTORY NOTIFIKASI -->
+                    <ul class="nav nav-pills nav-fill bg-light p-1 rounded-3 mb-3" id="announcementTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active py-1 px-3 fw-bold small rounded-3" id="active-tab" data-bs-toggle="tab" data-bs-target="#tab-active" type="button" role="tab" style="font-size: 12px;">
+                                <i class="bi bi-broadcast me-1"></i> Aktif di HP ({{ announcements | length }})
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link py-1 px-3 fw-bold small rounded-3" id="history-tab" data-bs-toggle="tab" data-bs-target="#tab-history" type="button" role="tab" style="font-size: 12px;">
+                                <i class="bi bi-clock-history me-1"></i> Riwayat / History ({{ announcement_history | length if announcement_history else (announcements | length) }})
+                            </button>
+                        </li>
+                    </ul>
 
-                    <div class="announcement-list-box" style="max-height: 220px; overflow-y: auto;">
-                        {% for ann in announcements %}
-                        <div class="d-flex align-items-start justify-content-between p-3 rounded-3 border mb-2 {% if ann.type == 'libur' %}border-danger-subtle bg-danger-subtle bg-opacity-25{% elif ann.type == 'acara' %}border-primary-subtle bg-primary-subtle bg-opacity-25{% else %}bg-white{% endif %}">
-                            <div class="me-2">
-                                <div class="d-flex align-items-center gap-2 mb-1">
-                                    {% if ann.type == 'libur' %}
-                                        <span class="badge bg-danger text-white small px-2 py-0">🏖️ HARI LIBUR</span>
-                                    {% elif ann.type == 'acara' %}
-                                        <span class="badge bg-primary text-white small px-2 py-0">🎉 ACARA</span>
-                                    {% elif ann.type == 'pengingat' %}
-                                        <span class="badge bg-warning text-dark small px-2 py-0">⏰ PENGINGAT</span>
-                                    {% else %}
-                                        <span class="badge bg-info text-dark small px-2 py-0">📢 PEMBERITAHUAN</span>
-                                    {% endif %}
-                                    <span class="fw-bold text-dark small">{{ ann.title }}</span>
+                    <div class="tab-content" id="announcementTabsContent">
+                        <!-- TAB 1: PEMBERITAHUAN AKTIF SAAT INI -->
+                        <div class="tab-pane fade show active" id="tab-active" role="tabpanel">
+                            <div class="announcement-list-box" style="max-height: 250px; overflow-y: auto;">
+                                {% for ann in announcements %}
+                                <div class="d-flex align-items-start justify-content-between p-3 rounded-3 border mb-2 {% if ann.type == 'libur' %}border-danger-subtle bg-danger-subtle bg-opacity-25{% elif ann.type == 'acara' %}border-primary-subtle bg-primary-subtle bg-opacity-25{% elif ann.type == 'pengingat' %}border-warning-subtle bg-warning-subtle bg-opacity-25{% else %}bg-white{% endif %} shadow-sm">
+                                    <div class="me-2">
+                                        <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+                                            {% if ann.type == 'libur' %}
+                                                <span class="badge bg-danger text-white small px-2 py-0">🏖️ HARI LIBUR</span>
+                                            {% elif ann.type == 'acara' %}
+                                                <span class="badge bg-primary text-white small px-2 py-0">🎉 ACARA</span>
+                                            {% elif ann.type == 'pengingat' %}
+                                                <span class="badge bg-warning text-dark small px-2 py-0">⏰ PENGINGAT</span>
+                                            {% else %}
+                                                <span class="badge bg-info text-dark small px-2 py-0">📢 PEMBERITAHUAN</span>
+                                            {% endif %}
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle small px-2 py-0"><i class="bi bi-check-circle me-1"></i>Aktif di HP</span>
+                                            <span class="fw-bold text-dark small">{{ ann.title }}</span>
+                                        </div>
+                                        <p class="text-secondary small mb-1 lh-sm" style="font-size: 12px;">{{ ann.content }}</p>
+                                        <small class="text-muted" style="font-size: 10.5px;"><i class="bi bi-clock me-1"></i>{{ ann.formatted_date if ann.formatted_date else '-' }} WIB</small>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-1">
+                                        <a href="/admin/announcement/toggle/{{ ann.id }}" class="btn btn-sm btn-outline-secondary border-0 p-1 rounded-2" title="Nonaktifkan (karyawan tidak melihat lagi tapi riwayat tetap tersimpan)">
+                                            <i class="bi bi-pause-circle"></i>
+                                        </a>
+                                        <a href="/admin/announcement/delete/{{ ann.id }}" onclick="return confirm('Hapus permanen pemberitahuan ini dari sistem?');" class="btn btn-sm btn-outline-danger border-0 p-1 rounded-2" title="Hapus Permanen">
+                                            <i class="bi bi-trash3"></i>
+                                        </a>
+                                    </div>
                                 </div>
-                                <p class="text-secondary small mb-1 lh-sm" style="font-size: 12px;">{{ ann.content }}</p>
-                                <small class="text-muted" style="font-size: 10.5px;"><i class="bi bi-clock me-1"></i>{{ ann.formatted_date }} WIB</small>
+                                {% else %}
+                                <div class="text-center py-4 text-muted small border rounded-3 bg-light">
+                                    <i class="bi bi-bell-slash d-block fs-3 mb-1 opacity-50"></i>
+                                    Belum ada pemberitahuan aktif. Kirim pengumuman baru melalui formulir di atas.
+                                </div>
+                                {% endfor %}
                             </div>
-                            <a href="/admin/announcement/delete/{{ ann.id }}" onclick="return confirm('Hapus pemberitahuan ini? Karyawan tidak akan melihatnya lagi.');" class="btn btn-sm btn-outline-danger border-0 p-1 rounded-2" title="Hapus Pengumuman">
-                                <i class="bi bi-trash3"></i>
-                            </a>
                         </div>
-                        {% else %}
-                        <div class="text-center py-3 text-muted small border rounded-3 bg-light">
-                            <i class="bi bi-bell-slash d-block fs-3 mb-1 opacity-50"></i>
-                            Belum ada pemberitahuan aktif. Buat pemberitahuan melalui formulir di atas.
+
+                        <!-- TAB 2: RIWAYAT / HISTORY LENGKAP NOTIFIKASI -->
+                        <div class="tab-pane fade" id="tab-history" role="tabpanel">
+                            <div class="announcement-history-box" style="max-height: 250px; overflow-y: auto;">
+                                {% set hist = announcement_history if announcement_history else announcements %}
+                                {% for item in hist %}
+                                <div class="d-flex align-items-start justify-content-between p-2 rounded-3 border mb-2 bg-light">
+                                    <div class="me-2">
+                                        <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+                                            {% if item.type == 'libur' %}
+                                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle small px-2 py-0">🏖️ Libur</span>
+                                            {% elif item.type == 'acara' %}
+                                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle small px-2 py-0">🎉 Acara</span>
+                                            {% elif item.type == 'pengingat' %}
+                                                <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle small px-2 py-0">⏰ Pengingat</span>
+                                            {% else %}
+                                                <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle small px-2 py-0">📢 Info</span>
+                                            {% endif %}
+
+                                            {% if item.is_active == 1 or item.is_active is not defined %}
+                                                <span class="badge bg-success text-white small px-2 py-0">Aktif</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary text-white small px-2 py-0">Nonaktif / Selesai</span>
+                                            {% endif %}
+                                            <strong class="text-dark small">{{ item.title }}</strong>
+                                        </div>
+                                        <div class="text-muted small mb-1 lh-sm" style="font-size: 11.5px;">{{ item.content }}</div>
+                                        <small class="text-muted" style="font-size: 10px;"><i class="bi bi-calendar-event me-1"></i>Dikirim: {{ item.formatted_date if item.formatted_date else '-' }} WIB</small>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-1">
+                                        <a href="/admin/announcement/toggle/{{ item.id }}" class="btn btn-sm btn-outline-primary border-0 p-1 rounded-2" title="{% if item.is_active == 1 %}Nonaktifkan{% else %}Aktifkan Kembali ke HP{% endif %}">
+                                            <i class="bi bi-arrow-repeat"></i>
+                                        </a>
+                                        <a href="/admin/announcement/delete/{{ item.id }}" onclick="return confirm('Hapus permanen notifikasi ini dari riwayat?');" class="btn btn-sm btn-outline-danger border-0 p-1 rounded-2" title="Hapus dari Riwayat">
+                                            <i class="bi bi-trash3"></i>
+                                        </a>
+                                    </div>
+                                </div>
+                                {% else %}
+                                <div class="text-center py-4 text-muted small border rounded-3 bg-light">
+                                    <i class="bi bi-clock-history d-block fs-3 mb-1 opacity-50"></i>
+                                    Belum ada riwayat notifikasi.
+                                </div>
+                                {% endfor %}
+                            </div>
                         </div>
-                        {% endfor %}
                     </div>
 
                 </div>
