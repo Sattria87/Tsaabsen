@@ -1192,7 +1192,7 @@ def detail_employee(id):
     # Kueri HANYA aktivitas milik karyawan tersebut (tidak tergabung dengan karyawan lain)
     cursor.execute("""
         SELECT 
-            id, username, type, timestamp, clock_out, image_path, reason,
+            id, username, type, timestamp, clock_out, image_path, evidence_path, reason,
             COALESCE(status, 'Approved') AS status,
             DATE_FORMAT(timestamp, '%%d %%b %%Y') AS formatted_date,
             TIME_FORMAT(timestamp, '%%H:%%i') AS formatted_time,
@@ -1527,6 +1527,7 @@ def presence():
             SUBSTRING(TIME(COALESCE(a.clock_in_time, a.max_ts)), 1, 5) AS today_clock_in,
             SUBSTRING(TIME(a.clock_out), 1, 5) AS today_clock_out,
             a.image_path AS today_image,
+            a.evidence_path AS today_evidence,
             a.reason AS today_reason
         FROM employees e
         LEFT JOIN (
@@ -1540,6 +1541,7 @@ def presence():
                        MAX(CASE WHEN type IN ('clock_in', 'hadir') AND image_path IS NOT NULL AND image_path != '' THEN image_path END),
                        MAX(CASE WHEN image_path IS NOT NULL AND image_path != '' THEN image_path END)
                    ) AS image_path,
+                   MAX(CASE WHEN evidence_path IS NOT NULL AND evidence_path != '' THEN evidence_path END) AS evidence_path,
                    SUBSTRING_INDEX(GROUP_CONCAT(COALESCE(reason, '') ORDER BY id DESC), ',', 1) AS reason
             FROM attendance
             WHERE DATE(timestamp) = CURDATE()

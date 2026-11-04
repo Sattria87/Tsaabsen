@@ -364,7 +364,8 @@
                                                 <th class="ps-4">No</th>
                                                 <th>Tanggal</th>
                                                 <th>Jam Clock In</th>
-                                                <th>Lokasi Kantor</th>
+                                                <th>Lokasi Kehadiran</th>
+                                                <th>Evidence (Bukti Lokasi)</th>
                                                 <th>Jam Pulang Terkait</th>
                                                 <th class="text-end pe-4">Status</th>
                                             </tr>
@@ -383,8 +384,73 @@
                                                     </span>
                                                 </td>
                                                 <td>
-                                                    <i class="bi bi-geo-alt-fill text-danger me-1"></i>
-                                                    <span class="fw-semibold">{{ item.reason if item.reason else 'Kantor Pusat' }}</span>
+                                                    {% if item.reason and 'other' in item.reason|lower %}
+                                                        <div class="mb-1">
+                                                            <span class="badge bg-warning text-dark border border-warning px-2 py-1" style="font-size: 11px;">
+                                                                <i class="bi bi-geo-alt-fill me-1"></i>TUGAS LUAR / OTHER
+                                                            </span>
+                                                        </div>
+                                                        <span class="fw-semibold text-dark small d-inline-block" style="max-width: 250px;" title="{{ item.reason }}">
+                                                            {{ item.reason }}
+                                                        </span>
+                                                    {% else %}
+                                                        <i class="bi bi-building text-primary me-1"></i>
+                                                        <span class="fw-semibold">{{ item.reason if item.reason else 'Kantor Pusat' }}</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    {% set ev_src = item.evidence_path or (item.image_path if (item.reason and 'other' in item.reason|lower and not item.evidence_path) else None) %}
+                                                    {% if ev_src %}
+                                                        <button type="button" class="btn btn-sm btn-outline-warning text-dark fw-bold rounded-pill px-3 py-1 shadow-sm d-inline-flex align-items-center gap-1" data-bs-toggle="modal" data-bs-target="#evidenceModal{{ item.id }}">
+                                                            <i class="bi bi-camera-fill text-warning"></i>
+                                                            <span>Lihat Evidence</span>
+                                                        </button>
+
+                                                        <!-- MODAL PREVIEW FOTO EVIDENCE -->
+                                                        <div class="modal fade" id="evidenceModal{{ item.id }}" tabindex="-1" aria-hidden="true">
+                                                            <div class="modal-dialog modal-dialog-centered">
+                                                                <div class="modal-content rounded-4 border-0 shadow">
+                                                                    <div class="modal-header bg-warning-subtle">
+                                                                        <div>
+                                                                            <h6 class="modal-title fw-bold text-dark mb-0">
+                                                                                <i class="bi bi-camera-reels-fill text-warning me-2"></i>Foto Evidence Penugasan Luar
+                                                                            </h6>
+                                                                            <small class="text-muted">{{ item.formatted_date }} • {{ item.formatted_time }} WIB</small>
+                                                                        </div>
+                                                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                                    </div>
+                                                                    <div class="modal-body text-center p-3">
+                                                                        <div class="mb-3">
+                                                                            <img src="{% if ev_src.startswith('/') or ev_src.startswith('http') %}{{ ev_src }}{% else %}/{{ ev_src }}{% endif %}" class="img-fluid rounded-3 shadow-sm border" alt="Foto Evidence" style="max-height: 420px; width: 100%; object-fit: contain;" onerror="this.src='/assets/mascot_avatar.png'">
+                                                                        </div>
+                                                                        <div class="alert alert-light border text-start p-3 rounded-3 mb-0">
+                                                                            <div class="d-flex align-items-start gap-2">
+                                                                                <i class="bi bi-geo-alt-fill text-danger fs-5 mt-1"></i>
+                                                                                <div>
+                                                                                    <div class="fw-bold text-dark small">Keterangan Lokasi & Titik GPS:</div>
+                                                                                    <div class="text-secondary small">{{ item.reason if item.reason else 'Lokasi Site / Lapangan' }}</div>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="modal-footer bg-light py-2">
+                                                                        <a href="{% if ev_src.startswith('/') or ev_src.startswith('http') %}{{ ev_src }}{% else %}/{{ ev_src }}{% endif %}" target="_blank" class="btn btn-sm btn-outline-primary rounded-pill px-3">
+                                                                            <i class="bi bi-arrows-fullscreen me-1"></i> Buka Ukuran Penuh
+                                                                        </a>
+                                                                        <button type="button" class="btn btn-sm btn-secondary rounded-pill px-3" data-bs-dismiss="modal">Tutup</button>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    {% elif item.reason and 'other' in item.reason|lower %}
+                                                        <span class="badge bg-secondary-subtle text-secondary border px-2 py-1">
+                                                            <i class="bi bi-camera-slash me-1"></i> Tanpa Foto
+                                                        </span>
+                                                    {% else %}
+                                                        <span class="badge bg-light text-muted border px-2 py-1 small">
+                                                            <i class="bi bi-building me-1"></i> Di Kantor
+                                                        </span>
+                                                    {% endif %}
                                                 </td>
                                                 <td>
                                                     {% if item.formatted_clock_out %}
@@ -403,7 +469,7 @@
                                             </tr>
                                             {% else %}
                                             <tr>
-                                                <td colspan="6" class="text-center py-5 text-muted">
+                                                <td colspan="7" class="text-center py-5 text-muted">
                                                     <i class="bi bi-box-arrow-in-right fs-1 d-block mb-2 text-secondary opacity-50"></i>
                                                     Belum ada data Clock In untuk karyawan ini.
                                                 </td>
@@ -575,6 +641,7 @@
                                                 <th>Waktu / Tanggal</th>
                                                 <th>Clock Out</th>
                                                 <th>Keterangan / Alasan</th>
+                                                <th>Evidence</th>
                                                 <th class="text-end pe-4">Status</th>
                                             </tr>
                                         </thead>
@@ -606,9 +673,59 @@
                                                     {% endif %}
                                                 </td>
                                                 <td style="max-width: 250px;">
-                                                    <span class="d-inline-block text-truncate" style="max-width: 240px;">
+                                                    {% if att.reason and 'other' in att.reason|lower %}
+                                                        <div class="mb-1">
+                                                            <span class="badge bg-warning text-dark border border-warning px-2 py-1" style="font-size: 10px;">
+                                                                <i class="bi bi-geo-alt-fill me-1"></i>OTHER
+                                                            </span>
+                                                        </div>
+                                                    {% endif %}
+                                                    <span class="d-inline-block text-truncate" style="max-width: 240px;" title="{{ att.reason }}">
                                                         {{ att.reason if att.reason else 'Presensi Kehadiran' }}
                                                     </span>
+                                                </td>
+                                                <td>
+                                                    {% set all_ev = att.evidence_path or (att.image_path if (att.reason and 'other' in att.reason|lower and not att.evidence_path) else None) %}
+                                                    {% if all_ev %}
+                                                        <button type="button" class="btn btn-sm btn-outline-warning text-dark fw-bold rounded-pill px-2 py-1 shadow-sm d-inline-flex align-items-center gap-1" data-bs-toggle="modal" data-bs-target="#allEvModal{{ att.id }}">
+                                                            <i class="bi bi-camera-fill text-warning"></i>
+                                                            <span style="font-size: 11px;">Evidence</span>
+                                                        </button>
+
+                                                        <!-- MODAL PREVIEW ALL EVIDENCE -->
+                                                        <div class="modal fade" id="allEvModal{{ att.id }}" tabindex="-1" aria-hidden="true">
+                                                            <div class="modal-dialog modal-dialog-centered">
+                                                                <div class="modal-content rounded-4 border-0 shadow">
+                                                                    <div class="modal-header bg-warning-subtle">
+                                                                        <div>
+                                                                            <h6 class="modal-title fw-bold text-dark mb-0">
+                                                                                <i class="bi bi-camera-reels-fill text-warning me-2"></i>Bukti Foto Evidence
+                                                                            </h6>
+                                                                            <small class="text-muted">{{ att.formatted_date }} • {{ att.formatted_time }} WIB</small>
+                                                                        </div>
+                                                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                                    </div>
+                                                                    <div class="modal-body text-center p-3">
+                                                                        <div class="mb-3">
+                                                                            <img src="{% if all_ev.startswith('/') or all_ev.startswith('http') %}{{ all_ev }}{% else %}/{{ all_ev }}{% endif %}" class="img-fluid rounded-3 shadow-sm border" alt="Foto Evidence" style="max-height: 420px; width: 100%; object-fit: contain;" onerror="this.src='/assets/mascot_avatar.png'">
+                                                                        </div>
+                                                                        <div class="alert alert-light border text-start p-3 rounded-3 mb-0">
+                                                                            <div class="fw-bold text-dark small">Keterangan:</div>
+                                                                            <div class="text-secondary small">{{ att.reason if att.reason else 'Tugas Luar' }}</div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="modal-footer bg-light py-2">
+                                                                        <a href="{% if all_ev.startswith('/') or all_ev.startswith('http') %}{{ all_ev }}{% else %}/{{ all_ev }}{% endif %}" target="_blank" class="btn btn-sm btn-outline-primary rounded-pill px-3">
+                                                                            <i class="bi bi-arrows-fullscreen me-1"></i> Buka Ukuran Penuh
+                                                                        </a>
+                                                                        <button type="button" class="btn btn-sm btn-secondary rounded-pill px-3" data-bs-dismiss="modal">Tutup</button>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    {% else %}
+                                                        <span class="text-muted small">-</span>
+                                                    {% endif %}
                                                 </td>
                                                 <td class="text-end pe-4">
                                                     {% if att.status == 'Approved' %}
@@ -622,7 +739,7 @@
                                             </tr>
                                             {% else %}
                                             <tr>
-                                                <td colspan="6" class="text-center py-5 text-muted">Belum ada riwayat aktivitas yang tercatat untuk karyawan ini.</td>
+                                                <td colspan="7" class="text-center py-5 text-muted">Belum ada riwayat aktivitas yang tercatat untuk karyawan ini.</td>
                                             </tr>
                                             {% endfor %}
                                         </tbody>

@@ -824,8 +824,20 @@
                                                 </li>
                                                 {% if emp.today_reason %}
                                                 <li class="list-group-item px-0">
-                                                    <span class="text-muted d-block mb-1">Catatan / Alasan:</span>
+                                                    <span class="text-muted d-block mb-1">Catatan / Lokasi / Alasan:</span>
                                                     <span class="badge bg-warning-subtle text-warning border px-2 py-1">{{ emp.today_reason }}</span>
+                                                </li>
+                                                {% endif %}
+                                                {% if emp.today_evidence %}
+                                                <li class="list-group-item px-0 text-center pt-3">
+                                                    <div class="mb-2">
+                                                        <span class="badge bg-warning-subtle text-dark border border-warning px-2 py-1 small fw-bold">
+                                                            <i class="bi bi-camera-reels-fill text-warning me-1"></i> Foto Evidence Lokasi (Site / Customer)
+                                                        </span>
+                                                    </div>
+                                                    <a href="{% if emp.today_evidence.startswith('http') or emp.today_evidence.startswith('/') %}{{ emp.today_evidence }}{% else %}/{{ emp.today_evidence }}{% endif %}" target="_blank" title="Klik untuk membuka ukuran penuh">
+                                                        <img src="{% if emp.today_evidence.startswith('http') or emp.today_evidence.startswith('/') %}{{ emp.today_evidence }}{% else %}/{{ emp.today_evidence }}{% endif %}" alt="Evidence {{ emp.name }}" class="img-fluid rounded-3 border shadow-sm" style="max-height: 220px; object-fit: contain;">
+                                                    </a>
                                                 </li>
                                                 {% endif %}
                                             </ul>
