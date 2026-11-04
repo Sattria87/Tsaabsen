@@ -313,6 +313,7 @@ class MySQLHelper {
     String type, {
     String? reason,
     String? image,
+    String? evidenceImage,
   }) async {
     lastSaveError = null;
     final urls = {baseUrl, ...candidateApiUrls}.toList();
@@ -326,6 +327,9 @@ class MySQLHelper {
         };
         if (image != null && image.isNotEmpty) {
           body['image'] = image;
+        }
+        if (evidenceImage != null && evidenceImage.isNotEmpty) {
+          body['evidence_image'] = evidenceImage;
         }
 
         final response = await http

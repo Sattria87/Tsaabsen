@@ -408,7 +408,7 @@ app.get('/api/branches', async (req, res) => {
 // Body: { username, type, reason }
 // ============================================================
 app.post('/api/attendance', async (req, res) => {
-  const { username, type, reason, image } = req.body;
+  const { username, type, reason, image, evidence_image } = req.body;
 
   if (!username || !type) {
     return res.status(400).json({
@@ -437,6 +437,26 @@ app.post('/api/attendance', async (req, res) => {
     }
   }
 
+  // Simpan foto evidence tugas luar (site/customer) jika ada (base64)
+  let savedEvidencePath = null;
+  if (evidence_image && typeof evidence_image === 'string' && evidence_image.trim().length > 0) {
+    try {
+      const uploadDir = path.join(assetsDir, 'foto_evidence');
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+      }
+
+      const base64Data = evidence_image.replace(/^data:image\/\w+;base64,/, '');
+      const filename = `evidence_${username}_${Date.now()}.jpg`;
+      const filePath = path.join(uploadDir, filename);
+      fs.writeFileSync(filePath, Buffer.from(base64Data, 'base64'));
+      savedEvidencePath = `assets/foto_evidence/${filename}`;
+      console.log(`[Foto Evidence Tersimpan] ${savedEvidencePath}`);
+    } catch (evErr) {
+      console.error('[Error Simpan Foto Evidence]', evErr.message);
+    }
+  }
+
   try {
     if (type === 'clock_out') {
       const cycleStart    = getAttendanceCycleStart();
@@ -457,10 +477,17 @@ app.post('/api/attendance', async (req, res) => {
       }
 
       // 2. Insert baris clock_out baru
-      await pool.execute(
-        'INSERT INTO attendance (username, type, timestamp, clock_out, image_path, reason, status) VALUES (?, ?, NOW(), NOW(), ?, ?, ?)',
-        [username, type, savedImagePath, reason ?? '', 'Approved']
-      );
+      try {
+        await pool.execute(
+          'INSERT INTO attendance (username, type, timestamp, clock_out, image_path, evidence_path, reason, status) VALUES (?, ?, NOW(), NOW(), ?, ?, ?, ?)',
+          [username, type, savedImagePath, savedEvidencePath, reason ?? '', 'Approved']
+        );
+      } catch (insertErr) {
+        await pool.execute(
+          'INSERT INTO attendance (username, type, timestamp, clock_out, image_path, reason, status) VALUES (?, ?, NOW(), NOW(), ?, ?, ?)',
+          [username, type, savedImagePath, reason ?? '', 'Approved']
+        );
+      }
     } else {
       // clock_in atau izin (izin_sakit, izin_keperluan, dll)
       const isPermission = ['izin', 'sakit', 'izin_sakit', 'izin_keperluan', 'cuti', 'izin_cuti'].includes(type) ||
@@ -503,10 +530,17 @@ app.post('/api/attendance', async (req, res) => {
 
       const initialStatus = isPermission ? 'Pending' : 'Approved';
 
-      await pool.execute(
-        'INSERT INTO attendance (username, type, timestamp, image_path, reason, status) VALUES (?, ?, NOW(), ?, ?, ?)',
-        [username, type, savedImagePath, reason ?? '', initialStatus]
-      );
+      try {
+        await pool.execute(
+          'INSERT INTO attendance (username, type, timestamp, image_path, evidence_path, reason, status) VALUES (?, ?, NOW(), ?, ?, ?, ?)',
+          [username, type, savedImagePath, savedEvidencePath, reason ?? '', initialStatus]
+        );
+      } catch (insertErr) {
+        await pool.execute(
+          'INSERT INTO attendance (username, type, timestamp, image_path, reason, status) VALUES (?, ?, NOW(), ?, ?, ?)',
+          [username, type, savedImagePath, reason ?? '', initialStatus]
+        );
+      }
     }
 
     return res.json({ success: true, message: 'Absensi berhasil disimpan' });

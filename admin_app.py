@@ -209,11 +209,26 @@ def ensure_db_schema():
                 timestamp DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 clock_out DATETIME NULL,
                 image_path VARCHAR(255) NULL,
+                evidence_path VARCHAR(255) NULL,
                 reason TEXT NULL,
                 status VARCHAR(20) DEFAULT 'Pending',
                 INDEX idx_att_user_time (username, timestamp)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
         """)
+
+        # Pastikan kolom evidence_path ada pada tabel attendance
+        try:
+            cursor.execute("""
+                SELECT COUNT(*) AS cnt 
+                FROM information_schema.COLUMNS 
+                WHERE TABLE_SCHEMA = %s 
+                  AND TABLE_NAME = 'attendance' 
+                  AND COLUMN_NAME = 'evidence_path'
+            """, (DB_NAME,))
+            if cursor.fetchone()['cnt'] == 0:
+                cursor.execute("ALTER TABLE attendance ADD COLUMN evidence_path VARCHAR(255) NULL AFTER image_path")
+        except Exception as ev_col_err:
+            print(f"[Init DB Evidence Column Info]: {ev_col_err}")
 
         # Tabel 6: Vacancies (Lowongan)
         cursor.execute("""

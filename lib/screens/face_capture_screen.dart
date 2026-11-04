@@ -13,12 +13,14 @@ class FaceCaptureScreen extends StatefulWidget {
   final Map<String, dynamic> userData;
   final String locationName;
   final int distance;
+  final File? evidenceImage;
 
   const FaceCaptureScreen({
     super.key,
     required this.userData,
     this.locationName = 'Kantor Pusat',
     this.distance = 30,
+    this.evidenceImage,
   });
 
   @override
@@ -302,11 +304,21 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
             'Wajah Cocok (${score.toStringAsFixed(1)}%)! Menyimpan absensi...';
       });
 
+      String? evidenceBase64;
+      if (widget.evidenceImage != null) {
+        try {
+          evidenceBase64 = await _compressAndEncodeImage(widget.evidenceImage!);
+        } catch (evErr) {
+          debugPrint('Error mengompres evidence: $evErr');
+        }
+      }
+
       bool success = await MySQLHelper.saveAttendance(
         username,
         'clock_in',
         reason: widget.locationName,
         image: imageBase64,
+        evidenceImage: evidenceBase64,
       );
 
       if (!mounted) return;

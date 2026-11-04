@@ -75,6 +75,24 @@ def migrate():
     else:
         print("[2] Kolom 'status' sudah ada di tabel 'attendance'.")
 
+    # 2b. Pastikan kolom evidence_path ada pada tabel attendance
+    cursor.execute("""
+    SELECT COUNT(*) AS cnt 
+    FROM information_schema.COLUMNS 
+    WHERE TABLE_SCHEMA = %s 
+      AND TABLE_NAME = 'attendance' 
+      AND COLUMN_NAME = 'evidence_path'
+    """, (DB_NAME,))
+    res_ev = cursor.fetchone()
+    if res_ev['cnt'] == 0:
+        cursor.execute("""
+            ALTER TABLE attendance 
+            ADD COLUMN evidence_path VARCHAR(255) NULL AFTER image_path
+        """)
+        print("[2b] Kolom 'evidence_path' berhasil ditambahkan ke tabel 'attendance'.")
+    else:
+        print("[2b] Kolom 'evidence_path' sudah ada di tabel 'attendance'.")
+
     # Update baris absensi yang lama agar statusnya valid
     cursor.execute("""
         UPDATE attendance 
