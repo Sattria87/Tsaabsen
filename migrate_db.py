@@ -93,6 +93,13 @@ def migrate():
     else:
         print("[2b] Kolom 'evidence_path' sudah ada di tabel 'attendance'.")
 
+    # 2c. Pastikan kolom reason bertipe TEXT
+    try:
+        cursor.execute("ALTER TABLE attendance MODIFY COLUMN reason TEXT NULL")
+        print("[2c] Kolom 'reason' berhasil dipastikan bertipe TEXT.")
+    except Exception as r_err:
+        print(f"[2c] Info reason column: {r_err}")
+
     # Update baris absensi yang lama agar statusnya valid
     cursor.execute("""
         UPDATE attendance 
@@ -159,6 +166,41 @@ def migrate():
         print("[4b] Akun default admin ('admin' / '123') berhasil dibuat di tabel 'admins'.")
     else:
         print(f"[4b] Tabel 'admins' sudah memiliki {count_adm} akun.")
+
+    # 5. Pastikan tabel app_settings untuk kontak HRD & pengaturan aplikasi
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS app_settings (
+        setting_key VARCHAR(100) PRIMARY KEY,
+        setting_value TEXT NOT NULL,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    """)
+
+    cursor.execute("SELECT COUNT(*) AS cnt FROM app_settings WHERE setting_key = 'hrd_whatsapp'")
+    if cursor.fetchone()['cnt'] == 0:
+        cursor.execute("INSERT INTO app_settings (setting_key, setting_value) VALUES ('hrd_whatsapp', '+62 851-9616-7691')")
+        cursor.execute("INSERT INTO app_settings (setting_key, setting_value) VALUES ('hrd_name', 'HRD PT TSA')")
+        print("[5] Pengaturan kontak HRD default berhasil dibuat.")
+
+    # 6. Pastikan tabel announcements untuk pengumuman HRD (libur, acara, info)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS announcements (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        title VARCHAR(150) NOT NULL,
+        content TEXT NOT NULL,
+        type VARCHAR(50) DEFAULT 'info',
+        is_active TINYINT DEFAULT 1,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    """)
+
+    cursor.execute("SELECT COUNT(*) AS cnt FROM announcements")
+    if cursor.fetchone()['cnt'] == 0:
+        cursor.execute("""
+            INSERT INTO announcements (title, content, type, is_active)
+            VALUES ('Pemberitahuan Sistem Absensi Online', 'Pastikan selalu melakukan Clock In dan Clock Out tepat waktu setiap hari kerja.', 'info', 1)
+        """)
+        print("[6] Data pengumuman contoh berhasil dibuat.")
 
     conn.commit()
     conn.close()

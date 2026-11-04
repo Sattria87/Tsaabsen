@@ -216,6 +216,12 @@ def ensure_db_schema():
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
         """)
 
+        # Pastikan kolom reason bertipe TEXT agar GPS dan alasan tidak terpotong
+        try:
+            cursor.execute("ALTER TABLE attendance MODIFY COLUMN reason TEXT NULL")
+        except Exception as r_col_err:
+            print(f"[Init DB Reason Column Info]: {r_col_err}")
+
         # Pastikan kolom evidence_path ada pada tabel attendance
         try:
             cursor.execute("""
@@ -245,6 +251,37 @@ def ensure_db_schema():
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
         """)
+
+        # Tabel 7: App Settings (Kontak HRD & Konfigurasi)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS app_settings (
+                setting_key VARCHAR(100) PRIMARY KEY,
+                setting_value TEXT NOT NULL,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+        """)
+        cursor.execute("SELECT COUNT(*) AS cnt FROM app_settings WHERE setting_key = 'hrd_whatsapp'")
+        if cursor.fetchone()['cnt'] == 0:
+            cursor.execute("INSERT INTO app_settings (setting_key, setting_value) VALUES ('hrd_whatsapp', '+62 851-9616-7691')")
+            cursor.execute("INSERT INTO app_settings (setting_key, setting_value) VALUES ('hrd_name', 'HRD PT TSA')")
+
+        # Tabel 8: Announcements (Broadcast Info/Libur/Acara HRD)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS announcements (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                title VARCHAR(150) NOT NULL,
+                content TEXT NOT NULL,
+                type VARCHAR(50) DEFAULT 'info',
+                is_active TINYINT DEFAULT 1,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+        """)
+        cursor.execute("SELECT COUNT(*) AS cnt FROM announcements")
+        if cursor.fetchone()['cnt'] == 0:
+            cursor.execute("""
+                INSERT INTO announcements (title, content, type, is_active)
+                VALUES ('Pemberitahuan Sistem Absensi Online', 'Pastikan selalu melakukan Clock In dan Clock Out tepat waktu setiap hari kerja.', 'info', 1)
+            """)
 
         conn.commit()
         conn.close()
@@ -377,7 +414,7 @@ def require_admin_login():
     allowed_endpoints = ['login', 'serve_assets', 'static', 'api_workday_status']
     if request.endpoint in allowed_endpoints:
         return
-    if request.path.startswith('/assets') or request.path.startswith('/static') or request.path.startswith('/api/workday-status') or request.path == '/favicon.ico':
+    if request.path.startswith('/assets') or request.path.startswith('/static') or request.path.startswith('/api/') or request.path == '/favicon.ico':
         return
 
     # Jika session admin belum ada, redirect ke /login
@@ -590,6 +627,28 @@ def index():
 
         top_attendees = attendance_employees[:3]
         other_attendees = attendance_employees[3:8]
+
+        # Ambil pengaturan Kontak HRD
+        hrd_whatsapp = '+62 851-9616-7691'
+        hrd_name = 'HRD PT TSA'
+        try:
+            cursor.execute("SELECT setting_key, setting_value FROM app_settings WHERE setting_key IN ('hrd_whatsapp', 'hrd_name')")
+            for row in cursor.fetchall():
+                if row['setting_key'] == 'hrd_whatsapp':
+                    hrd_whatsapp = row['setting_value']
+                elif row['setting_key'] == 'hrd_name':
+                    hrd_name = row['setting_value']
+        except Exception:
+            pass
+
+        # Ambil pengumuman aktif dari HRD
+        announcements = []
+        try:
+            cursor.execute("SELECT id, title, content, type, DATE_FORMAT(created_at, '%%d %%b %%Y %%H:%%i') AS formatted_date FROM announcements WHERE is_active = 1 ORDER BY id DESC")
+            announcements = cursor.fetchall()
+        except Exception:
+            pass
+
     except Exception as dash_err:
         print(f"[Dashboard DB Error]: {dash_err}")
     
@@ -607,7 +666,10 @@ def index():
         chart_absence=chart_absence,
         chart_employees=chart_employees,
         top_attendees=top_attendees,
-        other_attendees=other_attendees
+        other_attendees=other_attendees,
+        hrd_whatsapp=hrd_whatsapp if 'hrd_whatsapp' in locals() else '+62 851-9616-7691',
+        hrd_name=hrd_name if 'hrd_name' in locals() else 'HRD PT TSA',
+        announcements=announcements if 'announcements' in locals() else []
     )
 
 # ==========================================
@@ -2097,3 +2159,133 @@ if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8085))
     debug_mode = os.environ.get('FLASK_DEBUG', 'False').lower() == 'true'
     app.run(host='0.0.0.0', port=port, debug=debug_mode)
+# ==========================================
+# RUTE HRD CONTACT & PENGUMUMAN (ANNOUNCEMENTS)
+# ==========================================
+@app.route('/admin/hrd-contact/update', methods=['POST'])
+def update_hrd_contact():
+    hrd_whatsapp = request.form.get('hrd_whatsapp', '').strip()
+    hrd_name = request.form.get('hrd_name', '').strip()
+
+    if not hrd_whatsapp:
+        flash('Nomor WhatsApp HRD wajib diisi!', 'danger')
+        return redirect(url_for('index'))
+
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO app_settings (setting_key, setting_value)
+            VALUES ('hrd_whatsapp', %s)
+            ON DUPLICATE KEY UPDATE setting_value = %s
+        """, (hrd_whatsapp, hrd_whatsapp))
+
+        if hrd_name:
+            cursor.execute("""
+                INSERT INTO app_settings (setting_key, setting_value)
+                VALUES ('hrd_name', %s)
+                ON DUPLICATE KEY UPDATE setting_value = %s
+            """, (hrd_name, hrd_name))
+
+        conn.commit()
+        conn.close()
+        flash('Kontak WhatsApp HRD berhasil diperbarui & otomatis sinkron ke HP karyawan!', 'success')
+    except Exception as e:
+        flash(f'Gagal memperbarui kontak HRD: {e}', 'danger')
+
+    return redirect(url_for('index'))
+
+@app.route('/admin/announcement/add', methods=['POST'])
+def add_announcement():
+    title = request.form.get('title', '').strip()
+    content = request.form.get('content', '').strip()
+    ann_type = request.form.get('type', 'info').strip()
+
+    if not title or not content:
+        flash('Judul dan isi pemberitahuan wajib diisi!', 'danger')
+        return redirect(url_for('index'))
+
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO announcements (title, content, type, is_active)
+            VALUES (%s, %s, %s, 1)
+        """, (title, content, ann_type))
+        conn.commit()
+        conn.close()
+        flash(f'Pemberitahuan "{title}" berhasil dibuat dan dikirim ke aplikasi karyawan!', 'success')
+    except Exception as e:
+        flash(f'Gagal membuat pemberitahuan: {e}', 'danger')
+
+    return redirect(url_for('index'))
+
+@app.route('/admin/announcement/delete/<int:id>', methods=['POST', 'GET'])
+def delete_announcement(id):
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM announcements WHERE id = %s", (id,))
+        conn.commit()
+        conn.close()
+        flash('Pemberitahuan berhasil dihapus dari sistem!', 'success')
+    except Exception as e:
+        flash(f'Gagal menghapus pemberitahuan: {e}', 'danger')
+
+    return redirect(url_for('index'))
+
+# ==========================================
+# REST API PUBLIK UNTUK FLUTTER MOBILE APP
+# ==========================================
+@app.route('/api/settings/hrd-contact', methods=['GET'])
+def api_get_hrd_contact():
+    hrd_whatsapp = '+62 851-9616-7691'
+    hrd_name = 'HRD PT TSA'
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT setting_key, setting_value FROM app_settings WHERE setting_key IN ('hrd_whatsapp', 'hrd_name')")
+        for row in cursor.fetchall():
+            if row['setting_key'] == 'hrd_whatsapp':
+                hrd_whatsapp = row['setting_value']
+            elif row['setting_key'] == 'hrd_name':
+                hrd_name = row['setting_value']
+        conn.close()
+    except Exception:
+        pass
+
+    clean_phone = ''.join([c for c in hrd_whatsapp if c.isdigit()])
+    if clean_phone.startswith('0'):
+        clean_phone = '62' + clean_phone[1:]
+
+    return jsonify({
+        'success': True,
+        'hrd_whatsapp': hrd_whatsapp,
+        'hrd_phone_clean': clean_phone,
+        'hrd_name': hrd_name
+    })
+
+@app.route('/api/announcements', methods=['GET'])
+def api_get_announcements():
+    announcements = []
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT id, title, content, type,
+                   DATE_FORMAT(created_at, '%%d %%b %%Y %%H:%%i') AS formatted_date,
+                   created_at
+            FROM announcements
+            WHERE is_active = 1
+            ORDER BY id DESC
+            LIMIT 10
+        """)
+        announcements = cursor.fetchall()
+        conn.close()
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e), 'data': []})
+
+    return jsonify({
+        'success': True,
+        'data': announcements
+    })

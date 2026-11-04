@@ -445,8 +445,9 @@ class MySQLHelper {
   ) async {
     final urls = <String>[];
     if (baseUrl.isNotEmpty) urls.add(baseUrl);
-    if (!urls.contains(apiBaseUrl) && apiBaseUrl.isNotEmpty)
+    if (!urls.contains(apiBaseUrl) && apiBaseUrl.isNotEmpty) {
       urls.add(apiBaseUrl);
+    }
     for (final u in candidateAiUrls) {
       if (!urls.contains(u)) urls.add(u);
     }
@@ -523,6 +524,61 @@ class MySQLHelper {
       'face_detected': false,
       'message': 'Gagal terhubung ke AI Service (Port 5001). Pastikan AI Service Python sudah dijalankan!',
     };
+  }
+
+  /// 7. Ambil Pengaturan Kontak HRD (WhatsApp & Nama)
+  /// Endpoint: GET /api/settings/hrd-contact
+  static Future<Map<String, dynamic>> getAppConfig() async {
+    final urls = {baseUrl, ...candidateApiUrls}.toList();
+    for (final url in urls) {
+      try {
+        final response = await http
+            .get(Uri.parse('$url/settings/hrd-contact'))
+            .timeout(const Duration(seconds: 4));
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          if (data['success'] == true) {
+            baseUrl = url;
+            return {
+              'hrd_whatsapp': data['hrd_whatsapp'] ?? '+62 851-9616-7691',
+              'hrd_phone_clean': data['hrd_phone_clean'] ?? '6285196167691',
+              'hrd_name': data['hrd_name'] ?? 'HRD PT TSA',
+            };
+          }
+        }
+      } catch (e) {
+        debugPrint('[Config Info] Error kontak HRD ke $url: $e');
+      }
+    }
+    return {
+      'hrd_whatsapp': '+62 851-9616-7691',
+      'hrd_phone_clean': '6285196167691',
+      'hrd_name': 'HRD PT TSA',
+    };
+  }
+
+  /// 8. Ambil Daftar Pengumuman & Pemberitahuan Aktif dari HRD
+  /// Endpoint: GET /api/announcements
+  static Future<List<Map<String, dynamic>>> getAnnouncements() async {
+    final urls = {baseUrl, ...candidateApiUrls}.toList();
+    for (final url in urls) {
+      try {
+        final response = await http
+            .get(Uri.parse('$url/announcements'))
+            .timeout(const Duration(seconds: 4));
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          if (data['success'] == true && data['data'] != null) {
+            baseUrl = url;
+            final list = data['data'] as List<dynamic>;
+            return list.map((item) => Map<String, dynamic>.from(item)).toList();
+          }
+        }
+      } catch (e) {
+        debugPrint('[Announcements Info] Error pengumuman ke $url: $e');
+      }
+    }
+    return [];
   }
 }
 

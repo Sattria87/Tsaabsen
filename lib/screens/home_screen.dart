@@ -6,6 +6,7 @@ import '../utils/mysql_helper.dart';
 import '../utils/auth_service.dart';
 import '../utils/holiday_helper.dart';
 import '../widgets/employee_avatar.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'login_screen.dart';
 import 'location_verification_screen.dart';
 import 'permission_screen.dart';
@@ -40,6 +41,15 @@ class _HomeScreenState extends State<HomeScreen> {
   String? _permissionReason;
   String? _permissionTime;
 
+  // Kontak HRD & Pemberitahuan Broadcast
+  String _hrdWhatsapp = '+62 851-9616-7691';
+  String _hrdPhoneClean = '6285196167691';
+  String _hrdName = 'HRD PT TSA';
+  List<Map<String, dynamic>> _announcements = [];
+  Timer? _reminderPeriodicTimer;
+  DateTime? _lastPendingReminderShown;
+  DateTime? _lastClockInReminderShown;
+
   HolidayInfo get _holidayInfo => HolidayHelper.getHolidayInfo();
 
   @override
@@ -47,12 +57,15 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     HolidayHelper.syncHolidays();
     _checkAttendanceStatus();
+    _loadHrdConfigAndAnnouncements();
     _scheduleNextResetTimer();
+    _startPeriodicReminders();
   }
 
   @override
   void dispose() {
     _dailyResetTimer?.cancel();
+    _reminderPeriodicTimer?.cancel();
     _pageController.dispose();
     super.dispose();
   }
@@ -471,7 +484,7 @@ class _HomeScreenState extends State<HomeScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
-              onRefresh: _checkAttendanceStatus,
+              onRefresh: _refreshAllData,
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 child: Column(
@@ -481,7 +494,20 @@ class _HomeScreenState extends State<HomeScreen> {
                     // ==========================================
                     _buildHeaderSection(userName),
 
-                    const SizedBox(height: 28),
+                    const SizedBox(height: 16),
+
+                    // ==========================================
+                    // BROADCAST PEMBERITAHUAN DARI HRD
+                    // ==========================================
+                    _buildAnnouncementsSection(),
+
+                    // ==========================================
+                    // PENGINGAT JIKA BELUM CLOCK IN HARI INI
+                    // ==========================================
+                    if (!_hasClockedIn && !_hasPermission)
+                      _buildAttendanceReminderBanner(),
+
+                    const SizedBox(height: 12),
 
                     // ==========================================
                     // 2. KONTEN TENGAH BERDASARKAN STATUS ABSEN
@@ -1620,27 +1646,131 @@ class _HomeScreenState extends State<HomeScreen> {
 
           const SizedBox(height: 24),
 
-          // 6. TOMBOL AKSI BERDASARKAN STATUS
+          // 6. TOMBOL AKSI BERDASARKAN STATUS (CONTACT PERSON HRD & REFRESH)
           if (isPending) ...[
+            // KARTU CONTACT PERSON HRD (WHATSAPP RESMI)
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF0FDF4),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: const Color(0xFFBBF7D0), width: 1.5),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.03),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: const BoxDecoration(
+                          color: Color(0xFF25D366),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.support_agent_rounded,
+                          color: Colors.white,
+                          size: 22,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'CONTACT PERSON HRD',
+                              style: TextStyle(
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 0.5,
+                                color: Color(0xFF15803D),
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              _hrdName,
+                              style: const TextStyle(
+                                fontSize: 14.5,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF1E293B),
+                              ),
+                            ),
+                            Text(
+                              _hrdWhatsapp,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                color: Color(0xFF16A34A),
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Pengajuan izin/cuti Anda sedang menunggu persetujuan. Hubungi nomor HRD di atas via WhatsApp untuk konfirmasi cepat.',
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      color: Color(0xFF166534),
+                      height: 1.35,
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 46,
+                    child: ElevatedButton.icon(
+                      onPressed: _contactHrdViaWhatsApp,
+                      icon: const Icon(Icons.chat_rounded, color: Colors.white, size: 18),
+                      label: const Text(
+                        'Hubungi HRD via WhatsApp',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF25D366),
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
             // Tombol Segarkan Status untuk Pending
             Center(
               child: SizedBox(
                 width: 200,
-                height: 46,
-                child: ElevatedButton.icon(
+                height: 42,
+                child: OutlinedButton.icon(
                   onPressed: _isLoading ? null : _checkAttendanceStatus,
-                  icon: const Icon(Icons.refresh_rounded, size: 20),
+                  icon: const Icon(Icons.refresh_rounded, size: 18),
                   label: const Text(
                     'Segarkan Status',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
-                      fontSize: 14.5,
+                      fontSize: 13.5,
                     ),
                   ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF0F1A3A),
-                    foregroundColor: Colors.white,
-                    elevation: 0,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF0F1A3A),
+                    side: const BorderSide(color: Color(0xFFCBD5E1)),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(24),
                     ),
@@ -1719,11 +1849,342 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+
+  // ==========================================
+  // FITUR KONTAK HRD, BROADCAST & REMINDERS
+  // ==========================================
+
+  Future<void> _refreshAllData() async {
+    await Future.wait([
+      _checkAttendanceStatus(),
+      _loadHrdConfigAndAnnouncements(),
+    ]);
+  }
+
+  Future<void> _loadHrdConfigAndAnnouncements() async {
+    try {
+      final config = await MySQLHelper.getAppConfig();
+      final anns = await MySQLHelper.getAnnouncements();
+      if (!mounted) return;
+      setState(() {
+        _hrdWhatsapp = config['hrd_whatsapp'] ?? '+62 851-9616-7691';
+        _hrdPhoneClean = config['hrd_phone_clean'] ?? '6285196167691';
+        _hrdName = config['hrd_name'] ?? 'HRD PT TSA';
+        _announcements = anns;
+      });
+    } catch (e) {
+      debugPrint('[Config/Announcements Error]: $e');
+    }
+  }
+
+  Future<void> _contactHrdViaWhatsApp() async {
+    final displayName = widget.userData['name']?.toString().isNotEmpty == true
+        ? widget.userData['name'].toString()
+        : (widget.userData['username'] ?? 'Karyawan');
+    final username = widget.userData['username'] ?? '';
+    final typeLabel = _permissionType == 'cuti'
+        ? 'Cuti'
+        : (_permissionType == 'sakit' ? 'Sakit' : 'Izin');
+
+    final message =
+        'Halo $_hrdName, saya *$displayName* (@$username). '
+        'Saya ingin mengonfirmasi pengajuan *$typeLabel* saya untuk hari ini yang masih berstatus *Pending Approval*. '
+        'Mohon bantuannya untuk ditinjau dan disetujui. Terima kasih.';
+
+    final cleanPhone = _hrdPhoneClean.isNotEmpty ? _hrdPhoneClean : '6285196167691';
+    final urlString = 'https://wa.me/$cleanPhone?text=${Uri.encodeComponent(message)}';
+    final uri = Uri.parse(urlString);
+
+    try {
+      final canLaunch = await canLaunchUrl(uri);
+      if (canLaunch) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        await launchUrl(uri, mode: LaunchMode.platformDefault);
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Tidak dapat membuka WhatsApp ($e). Silakan hubungi manual ke: $_hrdWhatsapp'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  void _startPeriodicReminders() {
+    _reminderPeriodicTimer?.cancel();
+    Timer(const Duration(seconds: 15), () {
+      if (mounted) _checkAndTriggerInAppAlert();
+    });
+
+    _reminderPeriodicTimer = Timer.periodic(const Duration(minutes: 30), (timer) {
+      if (mounted) _checkAndTriggerInAppAlert();
+    });
+  }
+
+  void _checkAndTriggerInAppAlert() {
+    final now = DateTime.now();
+
+    // 1. Pengingat jika pengajuan masih Pending
+    if (_hasPermission && (_permissionStatus ?? '').toLowerCase() == 'pending') {
+      if (_lastPendingReminderShown == null ||
+          now.difference(_lastPendingReminderShown!).inMinutes >= 30) {
+        _lastPendingReminderShown = now;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: const Color(0xFFD97706),
+            duration: const Duration(seconds: 6),
+            content: Row(
+              children: const [
+                Icon(Icons.hourglass_top_rounded, color: Colors.white, size: 20),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Pengajuan izin Anda masih Pending. Hubungi HRD via WhatsApp untuk percepatan proses.',
+                    style: TextStyle(fontSize: 12),
+                  ),
+                ),
+              ],
+            ),
+            action: SnackBarAction(
+              label: 'WhatsApp',
+              textColor: Colors.white,
+              onPressed: _contactHrdViaWhatsApp,
+            ),
+          ),
+        );
+        return;
+      }
+    }
+
+    // 2. Pengingat jika belum Clock In
+    if (!_hasClockedIn && !_hasPermission && !_holidayInfo.isOffDay) {
+      if (_lastClockInReminderShown == null ||
+          now.difference(_lastClockInReminderShown!).inHours >= 1) {
+        _lastClockInReminderShown = now;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            backgroundColor: Color(0xFF2563EB),
+            duration: Duration(seconds: 5),
+            content: Row(
+              children: [
+                Icon(Icons.alarm_rounded, color: Colors.white, size: 20),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Pengingat: Anda belum melakukan Clock In kehadiran hari ini!',
+                    style: TextStyle(fontSize: 12),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+    }
+  }
+
+  Widget _buildAnnouncementsSection() {
+    if (_announcements.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: const [
+              Icon(Icons.campaign_rounded, color: Color(0xFFEAB308), size: 20),
+              SizedBox(width: 8),
+              Text(
+                'Pemberitahuan dari HRD',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1E293B),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          for (var ann in _announcements)
+            Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: ann['type'] == 'libur'
+                    ? const Color(0xFFFEF2F2)
+                    : (ann['type'] == 'acara'
+                        ? const Color(0xFFEFF6FF)
+                        : const Color(0xFFFFFBEB)),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: ann['type'] == 'libur'
+                      ? const Color(0xFFFECACA)
+                      : (ann['type'] == 'acara'
+                          ? const Color(0xFFBFDBFE)
+                          : const Color(0xFFFDE68A)),
+                ),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: ann['type'] == 'libur'
+                          ? const Color(0xFFEF4444)
+                          : (ann['type'] == 'acara'
+                              ? const Color(0xFF3B82F6)
+                              : const Color(0xFFF59E0B)),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      ann['type'] == 'libur'
+                          ? Icons.beach_access_rounded
+                          : (ann['type'] == 'acara'
+                              ? Icons.celebration_rounded
+                              : Icons.info_outline_rounded),
+                      color: Colors.white,
+                      size: 18,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: ann['type'] == 'libur'
+                                    ? const Color(0xFFDC2626)
+                                    : (ann['type'] == 'acara'
+                                        ? const Color(0xFF2563EB)
+                                        : const Color(0xFFD97706)),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                ann['type'] == 'libur'
+                                    ? 'HARI LIBUR'
+                                    : (ann['type'] == 'acara' ? 'ACARA KANTOR' : 'INFORMASI'),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                ann['title']?.toString() ?? 'Pengumuman',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                  color: Color(0xFF1E293B),
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          ann['content']?.toString() ?? '',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFF475569),
+                            height: 1.35,
+                          ),
+                        ),
+                        if (ann['formatted_date'] != null) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            ann['formatted_date'].toString(),
+                            style: const TextStyle(
+                              fontSize: 10,
+                              color: Color(0xFF94A3B8),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAttendanceReminderBanner() {
+    if (_holidayInfo.isOffDay) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFFBEB),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFFDE68A)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(7),
+              decoration: const BoxDecoration(
+                color: Color(0xFFF59E0B),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.notifications_active_rounded,
+                color: Colors.white,
+                size: 16,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: const [
+                  Text(
+                    'Pengingat Kehadiran Hari Ini',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                      color: Color(0xFF92400E),
+                    ),
+                  ),
+                  SizedBox(height: 2),
+                  Text(
+                    'Anda belum melakukan Clock In. Silakan presensi sebelum jam masuk berakhir.',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Color(0xFFB45309),
+                      height: 1.3,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 // Clipper untuk kurva header atas melengkung
 class HeaderArcClipper extends CustomClipper<Path> {
-  @override
+@override
   Path getClip(Size size) {
     final path = Path();
     path.lineTo(0, size.height - 24);

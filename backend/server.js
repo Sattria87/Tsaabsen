@@ -403,6 +403,48 @@ app.get('/api/branches', async (req, res) => {
 });
 
 // ============================================================
+// SETTINGS: Ambil kontak WhatsApp HRD
+// GET /api/settings/hrd-contact
+// ============================================================
+app.get('/api/settings/hrd-contact', async (req, res) => {
+  let hrd_whatsapp = '+62 851-9616-7691';
+  let hrd_name = 'HRD PT TSA';
+  try {
+    const [rows] = await pool.query("SELECT setting_key, setting_value FROM app_settings WHERE setting_key IN ('hrd_whatsapp', 'hrd_name')");
+    for (const r of rows) {
+      if (r.setting_key === 'hrd_whatsapp') hrd_whatsapp = r.setting_value;
+      if (r.setting_key === 'hrd_name') hrd_name = r.setting_value;
+    }
+  } catch (err) {
+    console.log('[Settings Query Info]', err.message);
+  }
+
+  let clean_phone = hrd_whatsapp.replace(/\D/g, '');
+  if (clean_phone.startsWith('0')) clean_phone = '62' + clean_phone.substring(1);
+
+  return res.json({
+    success: true,
+    hrd_whatsapp,
+    hrd_phone_clean: clean_phone,
+    hrd_name,
+  });
+});
+
+// ============================================================
+// ANNOUNCEMENTS: Ambil pengumuman/pemberitahuan aktif HRD
+// GET /api/announcements
+// ============================================================
+app.get('/api/announcements', async (req, res) => {
+  try {
+    const [rows] = await pool.query("SELECT id, title, content, type, DATE_FORMAT(created_at, '%d %b %Y %H:%i') AS formatted_date FROM announcements WHERE is_active = 1 ORDER BY id DESC LIMIT 10");
+    return res.json({ success: true, data: rows });
+  } catch (err) {
+    console.log('[Announcements Query Info]', err.message);
+    return res.json({ success: true, data: [] });
+  }
+});
+
+// ============================================================
 // ATTENDANCE: Simpan absensi (clock_in / clock_out / izin)
 // POST /api/attendance
 // Body: { username, type, reason }
