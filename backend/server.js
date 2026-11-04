@@ -472,6 +472,32 @@ app.get('/api/announcements', async (req, res) => {
   }
 });
 
+// Edit pengumuman via API
+app.post('/api/announcements/edit/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, content, type, is_active } = req.body;
+    await pool.query(
+      "UPDATE announcements SET title = ?, content = ?, type = ?, is_active = ? WHERE id = ?",
+      [title, content, type || 'info', is_active !== undefined ? is_active : 1, id]
+    );
+    return res.json({ success: true, message: 'Pengumuman berhasil diperbarui' });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// Hapus pengumuman via API
+app.delete('/api/announcements/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    await pool.query("DELETE FROM announcements WHERE id = ?", [id]);
+    return res.json({ success: true, message: 'Pengumuman berhasil dihapus' });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 // ============================================================
 // ATTENDANCE: Simpan absensi (clock_in / clock_out / izin)
 // POST /api/attendance

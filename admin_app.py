@@ -2263,6 +2263,33 @@ def add_announcement():
 
     return redirect(url_for('index'))
 
+@app.route('/admin/announcement/edit/<int:id>', methods=['POST'])
+def edit_announcement(id):
+    title = request.form.get('title', '').strip()
+    content = request.form.get('content', '').strip()
+    ann_type = request.form.get('type', 'info').strip()
+    is_active = int(request.form.get('is_active', 1))
+
+    if not title or not content:
+        flash('Judul dan isi pemberitahuan wajib diisi!', 'danger')
+        return redirect(url_for('index'))
+
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            UPDATE announcements 
+            SET title = %s, content = %s, type = %s, is_active = %s
+            WHERE id = %s
+        """, (title, content, ann_type, is_active, id))
+        conn.commit()
+        conn.close()
+        flash(f'Pemberitahuan "{title}" berhasil diperbarui!', 'success')
+    except Exception as e:
+        flash(f'Gagal memperbarui pemberitahuan: {e}', 'danger')
+
+    return redirect(url_for('index'))
+
 @app.route('/admin/announcement/toggle/<int:id>', methods=['POST', 'GET'])
 def toggle_announcement(id):
     try:

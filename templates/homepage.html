@@ -893,12 +893,63 @@
                                         <small class="text-muted" style="font-size: 10.5px;"><i class="bi bi-clock me-1"></i>{{ ann.formatted_date if ann.formatted_date else '-' }} WIB</small>
                                     </div>
                                     <div class="d-flex align-items-center gap-1">
+                                        <button type="button" class="btn btn-sm btn-outline-primary border-0 p-1 rounded-2" title="Ubah / Edit Pengumuman" data-bs-toggle="modal" data-bs-target="#editModal{{ ann.id }}">
+                                            <i class="bi bi-pencil-square"></i>
+                                        </button>
                                         <a href="/admin/announcement/toggle/{{ ann.id }}" class="btn btn-sm btn-outline-secondary border-0 p-1 rounded-2" title="Nonaktifkan (karyawan tidak melihat lagi tapi riwayat tetap tersimpan)">
                                             <i class="bi bi-pause-circle"></i>
                                         </a>
                                         <a href="/admin/announcement/delete/{{ ann.id }}" onclick="return confirm('Hapus permanen pemberitahuan ini dari sistem?');" class="btn btn-sm btn-outline-danger border-0 p-1 rounded-2" title="Hapus Permanen">
                                             <i class="bi bi-trash3"></i>
                                         </a>
+                                    </div>
+
+                                    <!-- Modal Edit Announcement Tab 1 -->
+                                    <div class="modal fade" id="editModal{{ ann.id }}" tabindex="-1" aria-hidden="true">
+                                        <div class="modal-dialog modal-dialog-centered">
+                                            <div class="modal-content rounded-4 border-0 shadow">
+                                                <div class="modal-header border-bottom-0 pb-0">
+                                                    <h6 class="modal-title fw-bold text-dark"><i class="bi bi-pencil-square text-primary me-2"></i>Ubah Pemberitahuan HRD</h6>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                </div>
+                                                <form action="/admin/announcement/edit/{{ ann.id }}" method="POST">
+                                                    <div class="modal-body pt-3">
+                                                        <div class="mb-3">
+                                                            <label class="form-label fw-bold small text-muted text-uppercase mb-1" style="font-size: 11px;">Judul Pemberitahuan *</label>
+                                                            <input type="text" name="title" class="form-control rounded-3" value="{{ ann.title }}" required>
+                                                        </div>
+                                                        <div class="row g-2 mb-3">
+                                                            <div class="col-6">
+                                                                <label class="form-label fw-bold small text-muted text-uppercase mb-1" style="font-size: 11px;">Kategori *</label>
+                                                                <select name="type" class="form-select rounded-3">
+                                                                    <option value="libur" {% if ann.type == 'libur' %}selected{% endif %}>🏖️ Hari Libur</option>
+                                                                    <option value="acara" {% if ann.type == 'acara' %}selected{% endif %}>🎉 Acara Kantor</option>
+                                                                    <option value="info" {% if ann.type == 'info' %}selected{% endif %}>📢 Info Penting</option>
+                                                                    <option value="pengingat" {% if ann.type == 'pengingat' %}selected{% endif %}>⏰ Pengingat</option>
+                                                                </select>
+                                                            </div>
+                                                            <div class="col-6">
+                                                                <label class="form-label fw-bold small text-muted text-uppercase mb-1" style="font-size: 11px;">Status Tampil di HP *</label>
+                                                                <select name="is_active" class="form-select rounded-3">
+                                                                    <option value="1" {% if ann.is_active == 1 or ann.is_active is not defined %}selected{% endif %}>🟢 Aktif di HP</option>
+                                                                    <option value="0" {% if ann.is_active == 0 %}selected{% endif %}>⚪ Nonaktif / Selesai</option>
+                                                                </select>
+                                                            </div>
+                                                        </div>
+                                                        <div class="mb-2">
+                                                            <label class="form-label fw-bold small text-muted text-uppercase mb-1" style="font-size: 11px;">Isi Pesan Pengumuman *</label>
+                                                            <textarea name="content" class="form-control rounded-3" rows="3" required>{{ ann.content }}</textarea>
+                                                        </div>
+                                                    </div>
+                                                    <div class="modal-footer border-top-0 pt-0">
+                                                        <button type="button" class="btn btn-secondary btn-sm rounded-3" data-bs-dismiss="modal">Batal</button>
+                                                        <button type="submit" class="btn btn-primary btn-sm fw-bold px-3 rounded-3 shadow-sm">
+                                                            <i class="bi bi-check2-circle me-1"></i> Simpan Perubahan
+                                                        </button>
+                                                    </div>
+                                                </form>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                                 {% else %}
@@ -939,12 +990,63 @@
                                         <small class="text-muted" style="font-size: 10px;"><i class="bi bi-calendar-event me-1"></i>Dikirim: {{ item.formatted_date if item.formatted_date else '-' }} WIB</small>
                                     </div>
                                     <div class="d-flex align-items-center gap-1">
-                                        <a href="/admin/announcement/toggle/{{ item.id }}" class="btn btn-sm btn-outline-primary border-0 p-1 rounded-2" title="{% if item.is_active == 1 %}Nonaktifkan{% else %}Aktifkan Kembali ke HP{% endif %}">
+                                        <button type="button" class="btn btn-sm btn-outline-primary border-0 p-1 rounded-2" title="Ubah / Edit Pengumuman" data-bs-toggle="modal" data-bs-target="#editModalHist{{ item.id }}">
+                                            <i class="bi bi-pencil-square"></i>
+                                        </button>
+                                        <a href="/admin/announcement/toggle/{{ item.id }}" class="btn btn-sm btn-outline-secondary border-0 p-1 rounded-2" title="{% if item.is_active == 1 %}Nonaktifkan{% else %}Aktifkan Kembali ke HP{% endif %}">
                                             <i class="bi bi-arrow-repeat"></i>
                                         </a>
                                         <a href="/admin/announcement/delete/{{ item.id }}" onclick="return confirm('Hapus permanen notifikasi ini dari riwayat?');" class="btn btn-sm btn-outline-danger border-0 p-1 rounded-2" title="Hapus dari Riwayat">
                                             <i class="bi bi-trash3"></i>
                                         </a>
+                                    </div>
+
+                                    <!-- Modal Edit Announcement Tab 2 (History) -->
+                                    <div class="modal fade" id="editModalHist{{ item.id }}" tabindex="-1" aria-hidden="true">
+                                        <div class="modal-dialog modal-dialog-centered">
+                                            <div class="modal-content rounded-4 border-0 shadow">
+                                                <div class="modal-header border-bottom-0 pb-0">
+                                                    <h6 class="modal-title fw-bold text-dark"><i class="bi bi-pencil-square text-primary me-2"></i>Ubah Pemberitahuan HRD</h6>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                </div>
+                                                <form action="/admin/announcement/edit/{{ item.id }}" method="POST">
+                                                    <div class="modal-body pt-3">
+                                                        <div class="mb-3">
+                                                            <label class="form-label fw-bold small text-muted text-uppercase mb-1" style="font-size: 11px;">Judul Pemberitahuan *</label>
+                                                            <input type="text" name="title" class="form-control rounded-3" value="{{ item.title }}" required>
+                                                        </div>
+                                                        <div class="row g-2 mb-3">
+                                                            <div class="col-6">
+                                                                <label class="form-label fw-bold small text-muted text-uppercase mb-1" style="font-size: 11px;">Kategori *</label>
+                                                                <select name="type" class="form-select rounded-3">
+                                                                    <option value="libur" {% if item.type == 'libur' %}selected{% endif %}>🏖️ Hari Libur</option>
+                                                                    <option value="acara" {% if item.type == 'acara' %}selected{% endif %}>🎉 Acara Kantor</option>
+                                                                    <option value="info" {% if item.type == 'info' %}selected{% endif %}>📢 Info Penting</option>
+                                                                    <option value="pengingat" {% if item.type == 'pengingat' %}selected{% endif %}>⏰ Pengingat</option>
+                                                                </select>
+                                                            </div>
+                                                            <div class="col-6">
+                                                                <label class="form-label fw-bold small text-muted text-uppercase mb-1" style="font-size: 11px;">Status Tampil di HP *</label>
+                                                                <select name="is_active" class="form-select rounded-3">
+                                                                    <option value="1" {% if item.is_active == 1 or item.is_active is not defined %}selected{% endif %}>🟢 Aktif di HP</option>
+                                                                    <option value="0" {% if item.is_active == 0 %}selected{% endif %}>⚪ Nonaktif / Selesai</option>
+                                                                </select>
+                                                            </div>
+                                                        </div>
+                                                        <div class="mb-2">
+                                                            <label class="form-label fw-bold small text-muted text-uppercase mb-1" style="font-size: 11px;">Isi Pesan Pengumuman *</label>
+                                                            <textarea name="content" class="form-control rounded-3" rows="3" required>{{ item.content }}</textarea>
+                                                        </div>
+                                                    </div>
+                                                    <div class="modal-footer border-top-0 pt-0">
+                                                        <button type="button" class="btn btn-secondary btn-sm rounded-3" data-bs-dismiss="modal">Batal</button>
+                                                        <button type="submit" class="btn btn-primary btn-sm fw-bold px-3 rounded-3 shadow-sm">
+                                                            <i class="bi bi-check2-circle me-1"></i> Simpan Perubahan
+                                                        </button>
+                                                    </div>
+                                                </form>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                                 {% else %}

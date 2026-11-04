@@ -52,6 +52,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   DateTime? _lastClockInReminderShown;
   int? _lastNotifiedAnnouncementId;
   Timer? _announcementPeriodicTimer;
+  final Set<int> _dismissedAnnouncementIds = {};
+  int _activeAnnouncementIndex = 0;
+  final PageController _announcementPageController = PageController();
 
   HolidayInfo get _holidayInfo => HolidayHelper.getHolidayInfo();
 
@@ -84,6 +87,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _reminderPeriodicTimer?.cancel();
     _announcementPeriodicTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
+    _announcementPageController.dispose();
     _pageController.dispose();
     super.dispose();
   }
@@ -2159,138 +2163,310 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   Widget _buildAnnouncementsSection() {
-    if (_announcements.isEmpty) return const SizedBox.shrink();
+    final visibleAnnouncements = _announcements
+        .where((a) => !_dismissedAnnouncementIds.contains(a['id']))
+        .toList();
+
+    if (visibleAnnouncements.isEmpty) return const SizedBox.shrink();
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Header Baris: Judul, Indikator Slide & Tombol Tutup/Reset
           Row(
-            children: const [
-              Icon(Icons.campaign_rounded, color: Color(0xFFEAB308), size: 20),
-              SizedBox(width: 8),
-              Text(
-                'Pemberitahuan dari HRD',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF1E293B),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          for (var ann in _announcements)
-            Container(
-              margin: const EdgeInsets.only(bottom: 8),
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: ann['type'] == 'libur'
-                    ? const Color(0xFFFEF2F2)
-                    : (ann['type'] == 'acara'
-                        ? const Color(0xFFEFF6FF)
-                        : const Color(0xFFFFFBEB)),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: ann['type'] == 'libur'
-                      ? const Color(0xFFFECACA)
-                      : (ann['type'] == 'acara'
-                          ? const Color(0xFFBFDBFE)
-                          : const Color(0xFFFDE68A)),
-                ),
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(8),
+                    padding: const EdgeInsets.all(4),
                     decoration: BoxDecoration(
-                      color: ann['type'] == 'libur'
-                          ? const Color(0xFFEF4444)
-                          : (ann['type'] == 'acara'
-                              ? const Color(0xFF3B82F6)
-                              : const Color(0xFFF59E0B)),
-                      borderRadius: BorderRadius.circular(10),
+                      color: const Color(0xFFFEF3C7),
+                      borderRadius: BorderRadius.circular(6),
                     ),
-                    child: Icon(
-                      ann['type'] == 'libur'
-                          ? Icons.beach_access_rounded
-                          : (ann['type'] == 'acara'
-                              ? Icons.celebration_rounded
-                              : Icons.info_outline_rounded),
-                      color: Colors.white,
-                      size: 18,
+                    child: const Icon(
+                      Icons.campaign_rounded,
+                      color: Color(0xFFD97706),
+                      size: 16,
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: ann['type'] == 'libur'
-                                    ? const Color(0xFFDC2626)
-                                    : (ann['type'] == 'acara'
-                                        ? const Color(0xFF2563EB)
-                                        : const Color(0xFFD97706)),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                ann['type'] == 'libur'
-                                    ? 'HARI LIBUR'
-                                    : (ann['type'] == 'acara' ? 'ACARA KANTOR' : 'INFORMASI'),
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            Expanded(
-                              child: Text(
-                                ann['title']?.toString() ?? 'Pengumuman',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13,
-                                  color: Color(0xFF1E293B),
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
+                  const SizedBox(width: 6),
+                  const Text(
+                    'Pemberitahuan HRD',
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF1E293B),
+                    ),
+                  ),
+                  if (visibleAnnouncements.length > 1) ...[
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE2E8F0),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        '${_activeAnnouncementIndex + 1}/${visibleAnnouncements.length}',
+                        style: const TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF475569),
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          ann['content']?.toString() ?? '',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: Color(0xFF475569),
-                            height: 1.35,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+              Row(
+                children: [
+                  // Indikator Titik (Dot Indicator) jika lebih dari 1 notifikasi
+                  if (visibleAnnouncements.length > 1)
+                    Row(
+                      children: List.generate(
+                        visibleAnnouncements.length,
+                        (index) => AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          margin: const EdgeInsets.only(right: 3),
+                          width: _activeAnnouncementIndex == index ? 12 : 5,
+                          height: 5,
+                          decoration: BoxDecoration(
+                            color: _activeAnnouncementIndex == index
+                                ? const Color(0xFF2563EB)
+                                : const Color(0xFFCBD5E1),
+                            borderRadius: BorderRadius.circular(4),
                           ),
                         ),
-                        if (ann['formatted_date'] != null) ...[
-                          const SizedBox(height: 4),
+                      ),
+                    ),
+                  const SizedBox(width: 8),
+                  // Tombol Tutup / Sembunyikan Notifikasi yang sedang aktif
+                  InkWell(
+                    onTap: () {
+                      final currentAnn = visibleAnnouncements[
+                          _activeAnnouncementIndex < visibleAnnouncements.length
+                              ? _activeAnnouncementIndex
+                              : 0];
+                      final int annId = (currentAnn['id'] as num?)?.toInt() ?? 0;
+                      setState(() {
+                        _dismissedAnnouncementIds.add(annId);
+                        if (_activeAnnouncementIndex >= visibleAnnouncements.length - 1 &&
+                            _activeAnnouncementIndex > 0) {
+                          _activeAnnouncementIndex--;
+                        }
+                      });
+                    },
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: const [
+                          Icon(Icons.close_rounded, size: 12, color: Color(0xFF64748B)),
+                          SizedBox(width: 2),
                           Text(
-                            ann['formatted_date'].toString(),
-                            style: const TextStyle(
+                            'Tutup',
+                            style: TextStyle(
                               fontSize: 10,
-                              color: Color(0xFF94A3B8),
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF64748B),
                             ),
                           ),
                         ],
-                      ],
+                      ),
                     ),
                   ),
                 ],
               ),
+            ],
+          ),
+
+          const SizedBox(height: 6),
+
+          // Horizontal Swipeable Slider (PageView)
+          SizedBox(
+            height: 122,
+            child: PageView.builder(
+              controller: _announcementPageController,
+              itemCount: visibleAnnouncements.length,
+              onPageChanged: (index) {
+                setState(() => _activeAnnouncementIndex = index);
+              },
+              itemBuilder: (context, index) {
+                final ann = visibleAnnouncements[index];
+                final type = (ann['type']?.toString() ?? 'info').toLowerCase();
+
+                final isHoliday = type == 'libur';
+                final isEvent = type == 'acara';
+                final isReminder = type == 'pengingat';
+
+                final Color cardBg = isHoliday
+                    ? const Color(0xFFFEF2F2)
+                    : (isEvent
+                        ? const Color(0xFFEFF6FF)
+                        : (isReminder
+                            ? const Color(0xFFFFFBEB)
+                            : const Color(0xFFF0FDF4)));
+
+                final Color borderColor = isHoliday
+                    ? const Color(0xFFFECACA)
+                    : (isEvent
+                        ? const Color(0xFFBFDBFE)
+                        : (isReminder
+                            ? const Color(0xFFFDE68A)
+                            : const Color(0xFFBBF7D0)));
+
+                final Color accentColor = isHoliday
+                    ? const Color(0xFFDC2626)
+                    : (isEvent
+                        ? const Color(0xFF2563EB)
+                        : (isReminder
+                            ? const Color(0xFFD97706)
+                            : const Color(0xFF16A34A)));
+
+                final IconData iconData = isHoliday
+                    ? Icons.beach_access_rounded
+                    : (isEvent
+                        ? Icons.celebration_rounded
+                        : (isReminder
+                            ? Icons.alarm_rounded
+                            : Icons.campaign_rounded));
+
+                final String typeLabel = isHoliday
+                    ? 'HARI LIBUR'
+                    : (isEvent
+                        ? 'ACARA'
+                        : (isReminder ? 'PENGINGAT' : 'INFORMASI'));
+
+                return InkWell(
+                  onTap: () => _showAnnouncementModal(ann),
+                  borderRadius: BorderRadius.circular(16),
+                  child: Container(
+                    margin: const EdgeInsets.only(right: 2),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                    decoration: BoxDecoration(
+                      color: cardBg,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: borderColor),
+                      boxShadow: [
+                        BoxShadow(
+                          color: accentColor.withValues(alpha: 0.05),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: accentColor,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Icon(iconData, color: Colors.white, size: 18),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: accentColor,
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      typeLabel,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 8.5,
+                                        fontWeight: FontWeight.bold,
+                                        letterSpacing: 0.3,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: Text(
+                                      ann['title']?.toString() ?? 'Pengumuman',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 12.5,
+                                        color: Color(0xFF1E293B),
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                ann['content']?.toString() ?? '',
+                                style: const TextStyle(
+                                  fontSize: 11.5,
+                                  color: Color(0xFF475569),
+                                  height: 1.3,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 4),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    ann['formatted_date'] != null
+                                        ? '${ann['formatted_date']} WIB'
+                                        : '',
+                                    style: const TextStyle(
+                                      fontSize: 9.5,
+                                      color: Color(0xFF94A3B8),
+                                    ),
+                                  ),
+                                  Row(
+                                    children: [
+                                      Text(
+                                        'Detail',
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                          color: accentColor,
+                                        ),
+                                      ),
+                                      Icon(
+                                        Icons.chevron_right_rounded,
+                                        size: 14,
+                                        color: accentColor,
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
             ),
+          ),
         ],
       ),
     );
