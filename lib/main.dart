@@ -6,6 +6,43 @@ import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
 import 'utils/auth_service.dart';
 import 'utils/app_nav.dart';
+import 'package:workmanager/workmanager.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'utils/notification_helper.dart';
+import 'utils/mysql_helper.dart';
+
+@pragma('vm:entry-point')
+void callbackDispatcher() {
+  Workmanager().executeTask((task, inputData) async {
+    try {
+      WidgetsFlutterBinding.ensureInitialized();
+      await NotificationHelper.init();
+      final anns = await MySQLHelper.getAnnouncements();
+      if (anns.isNotEmpty) {
+        final latest = anns.first;
+        final int id = (latest['id'] as num?)?.toInt() ?? 0;
+        final title = latest['title']?.toString() ?? 'Pengumuman HRD';
+        final body = latest['content']?.toString() ?? '';
+        final type = latest['type']?.toString().toLowerCase();
+
+        final prefs = await SharedPreferences.getInstance();
+        final lastBgId = prefs.getInt('last_bg_ann_id') ?? 0;
+        if (id != lastBgId) {
+          await prefs.setInt('last_bg_ann_id', id);
+          await NotificationHelper.showAnnouncementNotification(
+            id: id,
+            title: title,
+            body: body,
+            category: type,
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('[Background Fetch Error]: $e');
+    }
+    return Future.value(true);
+  });
+}
 
 List<CameraDescription> cameras = [];
 
@@ -15,6 +52,21 @@ Future<void> main() async {
     cameras = await availableCameras();
   } catch (e) {
     debugPrint('Error inisialisasi kamera: $e');
+  }
+
+  try {
+    await NotificationHelper.init();
+    await Workmanager().initialize(
+      callbackDispatcher,
+          );
+    await Workmanager().registerPeriodicTask(
+      "wg_announcement_check_task",
+      "fetchLatestAnnouncements",
+      frequency: const Duration(minutes: 15),
+      existingWorkPolicy: ExistingPeriodicWorkPolicy.keep,
+    );
+  } catch (e) {
+    debugPrint('[Workmanager Init Error]: $e');
   }
 
   runApp(

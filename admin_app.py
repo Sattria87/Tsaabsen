@@ -623,7 +623,6 @@ def index():
             raw_type = (emp.get('today_type') or '').lower()
             if raw_type in ('izin', 'izin_sakit', 'izin_keperluan', 'cuti', 'sakit') or raw_type.startswith('izin'):
                 emp['today_type'] = 'izin'
-        conn.close()
 
         top_attendees = attendance_employees[:3]
         other_attendees = attendance_employees[3:8]
@@ -675,6 +674,11 @@ def index():
             announcement_history = cursor.fetchall()
         except Exception as ann_err:
             print(f"[Announcements Fetch Error]: {ann_err}")
+        finally:
+            try:
+                conn.close()
+            except Exception:
+                pass
 
     except Exception as dash_err:
         print(f"[Dashboard DB Error]: {dash_err}")

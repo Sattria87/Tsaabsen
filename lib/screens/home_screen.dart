@@ -21,7 +21,7 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final PageController _pageController = PageController();
   int _currentIndex = 0;
 
@@ -55,9 +55,20 @@ class _HomeScreenState extends State<HomeScreen> {
 
   HolidayInfo get _holidayInfo => HolidayHelper.getHolidayInfo();
 
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      debugPrint('[Lifecycle] App resumed ke foreground, otomatis update pengumuman & status absen...');
+      _loadHrdConfigAndAnnouncements();
+      _checkAttendanceStatus();
+    }
+  }
+
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     HolidayHelper.syncHolidays();
     _checkAttendanceStatus();
     _loadHrdConfigAndAnnouncements();
@@ -72,6 +83,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _dailyResetTimer?.cancel();
     _reminderPeriodicTimer?.cancel();
     _announcementPeriodicTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
     _pageController.dispose();
     super.dispose();
   }
@@ -1907,7 +1919,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _startAnnouncementPolling() {
     _announcementPeriodicTimer?.cancel();
-    _announcementPeriodicTimer = Timer.periodic(const Duration(seconds: 15), (timer) {
+    _announcementPeriodicTimer = Timer.periodic(const Duration(seconds: 8), (timer) {
       if (mounted) {
         _loadHrdConfigAndAnnouncements();
       }
