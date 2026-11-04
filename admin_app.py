@@ -571,9 +571,9 @@ def index():
             FROM employees e
             LEFT JOIN (
                 SELECT username, 
-                       SUBSTRING_INDEX(GROUP_CONCAT(type ORDER BY id DESC), ',', 1) AS type,
+                       SUBSTRING_INDEX(GROUP_CONCAT(type ORDER BY id DESC SEPARATOR '|||'), '|||', 1) AS type,
                        MAX(timestamp) AS max_ts,
-                       SUBSTRING_INDEX(GROUP_CONCAT(COALESCE(reason, '') ORDER BY id DESC), ',', 1) AS reason
+                       SUBSTRING_INDEX(GROUP_CONCAT(COALESCE(reason, '') ORDER BY id DESC SEPARATOR '|||'), '|||', 1) AS reason
                 FROM attendance
                 WHERE DATE(timestamp) = CURDATE()
                   AND (type IN ('clock_in', 'hadir', 'clock_out') OR LOWER(COALESCE(status, '')) IN ('approved', 'disetujui'))
@@ -1532,7 +1532,7 @@ def presence():
         FROM employees e
         LEFT JOIN (
             SELECT username,
-                   SUBSTRING_INDEX(GROUP_CONCAT(type ORDER BY id DESC), ',', 1) AS type,
+                   SUBSTRING_INDEX(GROUP_CONCAT(type ORDER BY id DESC SEPARATOR '|||'), '|||', 1) AS type,
                    MAX(CASE WHEN type IN ('clock_in', 'hadir') THEN timestamp END) AS clock_in_time,
                    MAX(timestamp) AS max_ts,
                    MAX(clock_out) AS clock_out,
@@ -1542,7 +1542,7 @@ def presence():
                        MAX(CASE WHEN image_path IS NOT NULL AND image_path != '' THEN image_path END)
                    ) AS image_path,
                    MAX(CASE WHEN evidence_path IS NOT NULL AND evidence_path != '' THEN evidence_path END) AS evidence_path,
-                   SUBSTRING_INDEX(GROUP_CONCAT(COALESCE(reason, '') ORDER BY id DESC), ',', 1) AS reason
+                   SUBSTRING_INDEX(GROUP_CONCAT(COALESCE(reason, '') ORDER BY id DESC SEPARATOR '|||'), '|||', 1) AS reason
             FROM attendance
             WHERE DATE(timestamp) = CURDATE()
               AND (type IN ('clock_in', 'hadir', 'clock_out') OR LOWER(COALESCE(status, '')) IN ('approved', 'disetujui'))

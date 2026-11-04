@@ -595,7 +595,7 @@ class _LocationVerificationScreenState
       final place = _otherPlaceNameController.text.trim();
       final lat = _otherRealtimeGps!.latitude.toStringAsFixed(6);
       final lon = _otherRealtimeGps!.longitude.toStringAsFixed(6);
-      final fullLocationName = 'Other ($category) - $place [GPS: $lat, $lon]';
+      final fullLocationName = 'Other ($category) - $place [GPS: Lat $lat | Long $lon]';
 
       Navigator.push(
         context,
