@@ -12,6 +12,7 @@ import 'login_screen.dart';
 import 'location_verification_screen.dart';
 import 'permission_screen.dart';
 import 'clock_out_success_screen.dart';
+import 'first_time_face_registration_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final Map<String, dynamic> userData;
@@ -72,6 +73,22 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+
+    // Cek apakah akun karyawan sudah memiliki foto wajah acuan AI
+    final currentFace = widget.userData['face_image']?.toString().trim();
+    if (currentFace == null || currentFace.isEmpty || currentFace == 'null') {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          debugPrint('[HomeScreen] Akun belum memiliki foto acuan AI. Mengarahkan ke FirstTimeFaceRegistrationScreen...');
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => FirstTimeFaceRegistrationScreen(userData: widget.userData),
+            ),
+          );
+        }
+      });
+    }
     HolidayHelper.syncHolidays();
     _checkAttendanceStatus();
     _loadHrdConfigAndAnnouncements();

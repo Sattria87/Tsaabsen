@@ -284,11 +284,13 @@ app.post('/api/login', async (req, res) => {
     }
 
     console.log(`[LOGIN BERHASIL] Selamat datang, ${user.name} (${user.username}) - Cabang: ${userBranch || 'Default'}`);
+    const hasFace = Boolean(user.face_image && user.face_image.trim() !== '' && user.face_image !== 'null');
     return res.json({
       success   : true,
       username  : user.username,
       name      : user.name,
       face_image: user.face_image ?? null,
+      needs_face_registration: !hasFace,
       branch    : userBranch,
     });
   } catch (err) {
@@ -296,6 +298,72 @@ app.post('/api/login', async (req, res) => {
     return res.status(500).json({
       success: false,
       message: 'Kesalahan server: ' + err.message,
+    });
+  }
+});
+
+// ============================================================
+// USER: Daftarkan / Perbarui Foto Acuan Wajah Pertama Kali
+// POST /api/user/register-face
+// Body: { username, face_image }
+// ============================================================
+app.post('/api/user/register-face', async (req, res) => {
+  const { username, face_image } = req.body;
+
+  if (!username || !face_image) {
+    return res.status(400).json({
+      success: false,
+      message: 'username dan face_image wajib disertakan',
+    });
+  }
+
+  try {
+    const assetsDir = resolveAssetsDir();
+    const fotoDir = path.join(assetsDir, 'foto_karyawan');
+    if (!fs.existsSync(fotoDir)) {
+      fs.mkdirSync(fotoDir, { recursive: true });
+    }
+
+    const cleanUsername = username.replace(/[^a-zA-Z0-9_-]/g, '_');
+    const filename = `ref_${cleanUsername}_${Date.now()}.jpg`;
+    const targetFile = path.join(fotoDir, filename);
+
+    // Decode base64
+    let rawB64 = face_image;
+    if (rawB64.includes(',')) {
+      rawB64 = rawB64.split(',')[1];
+    }
+    const imgBuffer = Buffer.from(rawB64, 'base64');
+    fs.writeFileSync(targetFile, imgBuffer);
+
+    const relativeDbPath = `assets/foto_karyawan/${filename}`;
+
+    // Update users & employees tables
+    await pool.execute(
+      'UPDATE users SET face_image = ? WHERE username = ?',
+      [relativeDbPath, username]
+    );
+
+    try {
+      await pool.execute(
+        'UPDATE employees SET face_image = ? WHERE username = ?',
+        [relativeDbPath, username]
+      );
+    } catch (empErr) {
+      console.log('[RegisterFace Employee Update Info]', empErr.message);
+    }
+
+    console.log(`[FACE REGISTER SUCCESS] Foto acuan wajah @${username} berhasil disimpan di ${relativeDbPath}`);
+    return res.json({
+      success: true,
+      message: 'Foto acuan wajah AI berhasil didaftarkan!',
+      face_image: relativeDbPath,
+    });
+  } catch (err) {
+    console.error('[RegisterFace Error]', err.message);
+    return res.status(500).json({
+      success: false,
+      message: 'Gagal menyimpan foto acuan: ' + err.message,
     });
   }
 });

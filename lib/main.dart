@@ -4,6 +4,7 @@ import 'package:video_player/video_player.dart';
 
 import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
+import 'screens/first_time_face_registration_screen.dart';
 import 'utils/auth_service.dart';
 import 'utils/app_nav.dart';
 import 'package:workmanager/workmanager.dart';
@@ -171,12 +172,28 @@ class _SplashRouterState extends State<SplashRouter> {
         userData['username'] != null &&
         userData['username'].toString().trim().isNotEmpty) {
       debugPrint(
-        '[Splash] Sesi aktif ditemukan untuk: ${userData['username']}. Langsung ke HomeScreen.',
+        '[Splash] Sesi aktif ditemukan untuk: ${userData['username']}.',
       );
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => HomeScreen(userData: userData)),
-      );
+      final faceImg = userData['face_image']?.toString().trim();
+      final bool needsFaceReg = userData['needs_face_registration'] == true ||
+          faceImg == null ||
+          faceImg.isEmpty ||
+          faceImg == 'null';
+
+      if (needsFaceReg) {
+        debugPrint('[Splash] Foto acuan wajah belum ada. Arahkan ke FirstTimeFaceRegistrationScreen.');
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => FirstTimeFaceRegistrationScreen(userData: userData),
+          ),
+        );
+      } else {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => HomeScreen(userData: userData)),
+        );
+      }
     } else {
       debugPrint(
         '[Splash] Tidak ada sesi login tersimpan. Masuk ke LoginScreen.',

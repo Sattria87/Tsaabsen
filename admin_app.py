@@ -806,29 +806,25 @@ def add_employee():
         flash('Semua kolom data karyawan wajib diisi!', 'danger')
         return redirect(url_for('employee_management'))
 
-    if not face_image or not face_image.strip():
-        flash('Wajib mengambil foto selfie kamera sebagai acuan AI Face Recognition!', 'danger')
-        return redirect(url_for('employee_management'))
-
     employee_id = generate_random_employee_id()
+    db_image_path = None
 
-    # Simpan file gambar fisik ke folder assets/foto_karyawan/
-    assets_dir = os.path.join(app.root_path, 'assets', 'foto_karyawan')
-    os.makedirs(assets_dir, exist_ok=True)
-    filename = f"{employee_id.replace('.', '_')}_{username}.jpg"
-    filepath = os.path.join(assets_dir, filename)
+    # Simpan file gambar jika admin mengunggah/mengambil foto saat pembuatan akun (Opsional)
+    if face_image and face_image.strip():
+        assets_dir = os.path.join(app.root_path, 'assets', 'foto_karyawan')
+        os.makedirs(assets_dir, exist_ok=True)
+        filename = f"{employee_id.replace('.', '_')}_{username}.jpg"
+        filepath = os.path.join(assets_dir, filename)
 
-    try:
-        raw_b64 = face_image
-        if ',' in face_image:
-            raw_b64 = face_image.split(',', 1)[1]
-        with open(filepath, 'wb') as f:
-            f.write(base64.b64decode(raw_b64))
-    except Exception as img_err:
-        print(f"Peringatan: Gagal menyimpan file fisik gambar ke assets/foto_karyawan: {img_err}")
-
-    # Simpan path saja di database (contoh: assets/foto_karyawan/123_456_78_aan.jpg)
-    db_image_path = f"assets/foto_karyawan/{filename}"
+        try:
+            raw_b64 = face_image
+            if ',' in face_image:
+                raw_b64 = face_image.split(',', 1)[1]
+            with open(filepath, 'wb') as f:
+                f.write(base64.b64decode(raw_b64))
+            db_image_path = f"assets/foto_karyawan/{filename}"
+        except Exception as img_err:
+            print(f"Peringatan: Gagal menyimpan file fisik gambar ke assets/foto_karyawan: {img_err}")
 
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -852,7 +848,10 @@ def add_employee():
         )
         
         conn.commit()
-        flash(f'Karyawan "{name}" berhasil ditambahkan dengan foto di assets/foto_karyawan!', 'success')
+        if db_image_path:
+            flash(f'Karyawan "{name}" berhasil ditambahkan beserta foto acuan AI!', 'success')
+        else:
+            flash(f'Karyawan "{name}" berhasil ditambahkan! Foto acuan AI akan direkam saat karyawan pertama kali login di HP.', 'success')
     except pymysql.err.IntegrityError:
         flash('Error: Username tersebut sudah terdaftar!', 'danger')
     except Exception as e:
@@ -2321,6 +2320,51 @@ def delete_announcement(id):
 # ==========================================
 # REST API PUBLIK UNTUK FLUTTER MOBILE APP
 # ==========================================
+@app.route('/api/user/register-face', methods=['POST'])
+def api_register_face():
+    data = request.get_json(silent=True) or request.form
+    username = (data.get('username') or '').strip()
+    face_image = (data.get('face_image') or '').strip()
+
+    if not username or not face_image:
+        return jsonify({'success': False, 'message': 'username dan face_image wajib diisi'}), 400
+
+    try:
+        assets_dir = os.path.join(app.root_path, 'assets', 'foto_karyawan')
+        os.makedirs(assets_dir, exist_ok=True)
+        import re
+        clean_user = re.sub(r'[^a-zA-Z0-9_-]', '_', username)
+        filename = f"ref_{clean_user}_{int(datetime.now().timestamp())}.jpg"
+        filepath = os.path.join(assets_dir, filename)
+
+        raw_b64 = face_image
+        if ',' in face_image:
+            raw_b64 = face_image.split(',', 1)[1]
+        with open(filepath, 'wb') as f:
+            f.write(base64.b64decode(raw_b64))
+
+        db_image_path = f"assets/foto_karyawan/{filename}"
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("UPDATE users SET face_image = %s WHERE username = %s", (db_image_path, username))
+        try:
+            cursor.execute("UPDATE employees SET face_image = %s WHERE username = %s", (db_image_path, username))
+        except Exception as emp_err:
+            print(f"[RegisterFace Employee Update]: {emp_err}")
+        conn.commit()
+        conn.close()
+
+        print(f"[API Register Face Success] Foto acuan wajah @{username} disimpan di {db_image_path}")
+        return jsonify({
+            'success': True,
+            'message': 'Foto wajah acuan AI berhasil disimpan!',
+            'face_image': db_image_path
+        })
+    except Exception as e:
+        print(f"[API Register Face Error]: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
 @app.route('/api/settings/hrd-contact', methods=['GET'])
 def api_get_hrd_contact():
     hrd_whatsapp = '+62 851-9616-7691'

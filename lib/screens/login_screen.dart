@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../utils/mysql_helper.dart';
 import '../utils/auth_service.dart';
 import 'home_screen.dart';
+import 'first_time_face_registration_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -46,10 +47,27 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (!mounted) return;
       _showMsg('Login Berhasil!', Colors.green);
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => HomeScreen(userData: user)),
-      );
+
+      final faceImg = user['face_image']?.toString().trim();
+      final bool needsFaceReg = user['needs_face_registration'] == true ||
+          faceImg == null ||
+          faceImg.isEmpty ||
+          faceImg == 'null';
+
+      if (needsFaceReg) {
+        debugPrint('[Login] Pengguna belum memiliki foto acuan AI. Mengarahkan ke FirstTimeFaceRegistrationScreen...');
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => FirstTimeFaceRegistrationScreen(userData: user),
+          ),
+        );
+      } else {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => HomeScreen(userData: user)),
+        );
+      }
     } else {
       _showMsg(MySQLHelper.lastLoginError ?? 'Gagal login!', Colors.red);
     }

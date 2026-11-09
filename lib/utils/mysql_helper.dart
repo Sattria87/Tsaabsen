@@ -220,10 +220,16 @@ class MySQLHelper {
           final data = jsonDecode(response.body);
           if (data['success'] == true) {
             baseUrl = url; // Simpan URL aktif yang terbukti berhasil
+            final faceImg = data['face_image']?.toString().trim();
+            final bool needsFace = data['needs_face_registration'] == true ||
+                faceImg == null ||
+                faceImg.isEmpty ||
+                faceImg == 'null';
             return {
               'username': data['username'],
               'name': data['name'],
-              'face_image': data['face_image']?.toString(),
+              'face_image': faceImg,
+              'needs_face_registration': needsFace,
               'branch': data['branch']?.toString() ?? '',
             };
           }
@@ -582,6 +588,56 @@ class MySQLHelper {
       }
     }
     return [];
+  }
+
+  /// 9. Daftarkan / Simpan Foto Acuan Wajah Pertama Kali (Face Onboarding)
+  /// Endpoint: POST /api/user/register-face
+  static Future<Map<String, dynamic>> registerFace(
+    String username,
+    String faceBase64,
+  ) async {
+    final urls = <String>[];
+    if (baseUrl.isNotEmpty) urls.add(baseUrl);
+    for (final u in candidateApiUrls) {
+      if (!urls.contains(u)) urls.add(u);
+    }
+
+    for (final url in urls) {
+      try {
+        debugPrint('[RegisterFace] Mengirim foto acuan @$username ke $url/user/register-face ...');
+        final response = await http
+            .post(
+              Uri.parse('$url/user/register-face'),
+              headers: {'Content-Type': 'application/json'},
+              body: jsonEncode({
+                'username': username,
+                'face_image': faceBase64,
+              }),
+            )
+            .timeout(const Duration(seconds: 12));
+
+        debugPrint('[RegisterFace] Response ($url): ${response.statusCode} - ${response.body}');
+
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          if (data['success'] == true) {
+            baseUrl = url;
+            return {
+              'success': true,
+              'message': data['message'] ?? 'Foto acuan wajah berhasil disimpan!',
+              'face_image': data['face_image'],
+            };
+          }
+        }
+      } catch (e) {
+        debugPrint('[RegisterFace Error] $url: $e');
+      }
+    }
+
+    return {
+      'success': false,
+      'message': 'Gagal menyimpan foto acuan ke server. Periksa koneksi internet Anda.',
+    };
   }
 }
 

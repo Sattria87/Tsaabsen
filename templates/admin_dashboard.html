@@ -365,12 +365,13 @@
 
                             <!-- KOLOM KANAN: KAMERA SELFIE ACUAN AI FACE RECOGNITION -->
                             <div class="col-md-6">
-                                <h6 class="fw-bold text-dark border-bottom pb-2 mb-3">
-                                    <i class="bi bi-camera-fill text-danger me-1"></i> <span data-i18n="emp_sec_camera">Foto Selfie Kamera (Acuan AI)</span> <span class="text-danger">*</span>
+                                <h6 class="fw-bold text-dark border-bottom pb-2 mb-2 d-flex align-items-center justify-content-between">
+                                    <span><i class="bi bi-camera-fill text-primary me-1"></i> Foto Acuan AI</span>
+                                    <span class="badge bg-secondary-subtle text-secondary small fw-normal">Opsional</span>
                                 </h6>
-                                <p class="text-muted small mb-2" data-i18n="emp_camera_guide">
-                                    Wajah harus terlihat jelas, tegak lurus, dan menghadap kamera untuk master acuan AI.
-                                </p>
+                                <div class="alert alert-info py-2 px-3 small mb-2 border-0 bg-info-subtle text-info-emphasis rounded-3" style="font-size: 11.5px; line-height: 1.4;">
+                                    <i class="bi bi-info-circle-fill me-1"></i> <strong>Bisa dilewati saat buat akun.</strong> Karyawan akan otomatis diminta mengambil foto wajah saat pertama kali login di aplikasi HP.
+                                </div>
 
                                 <!-- Kotak Kamera & Preview -->
                                 <div class="camera-container mb-2" id="cameraBox">
@@ -413,7 +414,7 @@
 
                                 <!-- Hidden Canvas & Hidden Form Input -->
                                 <canvas id="photoCanvas" style="display: none;"></canvas>
-                                <input type="hidden" name="face_image" id="faceImageInput" required>
+                                <input type="hidden" name="face_image" id="faceImageInput">
                                 
                                 <div id="faceWarningAlert" class="alert alert-danger py-2 small mt-2 mb-0 d-none" data-i18n="emp_warn_face_required">
                                     <i class="bi bi-exclamation-triangle-fill me-1"></i> Foto selfie wajah wajib diambil sebagai acuan AI sebelum menyimpan!
@@ -681,15 +682,9 @@
             }
         });
 
-        // Validasi Wajib Foto Sebelum Form Disubmit
+        // Foto bersifat opsional saat pembuatan akun (karyawan bisa foto saat pertama kali login di HP)
         document.getElementById('addEmployeeForm').addEventListener('submit', function(e) {
-            if (!faceInput.value || faceInput.value.trim() === '') {
-                e.preventDefault();
-                warningAlert.classList.remove('d-none');
-                cameraBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                alert('PERINGATAN: Anda belum mengambil foto selfie wajah karyawan!\nFoto wajah wajib diambil menggunakan kamera sebagai acuan AI Face Recognition.');
-                return false;
-            }
+            // Form dapat disubmit dengan atau tanpa foto wajah acuan
         });
 
         // Otomatis matikan kamera saat modal ditutup
@@ -709,11 +704,9 @@
             }
         });
 
-        // Buka kamera otomatis saat modal dibuka untuk kemudahan admin
+        // Admin dapat menekan tombol 'Buka Kamera' kapan saja jika ingin mengambil foto saat buat akun
         addEmployeeModal.addEventListener('shown.bs.modal', function () {
-            if (!faceInput.value) {
-                startCamera();
-            }
+            // Kamera tidak otomatis terbuka agar admin dapat mengisi form dengan cepat tanpa foto
         });
 
         // ==========================================
