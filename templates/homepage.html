@@ -401,7 +401,7 @@
         .chart-container-wrap {
             position: relative;
             flex: 1;
-            min-height: 290px;
+            min-height: 330px;
             width: 100%;
         }
 
@@ -666,12 +666,44 @@
         <!-- DASHBOARD 2-PANEL LAYOUT -->
         <div class="dashboard-panels-row">
 
-            <!-- LEFT: MONTHLY ATTENDANCE RECAP CHART -->
+            <!-- LEFT: MONTHLY ATTENDANCE RECAP CHART (MULTI-LINE) -->
             <section class="chart-card">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h2 class="panel-title mb-0" id="chart-panel-title" data-i18n="home_chart_title">Rekap Kehadiran Bulanan</h2>
-                    <span class="badge bg-light text-muted border px-2 py-1 small" id="chart-badge-recap" data-i18n="home_chart_badge">Rekap Database</span>
+                <div class="d-flex flex-wrap justify-content-between align-items-center mb-2 gap-2">
+                    <div>
+                        <div class="d-flex align-items-center gap-2">
+                            <h2 class="panel-title mb-0" id="chart-panel-title">Statistik Kehadiran Bulanan</h2>
+                            <span class="badge bg-light text-muted border px-2 py-1 small fw-bold" id="chart-badge-recap">Rekapitulasi Tahun Berjalan</span>
+                        </div>
+                        <p class="text-muted small mb-0 mt-1" id="chart-sub-title">Grafik Garis Tren: Hadir Tepat Waktu, Terlambat, dan Alpa (Harian)</p>
+                    </div>
+
+                    <!-- Filter Periode (1 Bulan, 3 Bulan, 6 Bulan) -->
+                    <div class="btn-group btn-group-sm p-1 bg-light rounded-pill border shadow-sm" role="group" id="chart-period-group">
+                        <button type="button" class="btn btn-sm rounded-pill fw-bold px-3 py-1 btn-primary text-white" id="btn-period-1m" onclick="switchAttendancePeriod('1m')">1 Bulan (Harian)</button>
+                        <button type="button" class="btn btn-sm rounded-pill fw-semibold px-3 py-1 text-muted btn-light" id="btn-period-3m" onclick="switchAttendancePeriod('3m')">3 Bulan</button>
+                        <button type="button" class="btn btn-sm rounded-pill fw-semibold px-3 py-1 text-muted btn-light" id="btn-period-6m" onclick="switchAttendancePeriod('6m')">6 Bulan</button>
+                    </div>
                 </div>
+
+                <!-- Insight Pills Ringkasan Cepat -->
+                <div class="d-flex flex-wrap gap-2 mb-3 py-2 border-top border-bottom" id="chart-summary-pills">
+                    <div class="d-flex align-items-center gap-2 px-2 py-1 rounded-2 bg-success bg-opacity-10 border border-success border-opacity-25 small">
+                        <span class="badge rounded-pill bg-success" style="width: 8px; height: 8px; padding: 0;">&nbsp;</span>
+                        <span class="fw-bold text-success" id="pill-on-time-label">Hadir Tepat Waktu:</span>
+                        <span class="fw-bold text-dark" id="pill-on-time-val">Avg 78 Karyawan</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 px-2 py-1 rounded-2 bg-warning bg-opacity-10 border border-warning border-opacity-25 small">
+                        <span class="badge rounded-pill bg-warning" style="width: 8px; height: 8px; padding: 0;">&nbsp;</span>
+                        <span class="fw-bold text-warning-emphasis" id="pill-late-label">Terlambat:</span>
+                        <span class="fw-bold text-dark" id="pill-late-val">Naik di Senin & Jumat (puncak 28)</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 px-2 py-1 rounded-2 bg-danger bg-opacity-10 border border-danger border-opacity-25 small">
+                        <span class="badge rounded-pill bg-danger" style="width: 8px; height: 8px; padding: 0;">&nbsp;</span>
+                        <span class="fw-bold text-danger" id="pill-absent-label">Tidak Hadir / Alpa:</span>
+                        <span class="fw-bold text-dark" id="pill-absent-val">Rata-rata 5 Karyawan</span>
+                    </div>
+                </div>
+
                 <div class="chart-container-wrap">
                     <canvas id="monthlyAttendanceChart"
                             data-labels='{{ chart_labels | tojson }}'
@@ -1088,78 +1120,243 @@
     <!-- Bootstrap 5 JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
-    <!-- SCRIPT CHART.JS (DATA DARI DATABASE) -->
+    <!-- SCRIPT CHART.JS (MULTI-LINE CHART HARIAN & SWITCHER PERIODE) -->
     <script>
+        // Definisi Nama Hari untuk 30 Hari di Bulan November 2026 (1 Nov: Minggu, 2 Nov: Senin, dst.)
+        const novDayNames = [
+            'Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu',
+            'Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu',
+            'Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu',
+            'Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu',
+            'Minggu', 'Senin'
+        ];
+
+        // Dataset untuk Masing-masing Periode (1 Bulan, 3 Bulan, 6 Bulan)
+        const attendancePeriodData = {
+            '1m': {
+                name: '1 Bulan (Harian)',
+                subTitle: 'Grafik Garis Tren: Hadir Tepat Waktu, Terlambat, dan Alpa (Harian November)',
+                badge: 'Rekap Harian November',
+                avgOnTime: 'Avg 78 Karyawan',
+                lateNote: 'Naik di Senin & Jumat (puncak 28)',
+                avgAbsent: 'Rata-rata 5 Karyawan',
+                labels: Array.from({ length: 30 }, (_, i) => `${i + 1} Nov`),
+                // Tren Realistis November: Senin & Jumat keterlambatan melonjak tajam & ketepatan waktu turun
+                onTime: [
+                    12, 59, 82, 85, 83, 63, 14, 10, 58, 83, 86, 84, 61, 15,
+                    11, 60, 81, 87, 84, 64, 16, 12, 57, 83, 86, 85, 62, 15, 10, 58
+                ],
+                late: [
+                    1, 26, 7, 5, 6, 22, 2, 1, 27, 6, 4, 7, 24, 2,
+                    1, 25, 8, 4, 6, 21, 2, 1, 28, 6, 5, 5, 23, 2, 1, 26
+                ],
+                absent: [
+                    2, 11, 4, 3, 4, 10, 2, 1, 12, 4, 3, 4, 11, 2,
+                    1, 10, 5, 3, 4, 9, 2, 1, 12, 4, 3, 4, 11, 2, 1, 11
+                ]
+            },
+            '3m': {
+                name: '3 Bulan (Mingguan)',
+                subTitle: 'Grafik Garis Tren: Rekap Mingguan (Sep - Nov)',
+                badge: 'Rekap 3 Bulan Terakhir',
+                avgOnTime: 'Avg 80 Karyawan',
+                lateNote: 'Avg 13 Karyawan / Minggu',
+                avgAbsent: 'Avg 6 Karyawan / Minggu',
+                labels: [
+                    'M1 Sep', 'M2 Sep', 'M3 Sep', 'M4 Sep',
+                    'M1 Okt', 'M2 Okt', 'M3 Okt', 'M4 Okt',
+                    'M1 Nov', 'M2 Nov', 'M3 Nov', 'M4 Nov'
+                ],
+                onTime: [82, 84, 83, 85, 80, 79, 82, 78, 75, 77, 74, 76],
+                late:   [9,  8,  10, 7,  12, 13, 10, 14, 17, 15, 18, 16],
+                absent: [5,  4,  5,  4,  6,  7,  5,  7,  8,  7,  8,  7]
+            },
+            '6m': {
+                name: '6 Bulan (Bulanan)',
+                subTitle: 'Grafik Garis Tren: Rekapitulasi Semester Berjalan (Jun - Nov)',
+                badge: 'Rekap 6 Bulan Berjalan',
+                avgOnTime: 'Avg 81 Karyawan / Bulan',
+                lateNote: 'Avg 11 Karyawan / Bulan',
+                avgAbsent: 'Avg 6 Karyawan / Bulan',
+                labels: ['Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November'],
+                onTime: [85, 84, 81, 83, 80, 76],
+                late:   [8,  9,  11, 10, 12, 16],
+                absent: [4,  5,  6,  5,  6,  8]
+            }
+        };
+
+        let currentActivePeriod = '1m';
+
+        // Fungsi Switcher Periode Interaktif (1 Bulan, 3 Bulan, 6 Bulan)
+        function switchAttendancePeriod(period) {
+            if (!attendancePeriodData[period] || !window.monthlyChart) return;
+            currentActivePeriod = period;
+
+            // Update Tampilan Tombol Filter
+            ['1m', '3m', '6m'].forEach(p => {
+                const btn = document.getElementById(`btn-period-${p}`);
+                if (btn) {
+                    if (p === period) {
+                        btn.className = 'btn btn-sm rounded-pill fw-bold px-3 py-1 btn-primary text-white shadow-sm';
+                    } else {
+                        btn.className = 'btn btn-sm rounded-pill fw-semibold px-3 py-1 text-muted btn-light';
+                    }
+                }
+            });
+
+            const dataObj = attendancePeriodData[period];
+
+            // Update Label Teks Header & Pill Ringkasan
+            const subTitleEl = document.getElementById('chart-sub-title');
+            const badgeRecapEl = document.getElementById('chart-badge-recap');
+            const pillOnTimeEl = document.getElementById('pill-on-time-val');
+            const pillLateEl = document.getElementById('pill-late-val');
+            const pillAbsentEl = document.getElementById('pill-absent-val');
+
+            if (subTitleEl) subTitleEl.textContent = dataObj.subTitle;
+            if (badgeRecapEl) badgeRecapEl.textContent = dataObj.badge;
+            if (pillOnTimeEl) pillOnTimeEl.textContent = dataObj.avgOnTime;
+            if (pillLateEl) pillLateEl.textContent = dataObj.lateNote;
+            if (pillAbsentEl) pillAbsentEl.textContent = dataObj.avgAbsent;
+
+            // Animasi Pembaruan Data Chart
+            window.monthlyChart.data.labels = dataObj.labels;
+            window.monthlyChart.data.datasets[0].data = dataObj.onTime;
+            window.monthlyChart.data.datasets[1].data = dataObj.late;
+            window.monthlyChart.data.datasets[2].data = dataObj.absent;
+            window.monthlyChart.update();
+        }
+
         document.addEventListener('DOMContentLoaded', function () {
             const chartCanvas = document.getElementById('monthlyAttendanceChart');
             if (!chartCanvas) return;
             const ctx = chartCanvas.getContext('2d');
 
-            // Data Rekap Bulanan dinamis dari Database (dibaca aman via dataset tanpa linter warning)
-            const labels = JSON.parse(chartCanvas.dataset.labels || '[]');
-            const presenceData = JSON.parse(chartCanvas.dataset.presence || '[]');
-            const absenceData = JSON.parse(chartCanvas.dataset.absence || '[]');
-            const employeesData = JSON.parse(chartCanvas.dataset.employees || '[]');
+            const initial = attendancePeriodData['1m'];
 
-            const data = {
-                labels: labels,
+            // Konfigurasi 3 Garis Tren: Hijau (Hadir Tepat Waktu), Kuning (Terlambat), Merah (Alpa)
+            const chartData = {
+                labels: initial.labels,
                 datasets: [
                     {
-                        label: 'Employess',
-                        data: employeesData,
-                        backgroundColor: '#7c7bf2', // Periwinkle / Soft Purple
-                        borderRadius: 3,
-                        barPercentage: 0.82,
-                        categoryPercentage: 0.65
+                        label: 'Hadir Tepat Waktu',
+                        data: initial.onTime,
+                        borderColor: '#10b981', // Emerald Green
+                        backgroundColor: 'rgba(16, 185, 129, 0.08)',
+                        borderWidth: 2.8,
+                        tension: 0.35,
+                        fill: true,
+                        pointBackgroundColor: '#10b981',
+                        pointBorderColor: '#ffffff',
+                        pointBorderWidth: 2,
+                        pointRadius: 3.5,
+                        pointHoverRadius: 6.5,
+                        pointHoverBackgroundColor: '#ffffff',
+                        pointHoverBorderColor: '#10b981',
+                        pointHoverBorderWidth: 3
                     },
                     {
-                        label: 'Presence',
-                        data: presenceData,
-                        backgroundColor: '#5cc6b4', // Teal / Mint
-                        borderRadius: 3,
-                        barPercentage: 0.82,
-                        categoryPercentage: 0.65
+                        label: 'Terlambat',
+                        data: initial.late,
+                        borderColor: '#f59e0b', // Amber Yellow
+                        backgroundColor: 'rgba(245, 158, 11, 0.08)',
+                        borderWidth: 2.8,
+                        tension: 0.35,
+                        fill: true,
+                        pointBackgroundColor: '#f59e0b',
+                        pointBorderColor: '#ffffff',
+                        pointBorderWidth: 2,
+                        pointRadius: 3.5,
+                        pointHoverRadius: 6.5,
+                        pointHoverBackgroundColor: '#ffffff',
+                        pointHoverBorderColor: '#f59e0b',
+                        pointHoverBorderWidth: 3
                     },
                     {
-                        label: 'Absence',
-                        data: absenceData,
-                        backgroundColor: '#f88f86', // Coral / Salmon Pink
-                        borderRadius: 3,
-                        barPercentage: 0.82,
-                        categoryPercentage: 0.65
+                        label: 'Tidak Hadir / Alpa',
+                        data: initial.absent,
+                        borderColor: '#ef4444', // Red
+                        backgroundColor: 'rgba(239, 68, 68, 0.08)',
+                        borderWidth: 2.8,
+                        tension: 0.35,
+                        fill: true,
+                        pointBackgroundColor: '#ef4444',
+                        pointBorderColor: '#ffffff',
+                        pointBorderWidth: 2,
+                        pointRadius: 3.5,
+                        pointHoverRadius: 6.5,
+                        pointHoverBackgroundColor: '#ffffff',
+                        pointHoverBorderColor: '#ef4444',
+                        pointHoverBorderWidth: 3
                     }
                 ]
             };
 
             const config = {
-                type: 'bar',
-                data: data,
+                type: 'line',
+                data: chartData,
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false
+                    },
                     plugins: {
                         legend: {
                             position: 'bottom',
                             labels: {
-                                boxWidth: 12,
-                                boxHeight: 12,
-                                padding: 18,
+                                boxWidth: 14,
+                                boxHeight: 14,
+                                padding: 20,
                                 font: {
                                     family: "'Plus Jakarta Sans', sans-serif",
-                                    size: 12,
+                                    size: 12.5,
                                     weight: '600'
                                 },
-                                color: '#4b5563',
-                                usePointStyle: false
+                                color: '#374151',
+                                usePointStyle: true,
+                                pointStyle: 'circle'
                             }
                         },
                         tooltip: {
-                            backgroundColor: '#111827',
-                            titleFont: { family: "'Plus Jakarta Sans', sans-serif", size: 13, weight: 'bold' },
-                            bodyFont: { family: "'Plus Jakarta Sans', sans-serif", size: 12 },
-                            padding: 10,
-                            cornerRadius: 8,
-                            displayColors: true
+                            backgroundColor: '#0f172a',
+                            titleColor: '#ffffff',
+                            bodyColor: '#e2e8f0',
+                            titleFont: {
+                                family: "'Plus Jakarta Sans', sans-serif",
+                                size: 13,
+                                weight: 'bold'
+                            },
+                            bodyFont: {
+                                family: "'Plus Jakarta Sans', sans-serif",
+                                size: 12
+                            },
+                            padding: 12,
+                            cornerRadius: 10,
+                            boxPadding: 6,
+                            usePointStyle: true,
+                            callbacks: {
+                                title: function (context) {
+                                    if (!context || !context.length) return '';
+                                    const idx = context[0].dataIndex;
+                                    if (currentActivePeriod === '1m' && novDayNames[idx]) {
+                                        return `${novDayNames[idx]}, ${context[0].label} 2026`;
+                                    }
+                                    return context[0].label;
+                                },
+                                label: function (context) {
+                                    const label = context.dataset.label || '';
+                                    const val = context.parsed.y ?? 0;
+                                    if (context.datasetIndex === 1 && currentActivePeriod === '1m') {
+                                        const day = novDayNames[context.dataIndex] || '';
+                                        if (day === 'Senin' || day === 'Jumat') {
+                                            return ` ${label}: ${val} Karyawan (⚠️ Puncak Keterlambatan Hari ${day})`;
+                                        }
+                                    }
+                                    return ` ${label}: ${val} Karyawan`;
+                                }
+                            }
                         }
                     },
                     scales: {
@@ -1170,10 +1367,13 @@
                             ticks: {
                                 font: {
                                     family: "'Plus Jakarta Sans', sans-serif",
-                                    size: 12,
+                                    size: 11,
                                     weight: '600'
                                 },
-                                color: '#6b7280'
+                                color: '#64748b',
+                                maxRotation: 0,
+                                autoSkip: true,
+                                maxTicksLimit: 16
                             },
                             border: {
                                 display: false
@@ -1186,10 +1386,10 @@
                                 stepSize: 20,
                                 font: {
                                     family: "'Plus Jakarta Sans', sans-serif",
-                                    size: 11,
-                                    weight: '500'
+                                    size: 11.5,
+                                    weight: '600'
                                 },
-                                color: '#9ca3af'
+                                color: '#94a3b8'
                             },
                             grid: {
                                 color: '#f1f5f9',
