@@ -530,6 +530,9 @@ def index():
     presence_today = 0
     absence_today = 0
     request_obs = 0
+    daily_on_time = [0] * 30
+    daily_late = [0] * 30
+    daily_absent = [0] * 30
     chart_labels = ['May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct']
     chart_presence = [0, 0, 0, 0, 0, 0]
     chart_absence = [0, 0, 0, 0, 0, 0]
@@ -597,6 +600,44 @@ def index():
             chart_presence = [0, 0, 0, 0, 0, presence_today]
             chart_absence = [0, 0, 0, 0, 0, absence_today]
             chart_employees = [total_employees] * 6
+
+        # 6b. Rekap Kehadiran Harian Bulan Berjalan (1-30) Real Database
+        # Aturan User: Jika pada tanggal tersebut belum ada yang hadir, maka TIDAK HADIR SEMUA!
+        daily_on_time = []
+        daily_late = []
+        daily_absent = []
+        daily_att_map = {}
+        try:
+            cursor.execute("""
+                SELECT 
+                    DAY(timestamp) AS d,
+                    SUM(CASE WHEN (type = 'clock_in' OR type = 'hadir') AND TIME(timestamp) <= '08:30:00' THEN 1 ELSE 0 END) AS on_time_cnt,
+                    SUM(CASE WHEN (type = 'clock_in' OR type = 'hadir') AND TIME(timestamp) > '08:30:00' THEN 1 ELSE 0 END) AS late_cnt
+                FROM attendance
+                WHERE YEAR(timestamp) = YEAR(CURDATE()) AND MONTH(timestamp) = MONTH(CURDATE())
+                GROUP BY DAY(timestamp)
+            """)
+            for row in cursor.fetchall():
+                daily_att_map[int(row['d'])] = {
+                    'on_time': int(row['on_time_cnt'] or 0),
+                    'late': int(row['late_cnt'] or 0)
+                }
+        except Exception as e:
+            print(f"[Daily Att Query Info]: {e}")
+
+        for d in range(1, 31):
+            if d in daily_att_map and (daily_att_map[d]['on_time'] > 0 or daily_att_map[d]['late'] > 0):
+                ot = daily_att_map[d]['on_time']
+                lt = daily_att_map[d]['late']
+                ab = max(0, total_employees - ot - lt)
+                daily_on_time.append(ot)
+                daily_late.append(lt)
+                daily_absent.append(ab)
+            else:
+                # Belum ada yang hadir pada tanggal ini -> Hadir Tepat Waktu: 0, Terlambat: 0, Tidak Hadir: Semua Karyawan!
+                daily_on_time.append(0)
+                daily_late.append(0)
+                daily_absent.append(total_employees)
 
         # 7. Quick Attendance List Karyawan Real dari Database
         cursor.execute("""
@@ -696,6 +737,9 @@ def index():
         chart_presence=chart_presence,
         chart_absence=chart_absence,
         chart_employees=chart_employees,
+        daily_on_time=daily_on_time,
+        daily_late=daily_late,
+        daily_absent=daily_absent,
         top_attendees=top_attendees,
         other_attendees=other_attendees,
         hrd_whatsapp=hrd_whatsapp if 'hrd_whatsapp' in locals() else '+62 851-9616-7691',

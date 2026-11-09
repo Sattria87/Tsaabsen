@@ -707,6 +707,9 @@
                 <div class="chart-container-wrap">
                     <canvas id="monthlyAttendanceChart"
                             data-total-employees="{{ total_employees }}"
+                            data-daily-on-time='{{ daily_on_time | tojson if daily_on_time else "[]" }}'
+                            data-daily-late='{{ daily_late | tojson if daily_late else "[]" }}'
+                            data-daily-absent='{{ daily_absent | tojson if daily_absent else "[]" }}'
                             data-labels='{{ chart_labels | tojson }}'
                             data-presence='{{ chart_presence | tojson }}'
                             data-absence='{{ chart_absence | tojson }}'
@@ -1136,77 +1139,90 @@
         let currentActivePeriod = '1m';
 
         // Generator Data Grafik Kehadiran yang Terkalibrasi Proporsional dengan Total Karyawan Kantor
-        function buildAttendanceDatasets(totalEmp) {
-            const N = Math.max(parseInt(totalEmp, 10) || 11, 4);
+        // Aturan: Jika belum ada yang hadir pada hari tersebut, maka HADIR = 0, TERLAMBAT = 0, TIDAK HADIR = SEMUA KARYAWAN!
+        function buildAttendanceDatasets(totalEmp, serverOnTime, serverLate, serverAbsent) {
+            const N = Math.max(parseInt(totalEmp, 10) || 11, 1);
 
             // 1. Data 1 Bulan (Harian 1-30 November)
             const onTime1m = [];
             const late1m = [];
             const absent1m = [];
 
+            const hasServerData = Array.isArray(serverOnTime) && serverOnTime.length >= 30;
+
             for (let i = 0; i < 30; i++) {
-                const day = novDayNames[i];
-                if (day === 'Minggu' || day === 'Sabtu') {
-                    // Akhir Pekan (Sabtu & Minggu): Petugas Piket / Standby
-                    const duty = Math.min(2, Math.max(1, Math.round(N * 0.10)));
-                    onTime1m.push(duty);
-                    late1m.push(0);
-                    absent1m.push(0);
-                } else if (day === 'Senin') {
-                    // Hari Senin: Lonjakan Keterlambatan Tinggi (~30-36%) & Kehadiran Tepat Waktu Menurun (~55%)
-                    const late = Math.max(2, Math.round(N * 0.35));
-                    const absent = Math.max(1, Math.round(N * 0.10));
-                    const onTime = Math.max(1, N - late - absent);
-                    onTime1m.push(onTime);
-                    late1m.push(late);
-                    absent1m.push(absent);
-                } else if (day === 'Jumat') {
-                    // Hari Jumat: Peningkatan Keterlambatan (~25-28%) & Izin Awal Akhir Pekan (~18-20%)
-                    const late = Math.max(2, Math.round(N * 0.27));
-                    const absent = Math.max(1, Math.round(N * 0.18));
-                    const onTime = Math.max(1, N - late - absent);
-                    onTime1m.push(onTime);
-                    late1m.push(late);
-                    absent1m.push(absent);
+                let ot = 0;
+                let lt = 0;
+                let ab = N;
+
+                if (hasServerData) {
+                    ot = parseInt(serverOnTime[i], 10) || 0;
+                    lt = parseInt(serverLate[i], 10) || 0;
+                    if (ot > 0 || lt > 0) {
+                        ab = Math.max(0, N - ot - lt);
+                    } else {
+                        // Belum ada yang hadir -> Tidak Hadir Semua!
+                        ot = 0;
+                        lt = 0;
+                        ab = N;
+                    }
                 } else {
-                    // Hari Kerja Ideal (Selasa, Rabu, Kamis): Kehadiran Tepat Waktu Tinggi (~80-85%)
-                    const late = Math.max(1, Math.round(N * 0.09));
-                    const absent = Math.max(1, Math.round(N * 0.09));
-                    const onTime = Math.max(1, N - late - absent);
-                    onTime1m.push(onTime);
-                    late1m.push(late);
-                    absent1m.push(absent);
+                    // Fallback jika database belum ada data sama sekali -> Semua Belum Hadir!
+                    ot = 0;
+                    lt = 0;
+                    ab = N;
                 }
+
+                onTime1m.push(ot);
+                late1m.push(lt);
+                absent1m.push(ab);
             }
 
-            // Hitung Ringkasan Rata-rata Hari Kerja
-            const weekdayIndexes = novDayNames.map((d, i) => (d !== 'Minggu' && d !== 'Sabtu') ? i : -1).filter(i => i >= 0);
-            const sumOnTime = weekdayIndexes.reduce((acc, idx) => acc + onTime1m[idx], 0);
-            const avgOnTime = Math.round(sumOnTime / weekdayIndexes.length);
+            // Hitung Ringkasan Rata-rata / Total
+            const sumOnTime = onTime1m.reduce((a, b) => a + b, 0);
+            const sumLate = late1m.reduce((a, b) => a + b, 0);
             const peakLate = Math.max(...late1m);
-            const sumAbsent = weekdayIndexes.reduce((acc, idx) => acc + absent1m[idx], 0);
-            const avgAbsent = Math.max(1, Math.round(sumAbsent / weekdayIndexes.length));
+            const hasAnyAttendance = (sumOnTime > 0 || sumLate > 0);
+
+            const avgOnTimeText = hasAnyAttendance 
+                ? `Total ${sumOnTime} Hadir Tepat Waktu` 
+                : `0 dari ${N} Karyawan Hadir`;
+            const lateNoteText = hasAnyAttendance 
+                ? (peakLate > 0 ? `Puncak Terlambat: ${peakLate} Karyawan` : `0 Terlambat`) 
+                : `0 Terlambat (Belum Ada Presensi)`;
+            const absentText = hasAnyAttendance 
+                ? `Rata-rata ${Math.round(absent1m.reduce((a, b) => a + b, 0) / 30)} Tidak Hadir` 
+                : `${N} Karyawan Tidak Hadir (Semua Belum Hadir)`;
 
             // 2. Data 3 Bulan (12 Minggu Sep - Nov)
-            const onTimeFactors3m = [0.82, 0.85, 0.83, 0.84, 0.80, 0.79, 0.82, 0.78, 0.74, 0.77, 0.72, 0.75];
-            const onTime3m = onTimeFactors3m.map(f => Math.max(1, Math.round(N * f)));
-            const late3m = onTime3m.map(ot => Math.max(1, Math.round((N - ot) * 0.65)));
+            // Jika belum ada kehadiran, buat tidak hadir semua
+            const onTime3m = hasAnyAttendance 
+                ? [82, 85, 83, 84, 80, 79, 82, 78, 74, 77, 72, 75].map(f => Math.round(N * (f / 100))) 
+                : Array(12).fill(0);
+            const late3m = hasAnyAttendance 
+                ? onTime3m.map(ot => Math.max(0, Math.round((N - ot) * 0.65))) 
+                : Array(12).fill(0);
             const absent3m = onTime3m.map((ot, idx) => Math.max(0, N - ot - late3m[idx]));
 
             // 3. Data 6 Bulan (Jun - Nov)
-            const onTimeFactors6m = [0.85, 0.84, 0.81, 0.83, 0.80, 0.76];
-            const onTime6m = onTimeFactors6m.map(f => Math.max(1, Math.round(N * f)));
-            const late6m = onTime6m.map(ot => Math.max(1, Math.round((N - ot) * 0.65)));
+            const onTime6m = hasAnyAttendance 
+                ? [85, 84, 81, 83, 80, 76].map(f => Math.round(N * (f / 100))) 
+                : Array(6).fill(0);
+            const late6m = hasAnyAttendance 
+                ? onTime6m.map(ot => Math.max(0, Math.round((N - ot) * 0.65))) 
+                : Array(6).fill(0);
             const absent6m = onTime6m.map((ot, idx) => Math.max(0, N - ot - late6m[idx]));
 
             return {
                 '1m': {
                     name: '1 Bulan (Harian)',
-                    subTitle: `Grafik Garis Tren: Hadir Tepat Waktu, Terlambat, dan Alpa (Harian November - ${N} Karyawan)`,
+                    subTitle: hasAnyAttendance
+                        ? `Grafik Garis Tren Kehadiran Realistis (Harian November - ${N} Karyawan)`
+                        : `Grafik Garis Tren: Belum Ada Kehadiran (Semua ${N} Karyawan Berstatus Tidak Hadir)`,
                     badge: 'Rekap Harian November',
-                    avgOnTime: `Avg ${avgOnTime} dari ${N} Karyawan`,
-                    lateNote: `Puncak di Senin (${peakLate} Karyawan) & Jumat`,
-                    avgAbsent: `Rata-rata ${avgAbsent} Karyawan`,
+                    avgOnTime: avgOnTimeText,
+                    lateNote: lateNoteText,
+                    avgAbsent: absentText,
                     labels: Array.from({ length: 30 }, (_, i) => `${i + 1} Nov`),
                     onTime: onTime1m,
                     late: late1m,
@@ -1216,9 +1232,9 @@
                     name: '3 Bulan (Mingguan)',
                     subTitle: `Grafik Garis Tren: Rekap Mingguan Sep - Nov (${N} Karyawan)`,
                     badge: 'Rekap 3 Bulan Terakhir',
-                    avgOnTime: `Avg ${Math.round(N * 0.80)} Karyawan / Minggu`,
-                    lateNote: `Avg ${Math.max(1, Math.round(N * 0.13))} Karyawan / Minggu`,
-                    avgAbsent: `Avg ${Math.max(1, Math.round(N * 0.07))} Karyawan / Minggu`,
+                    avgOnTime: hasAnyAttendance ? `Avg ${Math.round(N * 0.80)} Karyawan / Minggu` : `0 Karyawan`,
+                    lateNote: hasAnyAttendance ? `Avg ${Math.max(1, Math.round(N * 0.13))} Karyawan / Minggu` : `0 Karyawan`,
+                    avgAbsent: hasAnyAttendance ? `Avg ${Math.max(1, Math.round(N * 0.07))} Karyawan / Minggu` : `${N} Karyawan`,
                     labels: [
                         'M1 Sep', 'M2 Sep', 'M3 Sep', 'M4 Sep',
                         'M1 Okt', 'M2 Okt', 'M3 Okt', 'M4 Okt',
@@ -1232,9 +1248,9 @@
                     name: '6 Bulan (Bulanan)',
                     subTitle: `Grafik Garis Tren: Rekapitulasi Semester Berjalan (${N} Karyawan)`,
                     badge: 'Rekap 6 Bulan Berjalan',
-                    avgOnTime: `Avg ${Math.round(N * 0.81)} Karyawan / Bulan`,
-                    lateNote: `Avg ${Math.max(1, Math.round(N * 0.12))} Karyawan / Bulan`,
-                    avgAbsent: `Avg ${Math.max(1, Math.round(N * 0.07))} Karyawan / Bulan`,
+                    avgOnTime: hasAnyAttendance ? `Avg ${Math.round(N * 0.81)} Karyawan / Bulan` : `0 Karyawan`,
+                    lateNote: hasAnyAttendance ? `Avg ${Math.max(1, Math.round(N * 0.12))} Karyawan / Bulan` : `0 Karyawan`,
+                    avgAbsent: hasAnyAttendance ? `Avg ${Math.max(1, Math.round(N * 0.07))} Karyawan / Bulan` : `${N} Karyawan`,
                     labels: ['Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November'],
                     onTime: onTime6m,
                     late: late6m,
@@ -1306,9 +1322,20 @@
             if (!chartCanvas) return;
             const ctx = chartCanvas.getContext('2d');
 
-            // Ambil Total Karyawan Asli dari Server / Database (misal 11)
+            // Ambil Total Karyawan Asli dan Data Rekap Harian dari Server / Database
             const totalEmp = parseInt(chartCanvas.dataset.totalEmployees || '11', 10) || 11;
-            attendancePeriodData = buildAttendanceDatasets(totalEmp);
+            let serverOnTime = [];
+            let serverLate = [];
+            let serverAbsent = [];
+            try {
+                serverOnTime = JSON.parse(chartCanvas.dataset.dailyOnTime || '[]');
+                serverLate = JSON.parse(chartCanvas.dataset.dailyLate || '[]');
+                serverAbsent = JSON.parse(chartCanvas.dataset.dailyAbsent || '[]');
+            } catch(e) {
+                console.warn("[Chart Server Data Parse Warn]:", e);
+            }
+
+            attendancePeriodData = buildAttendanceDatasets(totalEmp, serverOnTime, serverLate, serverAbsent);
 
             const initial = attendancePeriodData['1m'];
             const yConfig = calculateYAxisConfig(totalEmp);
@@ -1440,7 +1467,14 @@
                                 label: function (context) {
                                     const label = context.dataset.label || '';
                                     const val = context.parsed.y ?? 0;
-                                    if (context.datasetIndex === 1 && currentActivePeriod === '1m') {
+                                    if (context.datasetIndex === 2 && currentActivePeriod === '1m') {
+                                        const onTimeVal = context.chart.data.datasets[0].data[context.dataIndex] || 0;
+                                        const lateVal = context.chart.data.datasets[1].data[context.dataIndex] || 0;
+                                        if (onTimeVal === 0 && lateVal === 0) {
+                                            return ` ${label}: ${val} Karyawan (Semua Belum Hadir)`;
+                                        }
+                                    }
+                                    if (context.datasetIndex === 1 && currentActivePeriod === '1m' && val > 0) {
                                         const day = novDayNames[context.dataIndex] || '';
                                         if (day === 'Senin' || day === 'Jumat') {
                                             return ` ${label}: ${val} Karyawan (⚠️ Puncak Keterlambatan Hari ${day})`;
