@@ -1,5 +1,5 @@
-# Base image Python 3.11 Slim (ringan & cocok untuk VPS)
-FROM python:3.11-slim
+# Base image Python 3.11 Slim via AWS ECR Public (100% IPv4, bebas error IPv6 unreachable & limit Docker Hub)
+FROM public.ecr.aws/docker/library/python:3.11-slim
 
 # Set working directory
 WORKDIR /app

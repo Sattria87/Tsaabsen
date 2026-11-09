@@ -1,4 +1,5 @@
-FROM node:20-alpine
+# Gunakan mirror resmi AWS ECR Public (100% IPv4, bebas limit & kendala network unreachable IPv6)
+FROM public.ecr.aws/docker/library/node:20-alpine
 
 WORKDIR /app
 

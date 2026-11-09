@@ -16,7 +16,7 @@ services:
   # 1. DATABASE MYSQL
   # ----------------------------------------------------------------------------
   db:
-    image: mysql:8.0
+    image: public.ecr.aws/docker/library/mysql:8.0
     container_name: projectwg_db
     restart: always
     # Sinkronisasi timezone MySQL server ke WIB (+07:00 / Asia/Jakarta)
@@ -147,7 +147,7 @@ services:
   # 5. PHPMYADMIN (Web Database Manager)
   # ----------------------------------------------------------------------------
   phpmyadmin:
-    image: phpmyadmin/phpmyadmin:latest
+    image: public.ecr.aws/docker/library/phpmyadmin:latest
     container_name: projectwg_phpmyadmin
     restart: always
     depends_on:
