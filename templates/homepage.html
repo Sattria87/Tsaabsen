@@ -710,6 +710,14 @@
                             data-daily-on-time='{{ daily_on_time | tojson if daily_on_time else "[]" }}'
                             data-daily-late='{{ daily_late | tojson if daily_late else "[]" }}'
                             data-daily-absent='{{ daily_absent | tojson if daily_absent else "[]" }}'
+                            data-labels-3m='{{ labels_3m | tojson if labels_3m else "[]" }}'
+                            data-on-time-3m='{{ on_time_3m | tojson if on_time_3m else "[]" }}'
+                            data-late-3m='{{ late_3m | tojson if late_3m else "[]" }}'
+                            data-absent-3m='{{ absent_3m | tojson if absent_3m else "[]" }}'
+                            data-labels-6m='{{ labels_6m | tojson if labels_6m else "[]" }}'
+                            data-on-time-6m='{{ on_time_6m | tojson if on_time_6m else "[]" }}'
+                            data-late-6m='{{ late_6m | tojson if late_6m else "[]" }}'
+                            data-absent-6m='{{ absent_6m | tojson if absent_6m else "[]" }}'
                             data-labels='{{ chart_labels | tojson }}'
                             data-presence='{{ chart_presence | tojson }}'
                             data-absence='{{ chart_absence | tojson }}'
@@ -1139,119 +1147,127 @@
         let currentActivePeriod = '1m';
 
         // Generator Data Grafik Kehadiran yang Terkalibrasi Proporsional dengan Total Karyawan Kantor
-        // Aturan: Jika belum ada yang hadir pada hari tersebut, maka HADIR = 0, TERLAMBAT = 0, TIDAK HADIR = SEMUA KARYAWAN!
-        function buildAttendanceDatasets(totalEmp, serverOnTime, serverLate, serverAbsent) {
+        // Aturan: Jika belum ada yang hadir pada hari/bulan tersebut (baik 1m, 3m, maupun 6m), maka HADIR = 0, TERLAMBAT = 0, TIDAK HADIR = SEMUA KARYAWAN!
+        function buildAttendanceDatasets(totalEmp, serverData) {
             const N = Math.max(parseInt(totalEmp, 10) || 11, 1);
+            serverData = serverData || {};
 
             // 1. Data 1 Bulan (Harian 1-30 November)
             const onTime1m = [];
             const late1m = [];
             const absent1m = [];
-
-            const hasServerData = Array.isArray(serverOnTime) && serverOnTime.length >= 30;
+            const sOnTime1m = serverData.dailyOnTime || [];
+            const sLate1m = serverData.dailyLate || [];
 
             for (let i = 0; i < 30; i++) {
-                let ot = 0;
-                let lt = 0;
-                let ab = N;
-
-                if (hasServerData) {
-                    ot = parseInt(serverOnTime[i], 10) || 0;
-                    lt = parseInt(serverLate[i], 10) || 0;
-                    if (ot > 0 || lt > 0) {
-                        ab = Math.max(0, N - ot - lt);
-                    } else {
-                        // Belum ada yang hadir -> Tidak Hadir Semua!
-                        ot = 0;
-                        lt = 0;
-                        ab = N;
-                    }
+                const ot = parseInt(sOnTime1m[i], 10) || 0;
+                const lt = parseInt(sLate1m[i], 10) || 0;
+                if (ot > 0 || lt > 0) {
+                    onTime1m.push(ot);
+                    late1m.push(lt);
+                    absent1m.push(Math.max(0, N - ot - lt));
                 } else {
-                    // Fallback jika database belum ada data sama sekali -> Semua Belum Hadir!
-                    ot = 0;
-                    lt = 0;
-                    ab = N;
+                    // Belum ada yang hadir -> Hadir: 0, Terlambat: 0, Tidak Hadir: SEMUA KARYAWAN!
+                    onTime1m.push(0);
+                    late1m.push(0);
+                    absent1m.push(N);
                 }
-
-                onTime1m.push(ot);
-                late1m.push(lt);
-                absent1m.push(ab);
             }
 
-            // Hitung Ringkasan Rata-rata / Total
-            const sumOnTime = onTime1m.reduce((a, b) => a + b, 0);
-            const sumLate = late1m.reduce((a, b) => a + b, 0);
-            const peakLate = Math.max(...late1m);
-            const hasAnyAttendance = (sumOnTime > 0 || sumLate > 0);
+            // 2. Data 3 Bulan (3 Bulan Terakhir)
+            const labels3m = Array.isArray(serverData.labels3m) && serverData.labels3m.length === 3
+                ? serverData.labels3m
+                : ['September', 'Oktober', 'November'];
+            const onTime3m = [];
+            const late3m = [];
+            const absent3m = [];
+            const sOnTime3m = serverData.onTime3m || [];
+            const sLate3m = serverData.late3m || [];
 
-            const avgOnTimeText = hasAnyAttendance 
-                ? `Total ${sumOnTime} Hadir Tepat Waktu` 
-                : `0 dari ${N} Karyawan Hadir`;
-            const lateNoteText = hasAnyAttendance 
-                ? (peakLate > 0 ? `Puncak Terlambat: ${peakLate} Karyawan` : `0 Terlambat`) 
-                : `0 Terlambat (Belum Ada Presensi)`;
-            const absentText = hasAnyAttendance 
-                ? `Rata-rata ${Math.round(absent1m.reduce((a, b) => a + b, 0) / 30)} Tidak Hadir` 
-                : `${N} Karyawan Tidak Hadir (Semua Belum Hadir)`;
+            for (let i = 0; i < labels3m.length; i++) {
+                const ot = parseInt(sOnTime3m[i], 10) || 0;
+                const lt = parseInt(sLate3m[i], 10) || 0;
+                if (ot > 0 || lt > 0) {
+                    onTime3m.push(ot);
+                    late3m.push(lt);
+                    absent3m.push(Math.max(0, N - ot - lt));
+                } else {
+                    // Belum ada yang hadir pada bulan ini -> Hadir: 0, Terlambat: 0, Tidak Hadir: SEMUA KARYAWAN!
+                    onTime3m.push(0);
+                    late3m.push(0);
+                    absent3m.push(N);
+                }
+            }
 
-            // 2. Data 3 Bulan (12 Minggu Sep - Nov)
-            // Jika belum ada kehadiran, buat tidak hadir semua
-            const onTime3m = hasAnyAttendance 
-                ? [82, 85, 83, 84, 80, 79, 82, 78, 74, 77, 72, 75].map(f => Math.round(N * (f / 100))) 
-                : Array(12).fill(0);
-            const late3m = hasAnyAttendance 
-                ? onTime3m.map(ot => Math.max(0, Math.round((N - ot) * 0.65))) 
-                : Array(12).fill(0);
-            const absent3m = onTime3m.map((ot, idx) => Math.max(0, N - ot - late3m[idx]));
+            // 3. Data 6 Bulan (6 Bulan Terakhir)
+            const labels6m = Array.isArray(serverData.labels6m) && serverData.labels6m.length === 6
+                ? serverData.labels6m
+                : ['Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November'];
+            const onTime6m = [];
+            const late6m = [];
+            const absent6m = [];
+            const sOnTime6m = serverData.onTime6m || [];
+            const sLate6m = serverData.late6m || [];
 
-            // 3. Data 6 Bulan (Jun - Nov)
-            const onTime6m = hasAnyAttendance 
-                ? [85, 84, 81, 83, 80, 76].map(f => Math.round(N * (f / 100))) 
-                : Array(6).fill(0);
-            const late6m = hasAnyAttendance 
-                ? onTime6m.map(ot => Math.max(0, Math.round((N - ot) * 0.65))) 
-                : Array(6).fill(0);
-            const absent6m = onTime6m.map((ot, idx) => Math.max(0, N - ot - late6m[idx]));
+            for (let i = 0; i < labels6m.length; i++) {
+                const ot = parseInt(sOnTime6m[i], 10) || 0;
+                const lt = parseInt(sLate6m[i], 10) || 0;
+                if (ot > 0 || lt > 0) {
+                    onTime6m.push(ot);
+                    late6m.push(lt);
+                    absent6m.push(Math.max(0, N - ot - lt));
+                } else {
+                    // Belum ada yang hadir pada bulan ini -> Hadir: 0, Terlambat: 0, Tidak Hadir: SEMUA KARYAWAN!
+                    onTime6m.push(0);
+                    late6m.push(0);
+                    absent6m.push(N);
+                }
+            }
+
+            // Status Kehadiran untuk Label Ringkasan
+            const hasAtt1m = onTime1m.some(v => v > 0) || late1m.some(v => v > 0);
+            const hasAtt3m = onTime3m.some(v => v > 0) || late3m.some(v => v > 0);
+            const hasAtt6m = onTime6m.some(v => v > 0) || late6m.some(v => v > 0);
 
             return {
                 '1m': {
                     name: '1 Bulan (Harian)',
-                    subTitle: hasAnyAttendance
+                    subTitle: hasAtt1m
                         ? `Grafik Garis Tren Kehadiran Realistis (Harian November - ${N} Karyawan)`
                         : `Grafik Garis Tren: Belum Ada Kehadiran (Semua ${N} Karyawan Berstatus Tidak Hadir)`,
                     badge: 'Rekap Harian November',
-                    avgOnTime: avgOnTimeText,
-                    lateNote: lateNoteText,
-                    avgAbsent: absentText,
+                    avgOnTime: hasAtt1m ? `Total ${onTime1m.reduce((a, b) => a + b, 0)} Hadir Tepat Waktu` : `0 dari ${N} Karyawan Hadir`,
+                    lateNote: hasAtt1m ? `Puncak Terlambat: ${Math.max(...late1m)} Karyawan` : `0 Terlambat (Belum Ada Presensi)`,
+                    avgAbsent: hasAtt1m ? `Rata-rata ${Math.round(absent1m.reduce((a,b)=>a+b,0)/30)} Tidak Hadir` : `${N} Karyawan Tidak Hadir (Semua Belum Hadir)`,
                     labels: Array.from({ length: 30 }, (_, i) => `${i + 1} Nov`),
                     onTime: onTime1m,
                     late: late1m,
                     absent: absent1m
                 },
                 '3m': {
-                    name: '3 Bulan (Mingguan)',
-                    subTitle: `Grafik Garis Tren: Rekap Mingguan Sep - Nov (${N} Karyawan)`,
+                    name: '3 Bulan (Bulanan)',
+                    subTitle: hasAtt3m
+                        ? `Grafik Garis Tren Kehadiran: Rekap 3 Bulan Terakhir (${N} Karyawan)`
+                        : `Grafik Garis Tren: Belum Ada Kehadiran di Periode 3 Bulan (${N} Karyawan Tidak Hadir Semua)`,
                     badge: 'Rekap 3 Bulan Terakhir',
-                    avgOnTime: hasAnyAttendance ? `Avg ${Math.round(N * 0.80)} Karyawan / Minggu` : `0 Karyawan`,
-                    lateNote: hasAnyAttendance ? `Avg ${Math.max(1, Math.round(N * 0.13))} Karyawan / Minggu` : `0 Karyawan`,
-                    avgAbsent: hasAnyAttendance ? `Avg ${Math.max(1, Math.round(N * 0.07))} Karyawan / Minggu` : `${N} Karyawan`,
-                    labels: [
-                        'M1 Sep', 'M2 Sep', 'M3 Sep', 'M4 Sep',
-                        'M1 Okt', 'M2 Okt', 'M3 Okt', 'M4 Okt',
-                        'M1 Nov', 'M2 Nov', 'M3 Nov', 'M4 Nov'
-                    ],
+                    avgOnTime: hasAtt3m ? `Total ${onTime3m.reduce((a,b)=>a+b,0)} Hadir Tepat Waktu` : `0 dari ${N} Karyawan Hadir`,
+                    lateNote: hasAtt3m ? `Puncak Terlambat: ${Math.max(...late3m)} Karyawan` : `0 Terlambat (Belum Ada Presensi)`,
+                    avgAbsent: hasAtt3m ? `Rata-rata ${Math.round(absent3m.reduce((a,b)=>a+b,0)/3)} Tidak Hadir` : `${N} Karyawan Tidak Hadir (Semua Belum Hadir)`,
+                    labels: labels3m,
                     onTime: onTime3m,
                     late: late3m,
                     absent: absent3m
                 },
                 '6m': {
                     name: '6 Bulan (Bulanan)',
-                    subTitle: `Grafik Garis Tren: Rekapitulasi Semester Berjalan (${N} Karyawan)`,
+                    subTitle: hasAtt6m
+                        ? `Grafik Garis Tren Kehadiran: Rekapitulasi Semester Berjalan (${N} Karyawan)`
+                        : `Grafik Garis Tren: Belum Ada Kehadiran di Periode 6 Bulan (${N} Karyawan Tidak Hadir Semua)`,
                     badge: 'Rekap 6 Bulan Berjalan',
-                    avgOnTime: hasAnyAttendance ? `Avg ${Math.round(N * 0.81)} Karyawan / Bulan` : `0 Karyawan`,
-                    lateNote: hasAnyAttendance ? `Avg ${Math.max(1, Math.round(N * 0.12))} Karyawan / Bulan` : `0 Karyawan`,
-                    avgAbsent: hasAnyAttendance ? `Avg ${Math.max(1, Math.round(N * 0.07))} Karyawan / Bulan` : `${N} Karyawan`,
-                    labels: ['Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November'],
+                    avgOnTime: hasAtt6m ? `Total ${onTime6m.reduce((a,b)=>a+b,0)} Hadir Tepat Waktu` : `0 dari ${N} Karyawan Hadir`,
+                    lateNote: hasAtt6m ? `Puncak Terlambat: ${Math.max(...late6m)} Karyawan` : `0 Terlambat (Belum Ada Presensi)`,
+                    avgAbsent: hasAtt6m ? `Rata-rata ${Math.round(absent6m.reduce((a,b)=>a+b,0)/6)} Tidak Hadir` : `${N} Karyawan Tidak Hadir (Semua Belum Hadir)`,
+                    labels: labels6m,
                     onTime: onTime6m,
                     late: late6m,
                     absent: absent6m
@@ -1322,20 +1338,28 @@
             if (!chartCanvas) return;
             const ctx = chartCanvas.getContext('2d');
 
-            // Ambil Total Karyawan Asli dan Data Rekap Harian dari Server / Database
+            // Ambil Total Karyawan Asli dan Data Rekap Harian/Bulanan dari Server Database
             const totalEmp = parseInt(chartCanvas.dataset.totalEmployees || '11', 10) || 11;
-            let serverOnTime = [];
-            let serverLate = [];
-            let serverAbsent = [];
+            let serverData = {};
             try {
-                serverOnTime = JSON.parse(chartCanvas.dataset.dailyOnTime || '[]');
-                serverLate = JSON.parse(chartCanvas.dataset.dailyLate || '[]');
-                serverAbsent = JSON.parse(chartCanvas.dataset.dailyAbsent || '[]');
+                serverData = {
+                    dailyOnTime: JSON.parse(chartCanvas.dataset.dailyOnTime || '[]'),
+                    dailyLate: JSON.parse(chartCanvas.dataset.dailyLate || '[]'),
+                    dailyAbsent: JSON.parse(chartCanvas.dataset.dailyAbsent || '[]'),
+                    labels3m: JSON.parse(chartCanvas.dataset.labels3m || '[]'),
+                    onTime3m: JSON.parse(chartCanvas.dataset.onTime3m || '[]'),
+                    late3m: JSON.parse(chartCanvas.dataset.late3m || '[]'),
+                    absent3m: JSON.parse(chartCanvas.dataset.absent3m || '[]'),
+                    labels6m: JSON.parse(chartCanvas.dataset.labels6m || '[]'),
+                    onTime6m: JSON.parse(chartCanvas.dataset.onTime6m || '[]'),
+                    late6m: JSON.parse(chartCanvas.dataset.late6m || '[]'),
+                    absent6m: JSON.parse(chartCanvas.dataset.absent6m || '[]')
+                };
             } catch(e) {
                 console.warn("[Chart Server Data Parse Warn]:", e);
             }
 
-            attendancePeriodData = buildAttendanceDatasets(totalEmp, serverOnTime, serverLate, serverAbsent);
+            attendancePeriodData = buildAttendanceDatasets(totalEmp, serverData);
 
             const initial = attendancePeriodData['1m'];
             const yConfig = calculateYAxisConfig(totalEmp);
@@ -1467,7 +1491,7 @@
                                 label: function (context) {
                                     const label = context.dataset.label || '';
                                     const val = context.parsed.y ?? 0;
-                                    if (context.datasetIndex === 2 && currentActivePeriod === '1m') {
+                                    if (context.datasetIndex === 2) {
                                         const onTimeVal = context.chart.data.datasets[0].data[context.dataIndex] || 0;
                                         const lateVal = context.chart.data.datasets[1].data[context.dataIndex] || 0;
                                         if (onTimeVal === 0 && lateVal === 0) {

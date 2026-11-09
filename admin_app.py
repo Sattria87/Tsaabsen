@@ -533,6 +533,14 @@ def index():
     daily_on_time = [0] * 30
     daily_late = [0] * 30
     daily_absent = [0] * 30
+    labels_3m = ['September', 'Oktober', 'November']
+    on_time_3m = [0] * 3
+    late_3m = [0] * 3
+    absent_3m = [0] * 3
+    labels_6m = ['Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November']
+    on_time_6m = [0] * 6
+    late_6m = [0] * 6
+    absent_6m = [0] * 6
     chart_labels = ['May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct']
     chart_presence = [0, 0, 0, 0, 0, 0]
     chart_absence = [0, 0, 0, 0, 0, 0]
@@ -571,35 +579,64 @@ def index():
         # 5. Ketidakhadiran Hari Ini (karyawan yang belum clock_in hari ini)
         absence_today = max(0, total_employees - presence_today)
         
-        # 6. Data Rekap Bulanan untuk Grafik (Chart.js) langsung dari Database
-        cursor.execute("""
-            SELECT 
-                DATE_FORMAT(timestamp, '%b') AS month_name,
-                MONTH(timestamp) AS month_num,
-                YEAR(timestamp) AS yr,
-                SUM(CASE WHEN type = 'clock_in' OR type = 'hadir' THEN 1 ELSE 0 END) AS presence_cnt,
-                SUM(CASE WHEN type != 'clock_in' AND type != 'clock_out' AND type != 'hadir' THEN 1 ELSE 0 END) AS absence_cnt
-            FROM attendance
-            GROUP BY YEAR(timestamp), MONTH(timestamp), DATE_FORMAT(timestamp, '%b')
-            ORDER BY YEAR(timestamp) ASC, MONTH(timestamp) ASC
-        """)
-        monthly_rows = cursor.fetchall()
+        # 6a. Rekap Kehadiran 6 Bulan & 3 Bulan Real Database
+        # Aturan User: Jika pada bulan tersebut belum ada yang hadir, maka TIDAK HADIR SEMUA!
+        indo_month_names = {
+            1: 'Januari', 2: 'Februari', 3: 'Maret', 4: 'April', 5: 'Mei', 6: 'Juni',
+            7: 'Juli', 8: 'Agustus', 9: 'September', 10: 'Oktober', 11: 'November', 12: 'Desember'
+        }
+        monthly_att_map = {}
+        try:
+            cursor.execute("""
+                SELECT 
+                    YEAR(timestamp) AS yr,
+                    MONTH(timestamp) AS mo,
+                    SUM(CASE WHEN (type = 'clock_in' OR type = 'hadir') AND TIME(timestamp) <= '08:30:00' THEN 1 ELSE 0 END) AS on_time_cnt,
+                    SUM(CASE WHEN (type = 'clock_in' OR type = 'hadir') AND TIME(timestamp) > '08:30:00' THEN 1 ELSE 0 END) AS late_cnt
+                FROM attendance
+                GROUP BY YEAR(timestamp), MONTH(timestamp)
+            """)
+            for row in cursor.fetchall():
+                key = (int(row['yr']), int(row['mo']))
+                monthly_att_map[key] = {
+                    'on_time': int(row['on_time_cnt'] or 0),
+                    'late': int(row['late_cnt'] or 0)
+                }
+        except Exception as e:
+            print(f"[Monthly Att Query Info]: {e}")
 
-        if monthly_rows and len(monthly_rows) > 0:
-            chart_labels = []
-            chart_presence = []
-            chart_absence = []
-            chart_employees = []
-            recent_months = monthly_rows[-6:]
-            for r in recent_months:
-                chart_labels.append(r['month_name'])
-                chart_presence.append(int(r['presence_cnt'] or 0))
-                chart_absence.append(int(r['absence_cnt'] or 0))
-                chart_employees.append(total_employees)
-        else:
-            chart_presence = [0, 0, 0, 0, 0, presence_today]
-            chart_absence = [0, 0, 0, 0, 0, absence_today]
-            chart_employees = [total_employees] * 6
+        # Bangun array 6 bulan terakhir s/d bulan ini
+        labels_6m = []
+        on_time_6m = []
+        late_6m = []
+        absent_6m = []
+        now_dt = datetime.datetime.now()
+        for i in range(5, -1, -1):
+            y = now_dt.year
+            m = now_dt.month - i
+            while m <= 0:
+                m += 12
+                y -= 1
+            labels_6m.append(indo_month_names.get(m, str(m)))
+            k = (y, m)
+            if k in monthly_att_map and (monthly_att_map[k]['on_time'] > 0 or monthly_att_map[k]['late'] > 0):
+                ot = monthly_att_map[k]['on_time']
+                lt = monthly_att_map[k]['late']
+                ab = max(0, total_employees - ot - lt)
+                on_time_6m.append(ot)
+                late_6m.append(lt)
+                absent_6m.append(ab)
+            else:
+                # Belum ada yang hadir pada bulan ini -> Hadir: 0, Terlambat: 0, Tidak Hadir: Semua Karyawan!
+                on_time_6m.append(0)
+                late_6m.append(0)
+                absent_6m.append(total_employees)
+
+        # 3 Bulan adalah 3 bulan terakhir dari 6 bulan
+        labels_3m = labels_6m[-3:]
+        on_time_3m = on_time_6m[-3:]
+        late_3m = late_6m[-3:]
+        absent_3m = absent_6m[-3:]
 
         # 6b. Rekap Kehadiran Harian Bulan Berjalan (1-30) Real Database
         # Aturan User: Jika pada tanggal tersebut belum ada yang hadir, maka TIDAK HADIR SEMUA!
@@ -740,6 +777,14 @@ def index():
         daily_on_time=daily_on_time,
         daily_late=daily_late,
         daily_absent=daily_absent,
+        labels_3m=labels_3m,
+        on_time_3m=on_time_3m,
+        late_3m=late_3m,
+        absent_3m=absent_3m,
+        labels_6m=labels_6m,
+        on_time_6m=on_time_6m,
+        late_6m=late_6m,
+        absent_6m=absent_6m,
         top_attendees=top_attendees,
         other_attendees=other_attendees,
         hrd_whatsapp=hrd_whatsapp if 'hrd_whatsapp' in locals() else '+62 851-9616-7691',
