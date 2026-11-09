@@ -706,6 +706,7 @@
 
                 <div class="chart-container-wrap">
                     <canvas id="monthlyAttendanceChart"
+                            data-total-employees="{{ total_employees }}"
                             data-labels='{{ chart_labels | tojson }}'
                             data-presence='{{ chart_presence | tojson }}'
                             data-absence='{{ chart_absence | tojson }}'
@@ -1131,61 +1132,134 @@
             'Minggu', 'Senin'
         ];
 
-        // Dataset untuk Masing-masing Periode (1 Bulan, 3 Bulan, 6 Bulan)
-        const attendancePeriodData = {
-            '1m': {
-                name: '1 Bulan (Harian)',
-                subTitle: 'Grafik Garis Tren: Hadir Tepat Waktu, Terlambat, dan Alpa (Harian November)',
-                badge: 'Rekap Harian November',
-                avgOnTime: 'Avg 78 Karyawan',
-                lateNote: 'Naik di Senin & Jumat (puncak 28)',
-                avgAbsent: 'Rata-rata 5 Karyawan',
-                labels: Array.from({ length: 30 }, (_, i) => `${i + 1} Nov`),
-                // Tren Realistis November: Senin & Jumat keterlambatan melonjak tajam & ketepatan waktu turun
-                onTime: [
-                    12, 59, 82, 85, 83, 63, 14, 10, 58, 83, 86, 84, 61, 15,
-                    11, 60, 81, 87, 84, 64, 16, 12, 57, 83, 86, 85, 62, 15, 10, 58
-                ],
-                late: [
-                    1, 26, 7, 5, 6, 22, 2, 1, 27, 6, 4, 7, 24, 2,
-                    1, 25, 8, 4, 6, 21, 2, 1, 28, 6, 5, 5, 23, 2, 1, 26
-                ],
-                absent: [
-                    2, 11, 4, 3, 4, 10, 2, 1, 12, 4, 3, 4, 11, 2,
-                    1, 10, 5, 3, 4, 9, 2, 1, 12, 4, 3, 4, 11, 2, 1, 11
-                ]
-            },
-            '3m': {
-                name: '3 Bulan (Mingguan)',
-                subTitle: 'Grafik Garis Tren: Rekap Mingguan (Sep - Nov)',
-                badge: 'Rekap 3 Bulan Terakhir',
-                avgOnTime: 'Avg 80 Karyawan',
-                lateNote: 'Avg 13 Karyawan / Minggu',
-                avgAbsent: 'Avg 6 Karyawan / Minggu',
-                labels: [
-                    'M1 Sep', 'M2 Sep', 'M3 Sep', 'M4 Sep',
-                    'M1 Okt', 'M2 Okt', 'M3 Okt', 'M4 Okt',
-                    'M1 Nov', 'M2 Nov', 'M3 Nov', 'M4 Nov'
-                ],
-                onTime: [82, 84, 83, 85, 80, 79, 82, 78, 75, 77, 74, 76],
-                late:   [9,  8,  10, 7,  12, 13, 10, 14, 17, 15, 18, 16],
-                absent: [5,  4,  5,  4,  6,  7,  5,  7,  8,  7,  8,  7]
-            },
-            '6m': {
-                name: '6 Bulan (Bulanan)',
-                subTitle: 'Grafik Garis Tren: Rekapitulasi Semester Berjalan (Jun - Nov)',
-                badge: 'Rekap 6 Bulan Berjalan',
-                avgOnTime: 'Avg 81 Karyawan / Bulan',
-                lateNote: 'Avg 11 Karyawan / Bulan',
-                avgAbsent: 'Avg 6 Karyawan / Bulan',
-                labels: ['Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November'],
-                onTime: [85, 84, 81, 83, 80, 76],
-                late:   [8,  9,  11, 10, 12, 16],
-                absent: [4,  5,  6,  5,  6,  8]
-            }
-        };
-
+        let attendancePeriodData = {};
         let currentActivePeriod = '1m';
+
+        // Generator Data Grafik Kehadiran yang Terkalibrasi Proporsional dengan Total Karyawan Kantor
+        function buildAttendanceDatasets(totalEmp) {
+            const N = Math.max(parseInt(totalEmp, 10) || 11, 4);
+
+            // 1. Data 1 Bulan (Harian 1-30 November)
+            const onTime1m = [];
+            const late1m = [];
+            const absent1m = [];
+
+            for (let i = 0; i < 30; i++) {
+                const day = novDayNames[i];
+                if (day === 'Minggu' || day === 'Sabtu') {
+                    // Akhir Pekan (Sabtu & Minggu): Petugas Piket / Standby
+                    const duty = Math.min(2, Math.max(1, Math.round(N * 0.10)));
+                    onTime1m.push(duty);
+                    late1m.push(0);
+                    absent1m.push(0);
+                } else if (day === 'Senin') {
+                    // Hari Senin: Lonjakan Keterlambatan Tinggi (~30-36%) & Kehadiran Tepat Waktu Menurun (~55%)
+                    const late = Math.max(2, Math.round(N * 0.35));
+                    const absent = Math.max(1, Math.round(N * 0.10));
+                    const onTime = Math.max(1, N - late - absent);
+                    onTime1m.push(onTime);
+                    late1m.push(late);
+                    absent1m.push(absent);
+                } else if (day === 'Jumat') {
+                    // Hari Jumat: Peningkatan Keterlambatan (~25-28%) & Izin Awal Akhir Pekan (~18-20%)
+                    const late = Math.max(2, Math.round(N * 0.27));
+                    const absent = Math.max(1, Math.round(N * 0.18));
+                    const onTime = Math.max(1, N - late - absent);
+                    onTime1m.push(onTime);
+                    late1m.push(late);
+                    absent1m.push(absent);
+                } else {
+                    // Hari Kerja Ideal (Selasa, Rabu, Kamis): Kehadiran Tepat Waktu Tinggi (~80-85%)
+                    const late = Math.max(1, Math.round(N * 0.09));
+                    const absent = Math.max(1, Math.round(N * 0.09));
+                    const onTime = Math.max(1, N - late - absent);
+                    onTime1m.push(onTime);
+                    late1m.push(late);
+                    absent1m.push(absent);
+                }
+            }
+
+            // Hitung Ringkasan Rata-rata Hari Kerja
+            const weekdayIndexes = novDayNames.map((d, i) => (d !== 'Minggu' && d !== 'Sabtu') ? i : -1).filter(i => i >= 0);
+            const sumOnTime = weekdayIndexes.reduce((acc, idx) => acc + onTime1m[idx], 0);
+            const avgOnTime = Math.round(sumOnTime / weekdayIndexes.length);
+            const peakLate = Math.max(...late1m);
+            const sumAbsent = weekdayIndexes.reduce((acc, idx) => acc + absent1m[idx], 0);
+            const avgAbsent = Math.max(1, Math.round(sumAbsent / weekdayIndexes.length));
+
+            // 2. Data 3 Bulan (12 Minggu Sep - Nov)
+            const onTimeFactors3m = [0.82, 0.85, 0.83, 0.84, 0.80, 0.79, 0.82, 0.78, 0.74, 0.77, 0.72, 0.75];
+            const onTime3m = onTimeFactors3m.map(f => Math.max(1, Math.round(N * f)));
+            const late3m = onTime3m.map(ot => Math.max(1, Math.round((N - ot) * 0.65)));
+            const absent3m = onTime3m.map((ot, idx) => Math.max(0, N - ot - late3m[idx]));
+
+            // 3. Data 6 Bulan (Jun - Nov)
+            const onTimeFactors6m = [0.85, 0.84, 0.81, 0.83, 0.80, 0.76];
+            const onTime6m = onTimeFactors6m.map(f => Math.max(1, Math.round(N * f)));
+            const late6m = onTime6m.map(ot => Math.max(1, Math.round((N - ot) * 0.65)));
+            const absent6m = onTime6m.map((ot, idx) => Math.max(0, N - ot - late6m[idx]));
+
+            return {
+                '1m': {
+                    name: '1 Bulan (Harian)',
+                    subTitle: `Grafik Garis Tren: Hadir Tepat Waktu, Terlambat, dan Alpa (Harian November - ${N} Karyawan)`,
+                    badge: 'Rekap Harian November',
+                    avgOnTime: `Avg ${avgOnTime} dari ${N} Karyawan`,
+                    lateNote: `Puncak di Senin (${peakLate} Karyawan) & Jumat`,
+                    avgAbsent: `Rata-rata ${avgAbsent} Karyawan`,
+                    labels: Array.from({ length: 30 }, (_, i) => `${i + 1} Nov`),
+                    onTime: onTime1m,
+                    late: late1m,
+                    absent: absent1m
+                },
+                '3m': {
+                    name: '3 Bulan (Mingguan)',
+                    subTitle: `Grafik Garis Tren: Rekap Mingguan Sep - Nov (${N} Karyawan)`,
+                    badge: 'Rekap 3 Bulan Terakhir',
+                    avgOnTime: `Avg ${Math.round(N * 0.80)} Karyawan / Minggu`,
+                    lateNote: `Avg ${Math.max(1, Math.round(N * 0.13))} Karyawan / Minggu`,
+                    avgAbsent: `Avg ${Math.max(1, Math.round(N * 0.07))} Karyawan / Minggu`,
+                    labels: [
+                        'M1 Sep', 'M2 Sep', 'M3 Sep', 'M4 Sep',
+                        'M1 Okt', 'M2 Okt', 'M3 Okt', 'M4 Okt',
+                        'M1 Nov', 'M2 Nov', 'M3 Nov', 'M4 Nov'
+                    ],
+                    onTime: onTime3m,
+                    late: late3m,
+                    absent: absent3m
+                },
+                '6m': {
+                    name: '6 Bulan (Bulanan)',
+                    subTitle: `Grafik Garis Tren: Rekapitulasi Semester Berjalan (${N} Karyawan)`,
+                    badge: 'Rekap 6 Bulan Berjalan',
+                    avgOnTime: `Avg ${Math.round(N * 0.81)} Karyawan / Bulan`,
+                    lateNote: `Avg ${Math.max(1, Math.round(N * 0.12))} Karyawan / Bulan`,
+                    avgAbsent: `Avg ${Math.max(1, Math.round(N * 0.07))} Karyawan / Bulan`,
+                    labels: ['Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November'],
+                    onTime: onTime6m,
+                    late: late6m,
+                    absent: absent6m
+                }
+            };
+        }
+
+        // Hitung Skala Sumbu Y Otomatis yang Ideal Berdasarkan Jumlah Karyawan
+        function calculateYAxisConfig(totalEmp) {
+            const N = Math.max(parseInt(totalEmp, 10) || 11, 4);
+            if (N <= 15) {
+                // Untuk kantor ~11-15 karyawan: skala 0 s/d 14 atau 15 dengan step 2 atau 3
+                const maxVal = N <= 10 ? 12 : Math.max(14, Math.ceil((N + 2) / 2) * 2);
+                return { min: 0, max: maxVal, stepSize: 2 };
+            } else if (N <= 30) {
+                const maxVal = Math.ceil((N * 1.15) / 5) * 5;
+                return { min: 0, max: maxVal, stepSize: 5 };
+            } else if (N <= 60) {
+                const maxVal = Math.ceil((N * 1.15) / 10) * 10;
+                return { min: 0, max: maxVal, stepSize: 10 };
+            } else {
+                return { min: 0, max: 100, stepSize: 20 };
+            }
+        }
 
         // Fungsi Switcher Periode Interaktif (1 Bulan, 3 Bulan, 6 Bulan)
         function switchAttendancePeriod(period) {
@@ -1232,7 +1306,25 @@
             if (!chartCanvas) return;
             const ctx = chartCanvas.getContext('2d');
 
+            // Ambil Total Karyawan Asli dari Server / Database (misal 11)
+            const totalEmp = parseInt(chartCanvas.dataset.totalEmployees || '11', 10) || 11;
+            attendancePeriodData = buildAttendanceDatasets(totalEmp);
+
             const initial = attendancePeriodData['1m'];
+            const yConfig = calculateYAxisConfig(totalEmp);
+
+            // Update Tampilan Ringkasan Awal
+            const subTitleEl = document.getElementById('chart-sub-title');
+            const badgeRecapEl = document.getElementById('chart-badge-recap');
+            const pillOnTimeEl = document.getElementById('pill-on-time-val');
+            const pillLateEl = document.getElementById('pill-late-val');
+            const pillAbsentEl = document.getElementById('pill-absent-val');
+
+            if (subTitleEl) subTitleEl.textContent = initial.subTitle;
+            if (badgeRecapEl) badgeRecapEl.textContent = initial.badge;
+            if (pillOnTimeEl) pillOnTimeEl.textContent = initial.avgOnTime;
+            if (pillLateEl) pillLateEl.textContent = initial.lateNote;
+            if (pillAbsentEl) pillAbsentEl.textContent = initial.avgAbsent;
 
             // Konfigurasi 3 Garis Tren: Hijau (Hadir Tepat Waktu), Kuning (Terlambat), Merah (Alpa)
             const chartData = {
@@ -1380,10 +1472,10 @@
                             }
                         },
                         y: {
-                            min: 0,
-                            max: 100,
+                            min: yConfig.min,
+                            max: yConfig.max,
                             ticks: {
-                                stepSize: 20,
+                                stepSize: yConfig.stepSize,
                                 font: {
                                     family: "'Plus Jakarta Sans', sans-serif",
                                     size: 11.5,

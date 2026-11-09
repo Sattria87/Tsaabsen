@@ -52,9 +52,9 @@
             home_quick_title: "Aktivitas Presensi Terkini",
             home_quick_unit: "Karyawan",
             home_quick_empty: "Belum ada riwayat aktivitas presensi karyawan hari ini.",
-            chart_lbl_emp: "Karyawan",
-            chart_lbl_pres: "Hadir",
-            chart_lbl_abs: "Tidak Hadir",
+            chart_lbl_emp: "Hadir Tepat Waktu",
+            chart_lbl_pres: "Terlambat",
+            chart_lbl_abs: "Tidak Hadir / Alpa",
 
             // ================= EMPLOYEE (MANAJEMEN KARYAWAN) =================
             emp_mgmt_title: "Manajemen Data Karyawan",
@@ -337,9 +337,9 @@
             home_quick_title: "Recent Attendance Activity",
             home_quick_unit: "Employees",
             home_quick_empty: "No employee attendance activity recorded today.",
-            chart_lbl_emp: "Employees",
-            chart_lbl_pres: "Presence",
-            chart_lbl_abs: "Absence",
+            chart_lbl_emp: "On Time",
+            chart_lbl_pres: "Late",
+            chart_lbl_abs: "Absent",
 
             // ================= EMPLOYEE (MANAJEMEN KARYAWAN) =================
             emp_mgmt_title: "Employee Management",
