@@ -8,9 +8,10 @@ WORKDIR /app
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
 
-# Install dependensi sistem Linux yang dibutuhkan oleh OpenCV & dlib/face_recognition
+# Install dependensi sistem Linux yang dibutuhkan oleh OpenCV & InsightFace
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
+    python3-dev \
     cmake \
     libgl1 \
     libglib2.0-0 \
@@ -18,6 +19,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxext6 \
     libxrender-dev \
     && rm -rf /var/lib/apt/lists/*
+
+# Upgrade pip & install build tools (wheel, setuptools, Cython)
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel Cython
+
+# Pre-install numpy < 2.0.0 agar ekstensi C InsightFace kompatibel dan tidak crash
+RUN pip install --no-cache-dir "numpy>=1.24.0,<2.0.0"
 
 # Copy requirements dan install packages python
 COPY requirements.txt .
