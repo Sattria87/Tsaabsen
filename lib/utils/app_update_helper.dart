@@ -4,16 +4,51 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:open_filex/open_filex.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'mysql_helper.dart';
 
 /// Helper Komprehensif untuk Auto-Update In-App Aplikasi Mobile
 class AppUpdateHelper {
-  /// Versi aplikasi yang terpasang di perangkat ini
-  static const String currentVersionName = "1.0.0";
-  static const int currentVersionCode = 1;
+  /// Mengambil version code riil dari metadata platform (APK) dan cache instalasi
+  static Future<int> getCurrentVersionCode() async {
+    int code = 1;
+    try {
+      final info = await PackageInfo.fromPlatform();
+      code = int.tryParse(info.buildNumber) ?? 1;
+    } catch (_) {}
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final savedCode = prefs.getInt('app_installed_version_code') ?? 0;
+      if (savedCode > code) {
+        code = savedCode;
+      }
+    } catch (_) {}
+
+    return code;
+  }
+
+  /// Mengambil version name riil (contoh: "1.0.1")
+  static Future<String> getCurrentVersionName() async {
+    try {
+      final info = await PackageInfo.fromPlatform();
+      if (info.version.isNotEmpty) return info.version;
+    } catch (_) {}
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final savedName = prefs.getString('app_installed_version_name');
+      if (savedName != null && savedName.isNotEmpty) {
+        return savedName;
+      }
+    } catch (_) {}
+
+    return "1.0.1";
+  }
 
   /// Flag agar dialog tidak muncul berulang kali di sesi yang sama jika sudah ditolak
   static bool _hasPromptedThisSession = false;
@@ -28,6 +63,9 @@ class AppUpdateHelper {
     }
 
     try {
+      final int currentVersionCode = await getCurrentVersionCode();
+      final String currentVersionName = await getCurrentVersionName();
+
       final candidateUrls = [
         MySQLHelper.baseUrl,
         ...candidateApiUrls,
@@ -60,8 +98,14 @@ class AppUpdateHelper {
         return;
       }
 
-      final bool hasUpdate = updateData['has_update'] == true;
+      final int latestCode = int.tryParse(updateData['version_code']?.toString() ?? '1') ?? 1;
+      final bool hasUpdateServer = updateData['has_update'] == true;
+
+      // Proteksi anti-loop: Hanya anggap ada update jika versi server BENAR-BENAR lebih tinggi dari versi terpasang
+      final bool hasUpdate = hasUpdateServer && (latestCode > currentVersionCode);
+
       if (!hasUpdate) {
+        debugPrint('[AutoUpdate] Aplikasi sudah dalam versi terbaru (v$currentVersionName / Build $currentVersionCode).');
         if (isManual && context.mounted) {
           _showToast(
             context,
@@ -75,7 +119,6 @@ class AppUpdateHelper {
       _hasPromptedThisSession = true;
 
       final String latestVersion = updateData['latest_version'] ?? '1.0.1';
-      final int latestCode = updateData['version_code'] ?? 2;
       final bool isMandatory = updateData['is_mandatory'] == true;
       final String title = updateData['title'] ?? 'Pembaruan Aplikasi Tersedia';
       final String changelog =
@@ -94,6 +137,7 @@ class AppUpdateHelper {
             child: _buildUpdateDialog(
               ctx,
               title: title,
+              currentVersionName: currentVersionName,
               latestVersion: latestVersion,
               latestCode: latestCode,
               changelog: changelog,
@@ -115,6 +159,7 @@ class AppUpdateHelper {
   static Widget _buildUpdateDialog(
     BuildContext context, {
     required String title,
+    required String currentVersionName,
     required String latestVersion,
     required int latestCode,
     required String changelog,
@@ -257,7 +302,7 @@ class AppUpdateHelper {
                     ),
                     onPressed: () {
                       Navigator.of(context).pop();
-                      _startInAppDownload(context, downloadUrl, latestVersion);
+                      _startInAppDownload(context, downloadUrl, latestVersion, latestCode);
                     },
                     child: const Text(
                       'Perbarui Sekarang',
@@ -281,6 +326,7 @@ class AppUpdateHelper {
     BuildContext context,
     String downloadUrl,
     String targetVersion,
+    int targetCode,
   ) async {
     // Siapkan URL lengkap
     String fullUrl = downloadUrl;
@@ -415,6 +461,13 @@ class AppUpdateHelper {
       if (context.mounted) {
         Navigator.of(context, rootNavigator: true).pop();
       }
+
+      // Simpan status versi yang baru saja diunduh ke SharedPreferences agar tidak looping update
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setInt('app_installed_version_code', targetCode);
+        await prefs.setString('app_installed_version_name', targetVersion);
+      } catch (_) {}
 
       // Otomatis Buka Installer APK Android
       debugPrint('[AutoUpdate] Membuka file APK: ${apkFile.path}');
