@@ -2105,7 +2105,9 @@ def get_rekap_report_data(start_date, end_date, branch='all'):
             COALESCE(e.team, 'Operasional') AS divisi,
             COALESCE(e.branch, 'TUNGGAL SAHABAT ABADI') AS branch,
             COALESCE(SUM(att.is_hadir), 0) AS jumlah_hadir,
-            COALESCE(SUM(CASE WHEN att.is_hadir = 0 AND att.is_izin_raw = 1 THEN 1 ELSE 0 END), 0) AS jumlah_izin
+            COALESCE(SUM(CASE WHEN att.is_hadir = 0 AND att.is_izin_keperluan = 1 THEN 1 ELSE 0 END), 0) AS jumlah_izin_keperluan,
+            COALESCE(SUM(CASE WHEN att.is_hadir = 0 AND att.is_izin_sakit = 1 THEN 1 ELSE 0 END), 0) AS jumlah_izin_sakit,
+            COALESCE(SUM(CASE WHEN att.is_hadir = 0 AND att.is_cuti = 1 THEN 1 ELSE 0 END), 0) AS jumlah_cuti
         FROM employees e
         LEFT JOIN (
             SELECT 
@@ -2113,12 +2115,22 @@ def get_rekap_report_data(start_date, end_date, branch='all'):
                 DATE(timestamp) AS att_date,
                 MAX(CASE WHEN type IN ('clock_in', 'hadir') THEN 1 ELSE 0 END) AS is_hadir,
                 MAX(CASE 
-                    WHEN (type IN ('izin', 'sakit', 'cuti', 'sick_leave', 'necessity_leave', 'izin_sakit', 'izin_keperluan') 
-                          OR type LIKE 'izin_%%' 
-                          OR (reason IS NOT NULL AND reason != '' AND type NOT IN ('clock_in', 'clock_out', 'hadir')))
+                    WHEN (type IN ('cuti', 'izin_cuti') OR type LIKE '%%cuti%%')
                       AND LOWER(COALESCE(status, '')) IN ('approved', 'disetujui')
                     THEN 1 ELSE 0 
-                END) AS is_izin_raw
+                END) AS is_cuti,
+                MAX(CASE 
+                    WHEN (type IN ('sakit', 'izin_sakit', 'sick_leave') OR type LIKE '%%sakit%%')
+                      AND LOWER(COALESCE(status, '')) IN ('approved', 'disetujui')
+                    THEN 1 ELSE 0 
+                END) AS is_izin_sakit,
+                MAX(CASE 
+                    WHEN (type IN ('izin', 'izin_keperluan', 'necessity_leave') 
+                          OR (type LIKE 'izin_%%' AND type NOT LIKE '%%sakit%%' AND type NOT LIKE '%%cuti%%') 
+                          OR (reason IS NOT NULL AND reason != '' AND type NOT IN ('clock_in', 'clock_out', 'hadir', 'cuti', 'izin_cuti', 'sakit', 'izin_sakit')))
+                      AND LOWER(COALESCE(status, '')) IN ('approved', 'disetujui')
+                    THEN 1 ELSE 0 
+                END) AS is_izin_keperluan
             FROM attendance
             WHERE timestamp >= %s AND timestamp <= %s
             GROUP BY username, DATE(timestamp)
@@ -2137,21 +2149,26 @@ def get_rekap_report_data(start_date, end_date, branch='all'):
 
     processed_data = []
     tot_hadir = 0
-    tot_izin = 0
+    tot_izin_keperluan = 0
+    tot_izin_sakit = 0
+    tot_cuti = 0
     tot_alpha = 0
 
     for idx, r in enumerate(rows, 1):
         hadir = int(r['jumlah_hadir'] or 0)
-        izin = int(r['jumlah_izin'] or 0)
-        # Jika izin sudah disetujui (Approved) maka masuk ke jumlah_izin.
-        # Jika izin ditolak (Rejected) atau pending, maka tidak dihitung izin dan tetap dihitung sebagai alpha (tidak hadir).
-        alpha = max(0, total_hari_kerja - hadir - izin)
+        izin_keperluan = int(r['jumlah_izin_keperluan'] or 0)
+        izin_sakit = int(r['jumlah_izin_sakit'] or 0)
+        cuti = int(r['jumlah_cuti'] or 0)
+        # Alpha: Hari kerja dikurangi hadir, izin keperluan, izin sakit, dan cuti
+        alpha = max(0, total_hari_kerja - hadir - izin_keperluan - izin_sakit - cuti)
         pct = round((hadir / total_hari_kerja) * 100) if total_hari_kerja > 0 else 0
         username = r['username'] or ''
         email = username if '@' in username else (f"{username.lower()}@gmail.com" if username else '-')
 
         tot_hadir += hadir
-        tot_izin += izin
+        tot_izin_keperluan += izin_keperluan
+        tot_izin_sakit += izin_sakit
+        tot_cuti += cuti
         tot_alpha += alpha
 
         processed_data.append({
@@ -2162,7 +2179,9 @@ def get_rekap_report_data(start_date, end_date, branch='all'):
             'branch': r['branch'] if r['branch'] != 'Surabaya' else 'TUNGGAL SAHABAT ABADI',
             'total_hari_kerja': total_hari_kerja,
             'jumlah_hadir': hadir,
-            'jumlah_izin': izin,
+            'jumlah_izin_keperluan': izin_keperluan,
+            'jumlah_izin_sakit': izin_sakit,
+            'jumlah_cuti': cuti,
             'jumlah_alpha': alpha,
             'persentase': f"{pct}%",
             'persentase_num': pct
@@ -2173,7 +2192,9 @@ def get_rekap_report_data(start_date, end_date, branch='all'):
         'branches': branches,
         'total_hari_kerja': total_hari_kerja,
         'tot_hadir': tot_hadir,
-        'tot_izin': tot_izin,
+        'tot_izin_keperluan': tot_izin_keperluan,
+        'tot_izin_sakit': tot_izin_sakit,
+        'tot_cuti': tot_cuti,
         'tot_alpha': tot_alpha
     }
 
@@ -2241,23 +2262,37 @@ def export_report():
         elements.append(Paragraph(f"Rentang Tanggal: {start_date} s/d {end_date} | Kantor Cabang: {branch_str} | Dicetak: {datetime.now().strftime('%d/%m/%Y %H:%M')}", sub_style))
         elements.append(Spacer(1, 14))
 
-        table_headers = ["No", "Nama Karyawan", "Email", "Divisi", "Total Hari Kerja", "Jumlah Hadir", "Jumlah Izin", "Jumlah Alpha", "Kehadiran (%)"]
+        table_headers = [
+            "No",
+            "Nama Karyawan",
+            "Email",
+            "Divisi",
+            "Total Hari Kerja",
+            "Jumlah Hadir",
+            "Izin Keperluan",
+            "Izin Sakit",
+            "Cuti",
+            "Jumlah Alpha",
+            "Kehadiran (%)"
+        ]
         table_rows = [table_headers]
 
         for r in processed_data:
             table_rows.append([
                 str(r['no']),
-                str(r['name'])[:22],
-                str(r['email'])[:24],
+                str(r['name'])[:20],
+                str(r['email'])[:22],
                 str(r['divisi'])[:16],
                 str(r['total_hari_kerja']),
                 str(r['jumlah_hadir']),
-                str(r['jumlah_izin']),
+                str(r['jumlah_izin_keperluan']),
+                str(r['jumlah_izin_sakit']),
+                str(r['jumlah_cuti']),
                 str(r['jumlah_alpha']),
                 r['persentase']
             ])
 
-        col_widths = [30, 140, 140, 90, 80, 65, 65, 65, 75]
+        col_widths = [24, 110, 116, 72, 65, 55, 60, 55, 45, 65, 65]
         pdf_table = Table(table_rows, colWidths=col_widths, repeatRows=1)
         pdf_table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#131B3E')),
@@ -2265,12 +2300,12 @@ def export_report():
             ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
             ('ALIGN', (1, 1), (3, -1), 'LEFT'),
             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, 0), 9),
+            ('FONTSIZE', (0, 0), (-1, 0), 8.5),
             ('BOTTOMPADDING', (0, 0), (-1, 0), 6),
             ('TOPPADDING', (0, 0), (-1, 0), 6),
             ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#F8FAFC')]),
             ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#E2E8F0')),
-            ('FONTSIZE', (0, 1), (-1, -1), 8.5),
+            ('FONTSIZE', (0, 1), (-1, -1), 8),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
         ]))
         elements.append(pdf_table)
@@ -2297,7 +2332,9 @@ def export_report():
             "Divisi",
             "Total Hari Kerja",
             "Jumlah Hadir",
-            "Jumlah Izin",
+            "Izin Keperluan",
+            "Izin Sakit",
+            "Cuti",
             "Jumlah Alpha",
             "Persentase Kehadiran (%)"
         ]
@@ -2314,7 +2351,7 @@ def export_report():
         for col_num in range(1, len(headers) + 1):
             cell = ws.cell(row=1, column=col_num)
             cell.font = Font(name="Calibri", bold=True, color="000000", size=11)
-            cell.alignment = Alignment(horizontal="center" if col_num in [1, 5, 6, 7, 8, 9] else "left", vertical="center")
+            cell.alignment = Alignment(horizontal="center" if col_num in [1, 5, 6, 7, 8, 9, 10, 11] else "left", vertical="center")
             cell.border = thin_border
 
         # Isi data baris demi baris (Row 2+)
@@ -2326,7 +2363,9 @@ def export_report():
                 r['divisi'],
                 r['total_hari_kerja'],
                 r['jumlah_hadir'],
-                r['jumlah_izin'],
+                r['jumlah_izin_keperluan'],
+                r['jumlah_izin_sakit'],
+                r['jumlah_cuti'],
                 r['jumlah_alpha'],
                 r['persentase']
             ]
@@ -2336,7 +2375,7 @@ def export_report():
                 c = ws.cell(row=current_row, column=col_idx)
                 c.border = thin_border
                 c.font = Font(name="Calibri", size=11)
-                if col_idx in [1, 5, 6, 7, 8, 9]:
+                if col_idx in [1, 5, 6, 7, 8, 9, 10, 11]:
                     c.alignment = Alignment(horizontal="center")
                 else:
                     c.alignment = Alignment(horizontal="left")
