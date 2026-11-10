@@ -3203,6 +3203,136 @@ def api_get_attendance_status(username):
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
 
+
+@app.route('/api/attendance/monthly-stats/<username>', methods=['GET'])
+def api_get_monthly_stats(username):
+    """Mengembalikan statistik kehadiran bulanan karyawan untuk visualisasi diagram donat/pie di Flutter."""
+    try:
+        now = datetime.now()
+        month = int(request.args.get('month', now.month))
+        year = int(request.args.get('year', now.year))
+    except (ValueError, TypeError):
+        now = datetime.now()
+        month = now.month
+        year = now.year
+
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Ambil semua data clock_in user pada bulan dan tahun tersebut
+        cursor.execute("""
+            SELECT id, type, timestamp, clock_out, reason, status
+            FROM attendance
+            WHERE username = %s 
+              AND MONTH(timestamp) = %s 
+              AND YEAR(timestamp) = %s 
+              AND type = 'clock_in'
+            ORDER BY timestamp ASC
+        """, (username, month, year))
+        clock_in_rows = cursor.fetchall()
+        
+        # Ambil juga data pengajuan izin/cuti/sakit yang disetujui (Approved)
+        cursor.execute("""
+            SELECT id, type, timestamp, reason, status
+            FROM attendance
+            WHERE username = %s 
+              AND MONTH(timestamp) = %s 
+              AND YEAR(timestamp) = %s 
+              AND type NOT IN ('clock_in', 'clock_out')
+              AND status = 'Approved'
+            ORDER BY timestamp ASC
+        """, (username, month, year))
+        leave_rows = cursor.fetchall()
+        conn.close()
+
+        # Klasifikasi presensi
+        # Sangat Baik: hadir sebelum 08:50 (< 530 menit)
+        # Baik: hadir 08:50 - 09:00 (530 - 540 menit)
+        # Cukup: hadir 09:01 - 09:30 (541 - 570 menit)
+        # Kurang: hadir > 09:30 (> 570 menit)
+        sangat_baik = 0
+        baik = 0
+        cukup = 0
+        kurang = 0
+
+        # Catat tanggal unik presensi
+        unique_dates = set()
+
+        for r in clock_in_rows:
+            ts = r.get('timestamp')
+            if ts:
+                d_key = ts.strftime('%Y-%m-%d')
+                if d_key not in unique_dates:
+                    unique_dates.add(d_key)
+                    tot_minutes = ts.hour * 60 + ts.minute
+                    if tot_minutes < 530:
+                        sangat_baik += 1
+                    elif tot_minutes <= 540:
+                        baik += 1
+                    elif tot_minutes <= 570:
+                        cukup += 1
+                    else:
+                        kurang += 1
+
+        total_hadir = len(unique_dates)
+        total_kategori = sangat_baik + baik + cukup + kurang
+
+        if total_kategori > 0:
+            pct_sangat_baik = round((sangat_baik / total_kategori) * 100, 1)
+            pct_baik = round((baik / total_kategori) * 100, 1)
+            pct_cukup = round((cukup / total_kategori) * 100, 1)
+            pct_kurang = round((kurang / total_kategori) * 100, 1)
+        else:
+            pct_sangat_baik = pct_baik = pct_cukup = pct_kurang = 0.0
+
+        # Tentukan status performa keseluruhan & teks ulasan
+        if total_hadir == 0:
+            rating_status = "Belum Ada Data"
+            rating_color = "#9CA3AF"
+            summary_text = "Belum ada catatan presensi pada bulan ini."
+        else:
+            good_ratio = (sangat_baik + baik) / total_kategori if total_kategori > 0 else 0
+            if good_ratio >= 0.8:
+                rating_status = "Sangat Baik"
+                rating_color = "#10B981"
+                summary_text = f"Bulan ini Anda telah melakukan presensi sebanyak {total_hadir} kali dengan performa Sangat Baik ({round(good_ratio * 100)}% tepat waktu). Pertahankan kedisiplinan Anda!"
+            elif good_ratio >= 0.6:
+                rating_status = "Baik"
+                rating_color = "#0284C7"
+                summary_text = f"Bulan ini Anda telah melakukan presensi sebanyak {total_hadir} kali dengan performa Baik. Kedisiplinan Anda sudah sangat positif!"
+            elif (kurang / total_kategori if total_kategori > 0 else 0) < 0.4:
+                rating_status = "Cukup"
+                rating_color = "#F59E0B"
+                summary_text = f"Bulan ini Anda telah melakukan presensi sebanyak {total_hadir} kali dengan performa Cukup. Usahakan untuk hadir lebih awal."
+            else:
+                rating_status = "Kurang"
+                rating_color = "#EF4444"
+                summary_text = f"Bulan ini Anda telah melakukan presensi sebanyak {total_hadir} kali dengan performa Kurang. Mohon tingkatkan ketepatan waktu jam masuk."
+
+        return jsonify({
+            'success': True,
+            'username': username,
+            'month': month,
+            'year': year,
+            'total_hadir': total_hadir,
+            'sangat_baik': sangat_baik,
+            'baik': baik,
+            'cukup': cukup,
+            'kurang': kurang,
+            'pct_sangat_baik': pct_sangat_baik,
+            'pct_baik': pct_baik,
+            'pct_cukup': pct_cukup,
+            'pct_kurang': pct_kurang,
+            'rating_status': rating_status,
+            'rating_color': rating_color,
+            'summary_text': summary_text,
+            'total_izin_cuti': len(leave_rows)
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
 # ==========================================
 # AUTO UPDATE SYSTEM (API & WEB ADMIN DASHBOARD)
 # ==========================================

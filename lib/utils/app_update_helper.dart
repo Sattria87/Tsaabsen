@@ -497,3 +497,4 @@ class AppUpdateHelper {
     );
   }
 }
+

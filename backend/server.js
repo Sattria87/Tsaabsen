@@ -820,6 +820,123 @@ app.get('/api/attendance/status/:username', async (req, res) => {
 });
 
 // ============================================================
+// GET /api/attendance/monthly-stats/:username
+// ============================================================
+app.get('/api/attendance/monthly-stats/:username', async (req, res) => {
+  const { username } = req.params;
+  const now = new Date();
+  const month = parseInt(req.query.month) || (now.getMonth() + 1);
+  const year  = parseInt(req.query.year)  || now.getFullYear();
+
+  try {
+    const [clockInRows] = await pool.execute(
+      `SELECT id, type, timestamp, clock_out, reason, status
+       FROM attendance
+       WHERE username = ? AND MONTH(timestamp) = ? AND YEAR(timestamp) = ? AND type = 'clock_in'
+       ORDER BY timestamp ASC`,
+      [username, month, year]
+    );
+
+    const [leaveRows] = await pool.execute(
+      `SELECT id, type, timestamp, reason, status
+       FROM attendance
+       WHERE username = ? AND MONTH(timestamp) = ? AND YEAR(timestamp) = ? AND type NOT IN ('clock_in', 'clock_out') AND status = 'Approved'
+       ORDER BY timestamp ASC`,
+      [username, month, year]
+    );
+
+    let sangatBaik = 0;
+    let baik = 0;
+    let cukup = 0;
+    let kurang = 0;
+    const uniqueDates = new Set();
+
+    for (const r of clockInRows) {
+      if (r.timestamp) {
+        const d = new Date(r.timestamp);
+        const dKey = `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+        if (!uniqueDates.has(dKey)) {
+          uniqueDates.add(dKey);
+          const totMinutes = d.getHours() * 60 + d.getMinutes();
+          if (totMinutes < 530) {
+            sangatBaik++;
+          } else if (totMinutes <= 540) {
+            baik++;
+          } else if (totMinutes <= 570) {
+            cukup++;
+          } else {
+            kurang++;
+          }
+        }
+      }
+    }
+
+    const totalHadir = uniqueDates.size;
+    const totalKategori = sangatBaik + baik + cukup + kurang;
+
+    let pctSangatBaik = 0;
+    let pctBaik = 0;
+    let pctCukup = 0;
+    let pctKurang = 0;
+
+    if (totalKategori > 0) {
+      pctSangatBaik = parseFloat(((sangatBaik / totalKategori) * 100).toFixed(1));
+      pctBaik = parseFloat(((baik / totalKategori) * 100).toFixed(1));
+      pctCukup = parseFloat(((cukup / totalKategori) * 100).toFixed(1));
+      pctKurang = parseFloat(((kurang / totalKategori) * 100).toFixed(1));
+    }
+
+    let ratingStatus = 'Belum Ada Data';
+    let ratingColor  = '#9CA3AF';
+    let summaryText  = 'Belum ada catatan presensi pada bulan ini.';
+
+    if (totalHadir > 0) {
+      const goodRatio = (sangatBaik + baik) / totalKategori;
+      if (goodRatio >= 0.8) {
+        ratingStatus = 'Sangat Baik';
+        ratingColor  = '#10B981';
+        summaryText  = `Bulan ini Anda telah melakukan presensi sebanyak ${totalHadir} kali dengan performa Sangat Baik (${Math.round(goodRatio * 100)}% tepat waktu). Pertahankan kedisiplinan Anda!`;
+      } else if (goodRatio >= 0.6) {
+        ratingStatus = 'Baik';
+        ratingColor  = '#0284C7';
+        summaryText  = `Bulan ini Anda telah melakukan presensi sebanyak ${totalHadir} kali dengan performa Baik. Kedisiplinan Anda sudah sangat positif!`;
+      } else if ((kurang / totalKategori) < 0.4) {
+        ratingStatus = 'Cukup';
+        ratingColor  = '#F59E0B';
+        summaryText  = `Bulan ini Anda telah melakukan presensi sebanyak ${totalHadir} kali dengan performa Cukup. Usahakan untuk hadir lebih awal.`;
+      } else {
+        ratingStatus = 'Kurang';
+        ratingColor  = '#EF4444';
+        summaryText  = `Bulan ini Anda telah melakukan presensi sebanyak ${totalHadir} kali dengan performa Kurang. Mohon tingkatkan ketepatan waktu jam masuk.`;
+      }
+    }
+
+    return res.json({
+      success: true,
+      username,
+      month,
+      year,
+      total_hadir: totalHadir,
+      sangat_baik: sangatBaik,
+      baik,
+      cukup,
+      kurang,
+      pct_sangat_baik: pctSangatBaik,
+      pct_baik: pctBaik,
+      pct_cukup: pctCukup,
+      pct_kurang: pctKurang,
+      rating_status: ratingStatus,
+      rating_color: ratingColor,
+      summary_text: summaryText,
+      total_izin_cuti: leaveRows.length
+    });
+  } catch (err) {
+    console.error('[Monthly Stats Error]', err.message);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// ============================================================
 // START SERVER (BIND 0.0.0.0 agar bisa diakses device lain / HP)
 // ============================================================
 app.listen(PORT, '0.0.0.0', () => {

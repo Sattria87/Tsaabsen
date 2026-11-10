@@ -7,6 +7,7 @@ import '../utils/auth_service.dart';
 import '../utils/holiday_helper.dart';
 import '../utils/app_update_helper.dart';
 import '../widgets/employee_avatar.dart';
+import '../widgets/monthly_attendance_pie_chart.dart';
 import '../utils/notification_helper.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'login_screen.dart';
@@ -36,6 +37,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   String _clockOutTime = '--:--';
   bool _isSubmittingClockOut = false;
   Timer? _dailyResetTimer;
+
+  // State untuk Ringkasan Kehadiran & Donut/Pie Chart Bulanan (Sesuai Referensi Desain)
+  int _selectedStatsMonth = DateTime.now().month;
+  int _selectedStatsYear = DateTime.now().year;
+  bool _isLoadingMonthlyStats = false;
+  Map<String, dynamic>? _monthlyStatsData;
 
   // State untuk Pengajuan Izin / Sakit
   bool _hasPermission = false;
@@ -92,6 +99,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
     HolidayHelper.syncHolidays();
     _checkAttendanceStatus();
+    _loadMonthlyAttendanceStats();
     _loadHrdConfigAndAnnouncements();
     NotificationHelper.init();
     _scheduleNextResetTimer();
@@ -181,6 +189,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
           _isLoading = false;
         });
+
+        if (_hasClockedIn && !_hasClockedOut) {
+          _loadMonthlyAttendanceStats();
+        }
       } else {
         setState(() => _isLoading = false);
       }
@@ -188,6 +200,35 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       debugPrint('Error cek status absensi: $e');
       if (mounted) {
         setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  // Muat data statistik kehadiran bulanan untuk Donut Chart & Performa
+  Future<void> _loadMonthlyAttendanceStats() async {
+    final username = widget.userData['username']?.toString() ?? '';
+    if (username.isEmpty) return;
+
+    if (mounted) {
+      setState(() => _isLoadingMonthlyStats = true);
+    }
+
+    try {
+      final res = await MySQLHelper.getMonthlyAttendanceStats(
+        username,
+        month: _selectedStatsMonth,
+        year: _selectedStatsYear,
+      );
+      if (mounted) {
+        setState(() {
+          _monthlyStatsData = res;
+          _isLoadingMonthlyStats = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error _loadMonthlyAttendanceStats: $e');
+      if (mounted) {
+        setState(() => _isLoadingMonthlyStats = false);
       }
     }
   }
@@ -545,8 +586,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
                     // ==========================================
                     // BROADCAST PEMBERITAHUAN DARI HRD
+                    // (Sembunyikan saat user sudah Clock In sesuai referensi desain)
                     // ==========================================
-                    _buildAnnouncementsSection(),
+                    if (!(_hasClockedIn && !_hasClockedOut))
+                      _buildAnnouncementsSection(),
 
                     // ==========================================
                     // PENGINGAT JIKA BELUM CLOCK IN HARI INI
@@ -1057,201 +1100,422 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
-  // TAMPILAN 2: SUDAH CLOCK IN -> TAMPILAN CLOCK OUT
+  // TAMPILAN 2: SUDAH CLOCK IN -> TAMPILAN RINGKASAN KEHADIRAN (DONUT CHART & PERFORMA) + BANNER TOMBOL CLOCK OUT
   Widget _buildClockOutView() {
+    final int sangatBaik = (_monthlyStatsData?['sangat_baik'] as num?)?.toInt() ?? 0;
+    final int baik = (_monthlyStatsData?['baik'] as num?)?.toInt() ?? 0;
+    final int cukup = (_monthlyStatsData?['cukup'] as num?)?.toInt() ?? 0;
+    final int kurang = (_monthlyStatsData?['kurang'] as num?)?.toInt() ?? 0;
+    final int totalHadir = (_monthlyStatsData?['total_hadir'] as num?)?.toInt() ?? 0;
+    final String ratingStatus = _monthlyStatsData?['rating_status']?.toString() ?? 'Belum Ada Data';
+    final String summaryText = _monthlyStatsData?['summary_text']?.toString() ??
+        'Bulan ini Anda telah melakukan presensi sebanyak $totalHadir kali.';
+    final Color ratingColor = _parseHexColor(
+      _monthlyStatsData?['rating_color'],
+      const Color(0xFF10B981),
+    );
+
+    const monthNames = [
+      'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+    ];
+    final years = [2024, 2025, 2026, 2027];
+
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24.0),
+      padding: const EdgeInsets.symmetric(horizontal: 20.0),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(height: 10),
 
-          // Ikon Jam Melingkar Biru dengan Panah (Sesuai Desain)
-          const ClockOutRefreshIcon(size: 80),
-
-          const SizedBox(height: 18),
-
-          // Teks Ajakan: Klik Tombol untuk Clock Out
-          const Text(
-            'Klik Tombol untuk\nClock Out',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 18.5,
-              fontWeight: FontWeight.w800,
-              color: Color(0xFF1F2937),
-              height: 1.35,
+          // 1. CARD AREA ABSENSI (Persis Sesuai Gambar Referensi)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFE2E8F0), width: 0.8),
             ),
-          ),
-
-          const SizedBox(height: 24),
-
-          // Tombol Biru Clock Out
-          Center(
-            child: SizedBox(
-              width: 210,
-              height: 48,
-              child: ElevatedButton(
-                onPressed: _isSubmittingClockOut ? null : _confirmClockOut,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF007AFF),
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(26),
+            child: Row(
+              children: [
+                Container(
+                  width: 3.5,
+                  height: 26,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF97316),
+                    borderRadius: BorderRadius.circular(2),
                   ),
                 ),
-                child: _isSubmittingClockOut
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          color: Colors.white,
-                          strokeWidth: 2,
-                        ),
-                      )
-                    : const Text(
-                        'Clock Out',
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Area Absensi',
                         style: TextStyle(
-                          fontSize: 15.5,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF64748B),
                         ),
                       ),
-              ),
+                      const SizedBox(height: 2),
+                      Text(
+                        _clockInLocation.isNotEmpty ? _clockInLocation : 'Semua Cabang',
+                        style: const TextStyle(
+                          fontSize: 14.5,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF1E293B),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(
+                  Icons.my_location_rounded,
+                  color: Color(0xFF007AFF),
+                  size: 22,
+                ),
+              ],
             ),
           ),
 
-          const SizedBox(height: 36),
+          const SizedBox(height: 16),
 
-          // Card Informasi Clock In & Lokasi (Sesuai Desain)
+          // 2. CARD RINGKASAN KEHADIRAN (DONUT CHART & FILTER BULAN/TAHUN)
           Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 20),
+            padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(24),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.06),
-                  blurRadius: 22,
-                  offset: const Offset(0, 8),
+                  color: Colors.black.withValues(alpha: 0.05),
+                  blurRadius: 18,
+                  offset: const Offset(0, 6),
                 ),
               ],
+              border: Border.all(color: const Color(0xFFF1F5F9), width: 1.2),
             ),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Baris 1: Jam Clock In
+                // Header Baris: Judul + Dropdown Filter Bulan & Tahun
                 Row(
                   children: [
-                    const Icon(
-                      Icons.access_time_rounded,
-                      color: Color(0xFF6B7280),
-                      size: 26,
-                    ),
-                    const SizedBox(width: 14),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Clock In',
-                          style: TextStyle(
-                            color: Color(0xFF9CA3AF),
-                            fontSize: 12,
-                            fontWeight: FontWeight.w400,
-                          ),
+                    const Expanded(
+                      child: Text(
+                        'Ringkasan Kehadiran',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF1E293B),
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          _clockInTime.isNotEmpty && _clockInTime != '--:--'
-                              ? _clockInTime
-                              : '08:50',
-                          style: const TextStyle(
-                            color: Color(0xFF1E293B),
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-
-                const Divider(
-                  height: 28,
-                  color: Color(0xFFF1F5F9),
-                  thickness: 1.2,
-                ),
-
-                // Baris 2: Lokasi Kantor
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.location_on_outlined,
-                      color: Color(0xFF6B7280),
-                      size: 26,
-                    ),
-                    const SizedBox(width: 14),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Lokasi',
-                          style: TextStyle(
-                            color: Color(0xFF9CA3AF),
-                            fontSize: 12,
-                            fontWeight: FontWeight.w400,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          _clockInLocation.isNotEmpty
-                              ? _clockInLocation
-                              : 'Kantor Pusat',
-                          style: const TextStyle(
-                            color: Color(0xFF1E293B),
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-
-                // Baris 3: Keterangan Kehadiran (Sangat Baik / Baik / Kurang Baik)
-                if (_clockInKeterangan != null &&
-                    _clockInKeterangan!.isNotEmpty) ...[
-                  const Divider(
-                    height: 28,
-                    color: Color(0xFFF1F5F9),
-                    thickness: 1.2,
-                  ),
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.verified_outlined,
-                        color: Color(0xFF6B7280),
-                        size: 26,
                       ),
-                      const SizedBox(width: 14),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                    ),
+                    // Dropdown Bulan
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<int>(
+                          value: _selectedStatsMonth,
+                          isDense: true,
+                          icon: const Icon(
+                            Icons.keyboard_arrow_down_rounded,
+                            color: Color(0xFFDC2626),
+                            size: 18,
+                          ),
+                          items: List.generate(12, (index) {
+                            return DropdownMenuItem<int>(
+                              value: index + 1,
+                              child: Text(
+                                monthNames[index],
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFF1E293B),
+                                ),
+                              ),
+                            );
+                          }),
+                          onChanged: (val) {
+                            if (val != null) {
+                              setState(() => _selectedStatsMonth = val);
+                              _loadMonthlyAttendanceStats();
+                            }
+                          },
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    // Dropdown Tahun
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<int>(
+                          value: _selectedStatsYear,
+                          isDense: true,
+                          icon: const Icon(
+                            Icons.keyboard_arrow_down_rounded,
+                            color: Color(0xFFDC2626),
+                            size: 18,
+                          ),
+                          items: years.map((y) {
+                            return DropdownMenuItem<int>(
+                              value: y,
+                              child: Text(
+                                '$y',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFF1E293B),
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                          onChanged: (val) {
+                            if (val != null) {
+                              setState(() => _selectedStatsYear = val);
+                              _loadMonthlyAttendanceStats();
+                            }
+                          },
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 20),
+
+                // Diagram Donut di kiri & Legend di kanan (Sesuai Referensi Gambar)
+                _isLoadingMonthlyStats
+                    ? const Center(
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(vertical: 24.0),
+                          child: CircularProgressIndicator(strokeWidth: 2.5),
+                        ),
+                      )
+                    : Row(
                         children: [
-                          const Text(
-                            'Keterangan',
-                            style: TextStyle(
-                              color: Color(0xFF9CA3AF),
-                              fontSize: 12,
-                              fontWeight: FontWeight.w400,
+                          MonthlyAttendanceDonutChart(
+                            sangatBaik: sangatBaik,
+                            baik: baik,
+                            cukup: cukup,
+                            kurang: kurang,
+                            totalHadir: totalHadir,
+                            size: 122,
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildLegendItem(
+                                  const Color(0xFF00BFA5),
+                                  'Sangat Baik',
+                                  sangatBaik,
+                                ),
+                                _buildLegendItem(
+                                  const Color(0xFF38BDF8),
+                                  'Baik',
+                                  baik,
+                                ),
+                                _buildLegendItem(
+                                  const Color(0xFFF59E0B),
+                                  'Cukup',
+                                  cukup,
+                                ),
+                                _buildLegendItem(
+                                  const Color(0xFFEF4444),
+                                  'Kurang',
+                                  kurang,
+                                ),
+                              ],
                             ),
                           ),
-                          const SizedBox(height: 4),
-                          _buildKeteranganBadge(_clockInKeterangan!),
                         ],
+                      ),
+
+                const Divider(height: 26, color: Color(0xFFF1F5F9), thickness: 1.2),
+
+                // Card Ulasan Performa Kehadiran User (Berapa kali absen & Baik/Buruknya)
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0xFFE2E8F0), width: 0.8),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: ratingColor.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: ratingColor.withValues(alpha: 0.35),
+                                width: 0.8,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.verified_rounded,
+                                  size: 13,
+                                  color: ratingColor,
+                                ),
+                                const SizedBox(width: 5),
+                                Text(
+                                  ratingStatus,
+                                  style: TextStyle(
+                                    fontSize: 11.5,
+                                    fontWeight: FontWeight.w800,
+                                    color: ratingColor,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Spacer(),
+                          Text(
+                            '$totalHadir Hari Hadir',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFF1E293B),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        summaryText,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFF475569),
+                          height: 1.45,
+                        ),
                       ),
                     ],
                   ),
-                ],
+                ),
               ],
+            ),
+          ),
+
+          const SizedBox(height: 14),
+
+          // 3. CARD INFO CLOCK IN HARI INI
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFE2E8F0), width: 0.8),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEFF6FF),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(
+                    Icons.access_time_filled_rounded,
+                    color: Color(0xFF007AFF),
+                    size: 22,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Absen Masuk: ${_clockInTime.isNotEmpty && _clockInTime != '--:--' ? _clockInTime : '08:50'} WIB',
+                        style: const TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF1E293B),
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Lokasi: $_clockInLocation${_clockInKeterangan != null && _clockInKeterangan!.isNotEmpty ? ' • $_clockInKeterangan' : ''}',
+                        style: const TextStyle(
+                          fontSize: 11.5,
+                          color: Color(0xFF64748B),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 22),
+
+          // 4. BANNER MERAH TOMBOL CLOCK OUT (Persis Sesuai Permintaan & Gambar Referensi)
+          SizedBox(
+            width: double.infinity,
+            height: 54,
+            child: ElevatedButton(
+              onPressed: _isSubmittingClockOut ? null : _confirmClockOut,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFDC2626), // Merah cerah seperti di referensi
+                foregroundColor: Colors.white,
+                elevation: 2,
+                shadowColor: const Color(0xFFDC2626).withValues(alpha: 0.35),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(28),
+                ),
+              ),
+              child: _isSubmittingClockOut
+                  ? const SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2.2,
+                      ),
+                    )
+                  : const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.document_scanner_rounded,
+                          size: 22,
+                          color: Colors.white,
+                        ),
+                        SizedBox(width: 10),
+                        Text(
+                          'Clock Out',
+                          style: TextStyle(
+                            fontSize: 16.5,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.3,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
             ),
           ),
 
@@ -1259,6 +1523,56 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         ],
       ),
     );
+  }
+
+  // Helper Widget untuk Baris Legend Donut Chart
+  Widget _buildLegendItem(Color dotColor, String label, int count) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3.5),
+      child: Row(
+        children: [
+          Container(
+            width: 11,
+            height: 11,
+            decoration: BoxDecoration(
+              color: dotColor,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF475569),
+              ),
+            ),
+          ),
+          Text(
+            '$count',
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF1E293B),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Helper Parse Hex Color String
+  Color _parseHexColor(dynamic hexString, Color defaultColor) {
+    if (hexString == null) return defaultColor;
+    try {
+      final str = hexString.toString().replaceAll('#', '');
+      if (str.length == 6) {
+        return Color(int.parse('FF$str', radix: 16));
+      }
+    } catch (_) {}
+    return defaultColor;
   }
 
   // TAMPILAN 3: SUDAH CLOCK OUT (ABSENSI HARI INI SELESAI)

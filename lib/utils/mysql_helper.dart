@@ -446,6 +446,57 @@ class MySQLHelper {
     return null;
   }
 
+  /// Ambil statistik presensi bulanan karyawan untuk Pie/Donut Chart & Ringkasan Performa
+  /// Endpoint: GET /api/attendance/monthly-stats/:username?month=X&year=Y
+  static Future<Map<String, dynamic>?> getMonthlyAttendanceStats(
+    String username, {
+    int? month,
+    int? year,
+  }) async {
+    final now = DateTime.now();
+    final m = month ?? now.month;
+    final y = year ?? now.year;
+
+    final urls = {baseUrl, ...candidateApiUrls}.toList();
+    for (final url in urls) {
+      try {
+        final uri = Uri.parse('$url/attendance/monthly-stats/$username?month=$m&year=$y');
+        final response = await http.get(uri).timeout(const Duration(seconds: 5));
+
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          if (data['success'] == true) {
+            baseUrl = url;
+            return Map<String, dynamic>.from(data);
+          }
+        }
+      } catch (e) {
+        debugPrint('Error API (getMonthlyAttendanceStats) ke $url: $e');
+      }
+    }
+
+    // Fallback data offline / default aman jika server belum merespon
+    return {
+      'success': true,
+      'username': username,
+      'month': m,
+      'year': y,
+      'total_hadir': 0,
+      'sangat_baik': 0,
+      'baik': 0,
+      'cukup': 0,
+      'kurang': 0,
+      'pct_sangat_baik': 0.0,
+      'pct_baik': 0.0,
+      'pct_cukup': 0.0,
+      'pct_kurang': 0.0,
+      'rating_status': 'Belum Ada Data',
+      'rating_color': '#9CA3AF',
+      'summary_text': 'Belum ada catatan presensi pada bulan ini.',
+      'total_izin_cuti': 0,
+    };
+  }
+
   /// 6. Verifikasi Wajah AI (Python Flask - Port 5001 / Proxy Express)
   /// Endpoint: POST /api/verify
   static Future<Map<String, dynamic>> verifyFaceWithAI(
