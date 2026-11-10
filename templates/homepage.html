@@ -685,62 +685,59 @@
         <!-- DASHBOARD 2-PANEL LAYOUT -->
         <div class="dashboard-panels-row">
 
-            <!-- LEFT: MONTHLY ATTENDANCE RECAP CHART (MULTI-LINE) -->
+            <!-- LEFT: MONTHLY ATTENDANCE RECAP CHART (BAR CHART DENGAN KOMPARASI HARI KERJA) -->
             <section class="chart-card">
-                <div class="d-flex flex-wrap justify-content-between align-items-center mb-2 gap-2">
+                <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
                     <div>
                         <div class="d-flex align-items-center gap-2">
-                            <h2 class="panel-title mb-0" id="chart-panel-title">Statistik Kehadiran Bulanan</h2>
-                            <span class="badge bg-light text-muted border px-2 py-1 small fw-bold" id="chart-badge-recap">Rekapitulasi Tahun Berjalan</span>
+                            <h2 class="panel-title mb-0" id="chart-panel-title">Statistik Data Kehadiran Bulanan</h2>
+                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2.5 py-1 small fw-bold" id="chart-badge-recap">
+                                <i class="bi bi-calendar-check me-1"></i>Rekap {{ current_month_name }}
+                            </span>
                         </div>
-                        <p class="text-muted small mb-0 mt-1" id="chart-sub-title">Grafik Garis Tren: Hadir Tepat Waktu, Terlambat, dan Alpa (Harian)</p>
+                        <p class="text-muted small mb-0 mt-1" id="chart-sub-title">Grafik Batang Statistik: Komparasi Kehadiran Karyawan terhadap Hari Kerja Bulan Ini</p>
                     </div>
 
-                    <!-- Filter Periode (1 Bulan, 3 Bulan, 6 Bulan) -->
-                    <div class="btn-group btn-group-sm p-1 bg-light rounded-pill border shadow-sm" role="group" id="chart-period-group">
-                        <button type="button" class="btn btn-sm rounded-pill fw-bold px-3 py-1 btn-primary text-white" id="btn-period-1m" onclick="switchAttendancePeriod('1m')">1 Bulan (Harian)</button>
-                        <button type="button" class="btn btn-sm rounded-pill fw-semibold px-3 py-1 text-muted btn-light" id="btn-period-3m" onclick="switchAttendancePeriod('3m')">3 Bulan</button>
-                        <button type="button" class="btn btn-sm rounded-pill fw-semibold px-3 py-1 text-muted btn-light" id="btn-period-6m" onclick="switchAttendancePeriod('6m')">6 Bulan</button>
+                    <!-- Dropdown Select Option Filter Metrik (Hadir Tepat Waktu, Hadir Overall, Izin, Tidak Hadir) -->
+                    <div class="d-flex align-items-center gap-2">
+                        <label for="metricSelector" class="small fw-semibold text-secondary mb-0 d-none d-sm-inline">Pilih Metrik:</label>
+                        <select id="metricSelector" class="form-select form-select-sm fw-bold rounded-pill px-3 py-1.5 shadow-sm border-secondary-subtle" style="min-width: 240px; cursor: pointer; font-size: 13px;" onchange="changeAttendanceMetric(this.value)">
+                            <option value="tepat_waktu" selected>🟢 Hadir Tepat Waktu (Hijau)</option>
+                            <option value="hadir_overall">🔵 Hadir Overall (Biru)</option>
+                            <option value="izin">🟡 Izin (Kuning)</option>
+                            <option value="tidak_hadir">🔴 Tidak Hadir (Merah)</option>
+                        </select>
                     </div>
                 </div>
 
                 <!-- Insight Pills Ringkasan Cepat -->
-                <div class="d-flex flex-wrap gap-2 mb-3 py-2 border-top border-bottom" id="chart-summary-pills">
-                    <div class="d-flex align-items-center gap-2 px-2 py-1 rounded-2 bg-success bg-opacity-10 border border-success border-opacity-25 small">
-                        <span class="badge rounded-pill bg-success" style="width: 8px; height: 8px; padding: 0;">&nbsp;</span>
-                        <span class="fw-bold text-success" id="pill-on-time-label">Hadir Tepat Waktu:</span>
-                        <span class="fw-bold text-dark" id="pill-on-time-val">Avg 78 Karyawan</span>
+                <div class="d-flex flex-wrap align-items-center gap-2 mb-3 py-2 border-top border-bottom" id="chart-summary-pills">
+                    <div class="d-flex align-items-center gap-2 px-2.5 py-1 rounded-2 bg-light border small">
+                        <i class="bi bi-calendar3 text-primary"></i>
+                        <span class="fw-bold text-secondary">Hari Kerja 1 Bulan:</span>
+                        <span class="fw-bold text-dark" id="pill-working-days-val">{{ total_working_days_month }} Hari</span>
                     </div>
-                    <div class="d-flex align-items-center gap-2 px-2 py-1 rounded-2 bg-warning bg-opacity-10 border border-warning border-opacity-25 small">
-                        <span class="badge rounded-pill bg-warning" style="width: 8px; height: 8px; padding: 0;">&nbsp;</span>
-                        <span class="fw-bold text-warning-emphasis" id="pill-late-label">Terlambat:</span>
-                        <span class="fw-bold text-dark" id="pill-late-val">Naik di Senin & Jumat (puncak 28)</span>
+                    <div class="d-flex align-items-center gap-2 px-2.5 py-1 rounded-2 small" id="pill-active-metric-box" style="background-color: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.25);">
+                        <span class="badge rounded-pill" id="pill-active-metric-dot" style="background-color: #10B981; width: 8px; height: 8px; padding: 0;">&nbsp;</span>
+                        <span class="fw-bold" id="pill-active-metric-label" style="color: #059669;">Metrik Terpilih:</span>
+                        <span class="fw-bold text-dark" id="pill-active-metric-val">Hadir Tepat Waktu (Hijau)</span>
                     </div>
-                    <div class="d-flex align-items-center gap-2 px-2 py-1 rounded-2 bg-danger bg-opacity-10 border border-danger border-opacity-25 small">
-                        <span class="badge rounded-pill bg-danger" style="width: 8px; height: 8px; padding: 0;">&nbsp;</span>
-                        <span class="fw-bold text-danger" id="pill-absent-label">Tidak Hadir / Alpa:</span>
-                        <span class="fw-bold text-dark" id="pill-absent-val">Rata-rata 5 Karyawan</span>
+                    <div class="d-flex align-items-center gap-1.5 text-muted small ms-auto d-none d-md-flex">
+                        <i class="bi bi-cursor-fill text-primary"></i>
+                        <span>Klik batang grafik untuk melihat angka & detail interaktif</span>
                     </div>
                 </div>
 
-                <div class="chart-container-wrap">
+                <div class="chart-container-wrap" style="position: relative; height: 360px;">
                     <canvas id="monthlyAttendanceChart"
-                            data-total-employees="{{ total_employees }}"
-                            data-daily-on-time='{{ daily_on_time | tojson if daily_on_time else "[]" }}'
-                            data-daily-late='{{ daily_late | tojson if daily_late else "[]" }}'
-                            data-daily-absent='{{ daily_absent | tojson if daily_absent else "[]" }}'
-                            data-labels-3m='{{ labels_3m | tojson if labels_3m else "[]" }}'
-                            data-on-time-3m='{{ on_time_3m | tojson if on_time_3m else "[]" }}'
-                            data-late-3m='{{ late_3m | tojson if late_3m else "[]" }}'
-                            data-absent-3m='{{ absent_3m | tojson if absent_3m else "[]" }}'
-                            data-labels-6m='{{ labels_6m | tojson if labels_6m else "[]" }}'
-                            data-on-time-6m='{{ on_time_6m | tojson if on_time_6m else "[]" }}'
-                            data-late-6m='{{ late_6m | tojson if late_6m else "[]" }}'
-                            data-absent-6m='{{ absent_6m | tojson if absent_6m else "[]" }}'
-                            data-labels='{{ chart_labels | tojson }}'
-                            data-presence='{{ chart_presence | tojson }}'
-                            data-absence='{{ chart_absence | tojson }}'
-                            data-employees='{{ chart_employees | tojson }}'></canvas>
+                            data-chart-labels='{{ chart_bar_labels | tojson }}'
+                            data-bar-tepat-waktu='{{ chart_bar_tepat_waktu | tojson }}'
+                            data-bar-hadir-overall='{{ chart_bar_hadir_overall | tojson }}'
+                            data-bar-izin='{{ chart_bar_izin | tojson }}'
+                            data-bar-tidak-hadir='{{ chart_bar_tidak_hadir | tojson }}'
+                            data-bar-pembanding='{{ chart_bar_pembanding | tojson }}'
+                            data-bar-details='{{ chart_bar_details | tojson }}'
+                            data-total-working-days='{{ total_working_days_month }}'></canvas>
                 </div>
             </section>
 
@@ -1155,205 +1152,295 @@
     <!-- Bootstrap 5 JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
-    <!-- SCRIPT CHART.JS (MULTI-LINE CHART HARIAN & SWITCHER PERIODE) -->
+    <!-- MODAL INTERAKTIF: STATISTIK DATA KEHADIRAN BULANAN (POPUP SAAT GRAFIK BATANG DIKLIK) -->
+    <div class="modal fade" id="statKehadiranBulananModal" tabindex="-1" aria-labelledby="statModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content rounded-4 border-0 shadow-lg overflow-hidden">
+                <div class="modal-header border-0 pb-1 pt-4 px-4 bg-light bg-opacity-50">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="p-2.5 bg-primary-subtle text-primary rounded-3 shadow-sm">
+                            <i class="bi bi-bar-chart-fill fs-4"></i>
+                        </div>
+                        <div>
+                            <h5 class="modal-title fw-bold text-dark mb-0" id="statModalLabel">Statistik Data Kehadiran Bulanan</h5>
+                            <p class="text-muted small mb-0" id="statModalSubtitle">Rincian Performa Kehadiran Karyawan 1 Bulan Penuh</p>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <!-- Info Karyawan -->
+                    <div class="d-flex align-items-center gap-3 p-3 rounded-3 mb-3" style="background: #f8fafc; border: 1px solid #e2e8f0;">
+                        <div class="avatar-circle rounded-circle bg-primary text-white fw-bold d-flex align-items-center justify-content-center shadow-sm" id="statEmpAvatar" style="width: 48px; height: 48px; font-size: 18px; min-width: 48px;">
+                            K
+                        </div>
+                        <div class="flex-grow-1 overflow-hidden">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <h6 class="fw-bold mb-1 text-dark text-truncate" id="statEmpName">Nama Karyawan</h6>
+                                <span class="badge bg-white text-secondary border px-2 py-0.5 small" id="statEmpDivisi">Divisi</span>
+                            </div>
+                            <div class="small text-muted text-truncate" id="statEmpEmail">email@example.com</div>
+                        </div>
+                    </div>
+
+                    <!-- Highlight Box Metrik yang Sedang Dipilih -->
+                    <div class="p-3 rounded-3 mb-3 text-center transition-all" id="statHighlightBox" style="background: rgba(16, 185, 129, 0.08); border: 1.5px solid #10B981;">
+                        <span class="small fw-bold text-uppercase letter-spacing" id="statHighlightTitle" style="color: #059669; font-size: 11.5px;">Hadir Tepat Waktu</span>
+                        <div class="d-flex justify-content-center align-items-baseline gap-2 my-1">
+                            <span class="display-5 fw-bold text-dark" id="statHighlightVal">0</span>
+                            <span class="text-muted fw-semibold fs-5" id="statHighlightTotal">/ 21 Hari Kerja</span>
+                        </div>
+                        <div class="progress mt-2" style="height: 9px; border-radius: 6px; background-color: rgba(0,0,0,0.06);">
+                            <div class="progress-bar rounded-pill" id="statHighlightProgress" role="progressbar" style="width: 0%; background-color: #10B981; transition: width 0.6s ease;"></div>
+                        </div>
+                        <div class="d-flex justify-content-between mt-1.5 small text-muted" style="font-size: 11px;">
+                            <span>Rasio terhadap Hari Kerja</span>
+                            <span class="fw-bold text-dark" id="statHighlightPercent">0%</span>
+                        </div>
+                    </div>
+
+                    <!-- Rincian 4 Metrik Kehadiran Lengkap -->
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h6 class="small fw-bold text-secondary text-uppercase mb-0" style="font-size: 11.5px;">Rekapitulasi 4 Kategori (1 Bulan)</h6>
+                        <span class="badge bg-light text-secondary border" id="statTotalWorkingDaysBadge">21 Hari Kerja</span>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <div class="p-2.5 rounded-3 border bg-light d-flex align-items-center justify-content-between">
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge rounded-pill" style="background-color: #10B981; width: 10px; height: 10px; padding: 0;">&nbsp;</span>
+                                    <span class="small fw-semibold text-secondary">Tepat Waktu:</span>
+                                </div>
+                                <span class="fw-bold text-dark" id="statDetailTepatWaktu">0 Hari</span>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="p-2.5 rounded-3 border bg-light d-flex align-items-center justify-content-between">
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge rounded-pill" style="background-color: #2563EB; width: 10px; height: 10px; padding: 0;">&nbsp;</span>
+                                    <span class="small fw-semibold text-secondary">Hadir Overall:</span>
+                                </div>
+                                <span class="fw-bold text-dark" id="statDetailHadirOverall">0 Hari</span>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="p-2.5 rounded-3 border bg-light d-flex align-items-center justify-content-between">
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge rounded-pill" style="background-color: #F59E0B; width: 10px; height: 10px; padding: 0;">&nbsp;</span>
+                                    <span class="small fw-semibold text-secondary">Izin (Total):</span>
+                                </div>
+                                <span class="fw-bold text-dark" id="statDetailIzin">0 Hari</span>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="p-2.5 rounded-3 border bg-light d-flex align-items-center justify-content-between">
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge rounded-pill" style="background-color: #EF4444; width: 10px; height: 10px; padding: 0;">&nbsp;</span>
+                                    <span class="small fw-semibold text-secondary">Tidak Hadir:</span>
+                                </div>
+                                <span class="fw-bold text-dark" id="statDetailTidakHadir">0 Hari</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Detail Sub-Izin (Keperluan, Sakit, Cuti) -->
+                    <div class="p-2.5 rounded-3 border bg-warning-subtle text-warning-emphasis small d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center gap-1.5">
+                            <i class="bi bi-info-circle-fill"></i>
+                            <span class="fw-semibold">Breakdown Izin:</span>
+                        </div>
+                        <span class="fw-bold" id="statBreakdownIzinText">Keperluan: 0 | Sakit: 0 | Cuti: 0</span>
+                    </div>
+
+                    <div class="mt-4 pt-2 border-top d-flex justify-content-between align-items-center">
+                        <span class="text-muted small"><i class="bi bi-check-circle-fill text-success me-1"></i>Data Realtime Database</span>
+                        <button type="button" class="btn btn-sm btn-primary px-4 py-1.5 rounded-pill fw-semibold shadow-sm" data-bs-dismiss="modal">Tutup</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCRIPT CHART.JS (GRAFIK BATANG STATISTIK 1 BULAN & PILIHAN METRIK DENGAN PEMBANDING HARI KERJA) -->
     <script>
-        // Definisi Nama Hari untuk 30 Hari di Bulan November 2026 (1 Nov: Minggu, 2 Nov: Senin, dst.)
-        const novDayNames = [
-            'Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu',
-            'Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu',
-            'Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu',
-            'Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu',
-            'Minggu', 'Senin'
-        ];
+        // Data Payload dari Server Flask / Database Real
+        let chartEmpLabels = [];
+        let chartMetricData = {
+            tepat_waktu: [],
+            hadir_overall: [],
+            izin: [],
+            tidak_hadir: []
+        };
+        let chartBarPembanding = [];
+        let chartBarDetails = [];
+        let totalWorkingDays = 21;
+        let currentMetricKey = 'tepat_waktu';
 
-        let attendancePeriodData = {};
-        let currentActivePeriod = '1m';
-
-        // Generator Data Grafik Kehadiran yang Terkalibrasi Proporsional dengan Total Karyawan Kantor
-        // Aturan: Jika belum ada yang hadir pada hari/bulan tersebut (baik 1m, 3m, maupun 6m), maka HADIR = 0, TERLAMBAT = 0, TIDAK HADIR = SEMUA KARYAWAN!
-        function buildAttendanceDatasets(totalEmp, serverData) {
-            const N = Math.max(parseInt(totalEmp, 10) || 11, 1);
-            serverData = serverData || {};
-
-            // 1. Data 1 Bulan (Harian 1-30 November)
-            const onTime1m = [];
-            const late1m = [];
-            const absent1m = [];
-            const sOnTime1m = serverData.dailyOnTime || [];
-            const sLate1m = serverData.dailyLate || [];
-
-            for (let i = 0; i < 30; i++) {
-                const ot = parseInt(sOnTime1m[i], 10) || 0;
-                const lt = parseInt(sLate1m[i], 10) || 0;
-                if (ot > 0 || lt > 0) {
-                    onTime1m.push(ot);
-                    late1m.push(lt);
-                    absent1m.push(Math.max(0, N - ot - lt));
-                } else {
-                    // Belum ada yang hadir -> Hadir: 0, Terlambat: 0, Tidak Hadir: SEMUA KARYAWAN!
-                    onTime1m.push(0);
-                    late1m.push(0);
-                    absent1m.push(N);
-                }
+        // Konfigurasi Visual untuk masing-masing Metrik
+        const metricConfigMap = {
+            tepat_waktu: {
+                label: 'Hadir Tepat Waktu (Hijau)',
+                shortLabel: 'Hadir Tepat Waktu',
+                color: '#10B981',
+                hoverColor: '#059669',
+                borderColor: '#047857',
+                dotColor: '#10B981',
+                textColor: '#059669',
+                boxBg: 'rgba(16, 185, 129, 0.1)',
+                boxBorder: 'rgba(16, 185, 129, 0.25)',
+                highlightBg: 'rgba(16, 185, 129, 0.08)',
+                highlightBorder: '#10B981'
+            },
+            hadir_overall: {
+                label: 'Hadir Overall (Biru)',
+                shortLabel: 'Hadir Overall',
+                color: '#2563EB',
+                hoverColor: '#1D4ED8',
+                borderColor: '#1E40AF',
+                dotColor: '#2563EB',
+                textColor: '#1D4ED8',
+                boxBg: 'rgba(37, 99, 235, 0.1)',
+                boxBorder: 'rgba(37, 99, 235, 0.25)',
+                highlightBg: 'rgba(37, 99, 235, 0.08)',
+                highlightBorder: '#2563EB'
+            },
+            izin: {
+                label: 'Izin (Kuning)',
+                shortLabel: 'Izin & Cuti',
+                color: '#F59E0B',
+                hoverColor: '#D97706',
+                borderColor: '#B45309',
+                dotColor: '#F59E0B',
+                textColor: '#B45309',
+                boxBg: 'rgba(245, 158, 11, 0.1)',
+                boxBorder: 'rgba(245, 158, 11, 0.25)',
+                highlightBg: 'rgba(245, 158, 11, 0.08)',
+                highlightBorder: '#F59E0B'
+            },
+            tidak_hadir: {
+                label: 'Tidak Hadir (Merah)',
+                shortLabel: 'Tidak Hadir / Alpa',
+                color: '#EF4444',
+                hoverColor: '#DC2626',
+                borderColor: '#B91C1C',
+                dotColor: '#EF4444',
+                textColor: '#B91C1C',
+                boxBg: 'rgba(239, 68, 68, 0.1)',
+                boxBorder: 'rgba(239, 68, 68, 0.25)',
+                highlightBg: 'rgba(239, 68, 68, 0.08)',
+                highlightBorder: '#EF4444'
             }
+        };
 
-            // 2. Data 3 Bulan (3 Bulan Terakhir)
-            const labels3m = Array.isArray(serverData.labels3m) && serverData.labels3m.length === 3
-                ? serverData.labels3m
-                : ['September', 'Oktober', 'November'];
-            const onTime3m = [];
-            const late3m = [];
-            const absent3m = [];
-            const sOnTime3m = serverData.onTime3m || [];
-            const sLate3m = serverData.late3m || [];
+        // Ganti Metrik Grafik Batang (Dipicu oleh Select Option)
+        function changeAttendanceMetric(metricKey) {
+            if (!metricConfigMap[metricKey] || !window.monthlyChart) return;
+            currentMetricKey = metricKey;
+            const cfg = metricConfigMap[metricKey];
 
-            for (let i = 0; i < labels3m.length; i++) {
-                const ot = parseInt(sOnTime3m[i], 10) || 0;
-                const lt = parseInt(sLate3m[i], 10) || 0;
-                if (ot > 0 || lt > 0) {
-                    onTime3m.push(ot);
-                    late3m.push(lt);
-                    absent3m.push(Math.max(0, N - ot - lt));
-                } else {
-                    // Belum ada yang hadir pada bulan ini -> Hadir: 0, Terlambat: 0, Tidak Hadir: SEMUA KARYAWAN!
-                    onTime3m.push(0);
-                    late3m.push(0);
-                    absent3m.push(N);
-                }
-            }
+            // Update Dataset 1 (Metrik Terpilih)
+            window.monthlyChart.data.datasets[0].label = cfg.shortLabel;
+            window.monthlyChart.data.datasets[0].data = chartMetricData[metricKey] || [];
+            window.monthlyChart.data.datasets[0].backgroundColor = cfg.color;
+            window.monthlyChart.data.datasets[0].hoverBackgroundColor = cfg.hoverColor;
+            window.monthlyChart.data.datasets[0].borderColor = cfg.borderColor;
 
-            // 3. Data 6 Bulan (6 Bulan Terakhir)
-            const labels6m = Array.isArray(serverData.labels6m) && serverData.labels6m.length === 6
-                ? serverData.labels6m
-                : ['Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November'];
-            const onTime6m = [];
-            const late6m = [];
-            const absent6m = [];
-            const sOnTime6m = serverData.onTime6m || [];
-            const sLate6m = serverData.late6m || [];
-
-            for (let i = 0; i < labels6m.length; i++) {
-                const ot = parseInt(sOnTime6m[i], 10) || 0;
-                const lt = parseInt(sLate6m[i], 10) || 0;
-                if (ot > 0 || lt > 0) {
-                    onTime6m.push(ot);
-                    late6m.push(lt);
-                    absent6m.push(Math.max(0, N - ot - lt));
-                } else {
-                    // Belum ada yang hadir pada bulan ini -> Hadir: 0, Terlambat: 0, Tidak Hadir: SEMUA KARYAWAN!
-                    onTime6m.push(0);
-                    late6m.push(0);
-                    absent6m.push(N);
-                }
-            }
-
-            // Status Kehadiran untuk Label Ringkasan
-            const hasAtt1m = onTime1m.some(v => v > 0) || late1m.some(v => v > 0);
-            const hasAtt3m = onTime3m.some(v => v > 0) || late3m.some(v => v > 0);
-            const hasAtt6m = onTime6m.some(v => v > 0) || late6m.some(v => v > 0);
-
-            return {
-                '1m': {
-                    name: '1 Bulan (Harian)',
-                    subTitle: hasAtt1m
-                        ? `Grafik Garis Tren Kehadiran Realistis (Harian November - ${N} Karyawan)`
-                        : `Grafik Garis Tren: Belum Ada Kehadiran (Semua ${N} Karyawan Berstatus Tidak Hadir)`,
-                    badge: 'Rekap Harian November',
-                    avgOnTime: hasAtt1m ? `Total ${onTime1m.reduce((a, b) => a + b, 0)} Hadir Tepat Waktu` : `0 dari ${N} Karyawan Hadir`,
-                    lateNote: hasAtt1m ? `Puncak Terlambat: ${Math.max(...late1m)} Karyawan` : `0 Terlambat (Belum Ada Presensi)`,
-                    avgAbsent: hasAtt1m ? `Rata-rata ${Math.round(absent1m.reduce((a,b)=>a+b,0)/30)} Tidak Hadir` : `${N} Karyawan Tidak Hadir (Semua Belum Hadir)`,
-                    labels: Array.from({ length: 30 }, (_, i) => `${i + 1} Nov`),
-                    onTime: onTime1m,
-                    late: late1m,
-                    absent: absent1m
-                },
-                '3m': {
-                    name: '3 Bulan (Bulanan)',
-                    subTitle: hasAtt3m
-                        ? `Grafik Garis Tren Kehadiran: Rekap 3 Bulan Terakhir (${N} Karyawan)`
-                        : `Grafik Garis Tren: Belum Ada Kehadiran di Periode 3 Bulan (${N} Karyawan Tidak Hadir Semua)`,
-                    badge: 'Rekap 3 Bulan Terakhir',
-                    avgOnTime: hasAtt3m ? `Total ${onTime3m.reduce((a,b)=>a+b,0)} Hadir Tepat Waktu` : `0 dari ${N} Karyawan Hadir`,
-                    lateNote: hasAtt3m ? `Puncak Terlambat: ${Math.max(...late3m)} Karyawan` : `0 Terlambat (Belum Ada Presensi)`,
-                    avgAbsent: hasAtt3m ? `Rata-rata ${Math.round(absent3m.reduce((a,b)=>a+b,0)/3)} Tidak Hadir` : `${N} Karyawan Tidak Hadir (Semua Belum Hadir)`,
-                    labels: labels3m,
-                    onTime: onTime3m,
-                    late: late3m,
-                    absent: absent3m
-                },
-                '6m': {
-                    name: '6 Bulan (Bulanan)',
-                    subTitle: hasAtt6m
-                        ? `Grafik Garis Tren Kehadiran: Rekapitulasi Semester Berjalan (${N} Karyawan)`
-                        : `Grafik Garis Tren: Belum Ada Kehadiran di Periode 6 Bulan (${N} Karyawan Tidak Hadir Semua)`,
-                    badge: 'Rekap 6 Bulan Berjalan',
-                    avgOnTime: hasAtt6m ? `Total ${onTime6m.reduce((a,b)=>a+b,0)} Hadir Tepat Waktu` : `0 dari ${N} Karyawan Hadir`,
-                    lateNote: hasAtt6m ? `Puncak Terlambat: ${Math.max(...late6m)} Karyawan` : `0 Terlambat (Belum Ada Presensi)`,
-                    avgAbsent: hasAtt6m ? `Rata-rata ${Math.round(absent6m.reduce((a,b)=>a+b,0)/6)} Tidak Hadir` : `${N} Karyawan Tidak Hadir (Semua Belum Hadir)`,
-                    labels: labels6m,
-                    onTime: onTime6m,
-                    late: late6m,
-                    absent: absent6m
-                }
-            };
-        }
-
-        // Hitung Skala Sumbu Y Otomatis yang Ideal Berdasarkan Jumlah Karyawan
-        function calculateYAxisConfig(totalEmp) {
-            const N = Math.max(parseInt(totalEmp, 10) || 11, 4);
-            if (N <= 15) {
-                // Untuk kantor ~11-15 karyawan: skala 0 s/d 14 atau 15 dengan step 2 atau 3
-                const maxVal = N <= 10 ? 12 : Math.max(14, Math.ceil((N + 2) / 2) * 2);
-                return { min: 0, max: maxVal, stepSize: 2 };
-            } else if (N <= 30) {
-                const maxVal = Math.ceil((N * 1.15) / 5) * 5;
-                return { min: 0, max: maxVal, stepSize: 5 };
-            } else if (N <= 60) {
-                const maxVal = Math.ceil((N * 1.15) / 10) * 10;
-                return { min: 0, max: maxVal, stepSize: 10 };
-            } else {
-                return { min: 0, max: 100, stepSize: 20 };
-            }
-        }
-
-        // Fungsi Switcher Periode Interaktif (1 Bulan, 3 Bulan, 6 Bulan)
-        function switchAttendancePeriod(period) {
-            if (!attendancePeriodData[period] || !window.monthlyChart) return;
-            currentActivePeriod = period;
-
-            // Update Tampilan Tombol Filter
-            ['1m', '3m', '6m'].forEach(p => {
-                const btn = document.getElementById(`btn-period-${p}`);
-                if (btn) {
-                    if (p === period) {
-                        btn.className = 'btn btn-sm rounded-pill fw-bold px-3 py-1 btn-primary text-white shadow-sm';
-                    } else {
-                        btn.className = 'btn btn-sm rounded-pill fw-semibold px-3 py-1 text-muted btn-light';
-                    }
-                }
-            });
-
-            const dataObj = attendancePeriodData[period];
-
-            // Update Label Teks Header & Pill Ringkasan
-            const subTitleEl = document.getElementById('chart-sub-title');
-            const badgeRecapEl = document.getElementById('chart-badge-recap');
-            const pillOnTimeEl = document.getElementById('pill-on-time-val');
-            const pillLateEl = document.getElementById('pill-late-val');
-            const pillAbsentEl = document.getElementById('pill-absent-val');
-
-            if (subTitleEl) subTitleEl.textContent = dataObj.subTitle;
-            if (badgeRecapEl) badgeRecapEl.textContent = dataObj.badge;
-            if (pillOnTimeEl) pillOnTimeEl.textContent = dataObj.avgOnTime;
-            if (pillLateEl) pillLateEl.textContent = dataObj.lateNote;
-            if (pillAbsentEl) pillAbsentEl.textContent = dataObj.avgAbsent;
-
-            // Animasi Pembaruan Data Chart
-            window.monthlyChart.data.labels = dataObj.labels;
-            window.monthlyChart.data.datasets[0].data = dataObj.onTime;
-            window.monthlyChart.data.datasets[1].data = dataObj.late;
-            window.monthlyChart.data.datasets[2].data = dataObj.absent;
             window.monthlyChart.update();
+
+            // Update UI Insight Pill
+            const pillBox = document.getElementById('pill-active-metric-box');
+            const pillDot = document.getElementById('pill-active-metric-dot');
+            const pillLabel = document.getElementById('pill-active-metric-label');
+            const pillVal = document.getElementById('pill-active-metric-val');
+
+            if (pillBox) {
+                pillBox.style.backgroundColor = cfg.boxBg;
+                pillBox.style.borderColor = cfg.boxBorder;
+            }
+            if (pillDot) {
+                pillDot.style.backgroundColor = cfg.dotColor;
+            }
+            if (pillLabel) {
+                pillLabel.style.color = cfg.textColor;
+            }
+            if (pillVal) {
+                pillVal.textContent = cfg.label;
+            }
+        }
+
+        // Tampilkan Modal Interaktif dengan Judul "Statistik Data Kehadiran Bulanan"
+        function openStatKehadiranModal(index) {
+            if (index < 0 || index >= chartBarDetails.length) return;
+            const item = chartBarDetails[index];
+            const cfg = metricConfigMap[currentMetricKey] || metricConfigMap['tepat_waktu'];
+
+            // Isi Info Karyawan
+            const nameEl = document.getElementById('statEmpName');
+            const avatarEl = document.getElementById('statEmpAvatar');
+            const divisiEl = document.getElementById('statEmpDivisi');
+            const emailEl = document.getElementById('statEmpEmail');
+
+            if (nameEl) nameEl.textContent = item.name;
+            if (avatarEl) avatarEl.textContent = (item.name || 'K').trim().charAt(0).toUpperCase();
+            if (divisiEl) divisiEl.textContent = item.divisi || 'Operasional';
+            if (emailEl) emailEl.textContent = item.email || '-';
+
+            // Highlight Metrik Aktif
+            const highlightBox = document.getElementById('statHighlightBox');
+            const highlightTitle = document.getElementById('statHighlightTitle');
+            const highlightVal = document.getElementById('statHighlightVal');
+            const highlightTotal = document.getElementById('statHighlightTotal');
+            const highlightProgress = document.getElementById('statHighlightProgress');
+            const highlightPercent = document.getElementById('statHighlightPercent');
+
+            let activeVal = 0;
+            if (currentMetricKey === 'tepat_waktu') activeVal = item.tepat_waktu;
+            else if (currentMetricKey === 'hadir_overall') activeVal = item.hadir_overall;
+            else if (currentMetricKey === 'izin') activeVal = item.izin;
+            else if (currentMetricKey === 'tidak_hadir') activeVal = item.tidak_hadir;
+
+            const totalHk = item.hari_kerja || totalWorkingDays || 21;
+            const pctVal = Math.round((activeVal / totalHk) * 100);
+
+            if (highlightBox) {
+                highlightBox.style.background = cfg.highlightBg;
+                highlightBox.style.borderColor = cfg.highlightBorder;
+            }
+            if (highlightTitle) {
+                highlightTitle.textContent = `Metrik Terpilih: ${cfg.shortLabel}`;
+                highlightTitle.style.color = cfg.textColor;
+            }
+            if (highlightVal) highlightVal.textContent = activeVal;
+            if (highlightTotal) highlightTotal.textContent = `/ ${totalHk} Hari Kerja`;
+            if (highlightProgress) {
+                highlightProgress.style.width = `${Math.min(100, pctVal)}%`;
+                highlightProgress.style.backgroundColor = cfg.color;
+            }
+            if (highlightPercent) highlightPercent.textContent = `${pctVal}% (${activeVal} dari ${totalHk} Hari Kerja)`;
+
+            // Rincian Lengkap 4 Kategori
+            const dtTw = document.getElementById('statDetailTepatWaktu');
+            const dtHd = document.getElementById('statDetailHadirOverall');
+            const dtIz = document.getElementById('statDetailIzin');
+            const dtTh = document.getElementById('statDetailTidakHadir');
+            const dtBadgeHk = document.getElementById('statTotalWorkingDaysBadge');
+            const dtBreakdown = document.getElementById('statBreakdownIzinText');
+
+            if (dtTw) dtTw.textContent = `${item.tepat_waktu} Hari`;
+            if (dtHd) dtHd.textContent = `${item.hadir_overall} Hari`;
+            if (dtIz) dtIz.textContent = `${item.izin} Hari`;
+            if (dtTh) dtTh.textContent = `${item.tidak_hadir} Hari`;
+            if (dtBadgeHk) dtBadgeHk.textContent = `${totalHk} Hari Kerja`;
+            if (dtBreakdown) {
+                dtBreakdown.textContent = `Keperluan: ${item.izin_keperluan || 0} | Sakit: ${item.izin_sakit || 0} | Cuti: ${item.cuti || 0}`;
+            }
+
+            // Tampilkan Modal Bootstrap
+            const modalEl = document.getElementById('statKehadiranBulananModal');
+            if (modalEl) {
+                const modalInstance = bootstrap.Modal.getOrCreateInstance(modalEl);
+                modalInstance.show();
+            }
         }
 
         document.addEventListener('DOMContentLoaded', function () {
@@ -1361,112 +1448,74 @@
             if (!chartCanvas) return;
             const ctx = chartCanvas.getContext('2d');
 
-            // Ambil Total Karyawan Asli dan Data Rekap Harian/Bulanan dari Server Database
-            const totalEmp = parseInt(chartCanvas.dataset.totalEmployees || '11', 10) || 11;
-            let serverData = {};
+            // Parsing Data JSON dari atribut Canvas
             try {
-                serverData = {
-                    dailyOnTime: JSON.parse(chartCanvas.dataset.dailyOnTime || '[]'),
-                    dailyLate: JSON.parse(chartCanvas.dataset.dailyLate || '[]'),
-                    dailyAbsent: JSON.parse(chartCanvas.dataset.dailyAbsent || '[]'),
-                    labels3m: JSON.parse(chartCanvas.dataset.labels3m || '[]'),
-                    onTime3m: JSON.parse(chartCanvas.dataset.onTime3m || '[]'),
-                    late3m: JSON.parse(chartCanvas.dataset.late3m || '[]'),
-                    absent3m: JSON.parse(chartCanvas.dataset.absent3m || '[]'),
-                    labels6m: JSON.parse(chartCanvas.dataset.labels6m || '[]'),
-                    onTime6m: JSON.parse(chartCanvas.dataset.onTime6m || '[]'),
-                    late6m: JSON.parse(chartCanvas.dataset.late6m || '[]'),
-                    absent6m: JSON.parse(chartCanvas.dataset.absent6m || '[]')
-                };
-            } catch(e) {
-                console.warn("[Chart Server Data Parse Warn]:", e);
+                chartEmpLabels = JSON.parse(chartCanvas.dataset.chartLabels || '[]');
+                chartMetricData.tepat_waktu = JSON.parse(chartCanvas.dataset.barTepatWaktu || '[]');
+                chartMetricData.hadir_overall = JSON.parse(chartCanvas.dataset.barHadirOverall || '[]');
+                chartMetricData.izin = JSON.parse(chartCanvas.dataset.barIzin || '[]');
+                chartMetricData.tidak_hadir = JSON.parse(chartCanvas.dataset.barTidakHadir || '[]');
+                chartBarPembanding = JSON.parse(chartCanvas.dataset.barPembanding || '[]');
+                chartBarDetails = JSON.parse(chartCanvas.dataset.barDetails || '[]');
+                totalWorkingDays = parseInt(chartCanvas.dataset.totalWorkingDays || '21', 10) || 21;
+            } catch (err) {
+                console.error("[Chart Data Parse Error]:", err);
             }
 
-            attendancePeriodData = buildAttendanceDatasets(totalEmp, serverData);
+            // Fallback jika array kosong
+            if (!chartEmpLabels.length) {
+                chartEmpLabels = ['Karyawan 1', 'Karyawan 2', 'Karyawan 3'];
+                chartMetricData.tepat_waktu = [0, 0, 0];
+                chartMetricData.hadir_overall = [0, 0, 0];
+                chartMetricData.izin = [0, 0, 0];
+                chartMetricData.tidak_hadir = [21, 21, 21];
+                chartBarPembanding = [21, 21, 21];
+            }
 
-            const initial = attendancePeriodData['1m'];
-            const yConfig = calculateYAxisConfig(totalEmp);
+            const initialCfg = metricConfigMap['tepat_waktu'];
 
-            // Update Tampilan Ringkasan Awal
-            const subTitleEl = document.getElementById('chart-sub-title');
-            const badgeRecapEl = document.getElementById('chart-badge-recap');
-            const pillOnTimeEl = document.getElementById('pill-on-time-val');
-            const pillLateEl = document.getElementById('pill-late-val');
-            const pillAbsentEl = document.getElementById('pill-absent-val');
-
-            if (subTitleEl) subTitleEl.textContent = initial.subTitle;
-            if (badgeRecapEl) badgeRecapEl.textContent = initial.badge;
-            if (pillOnTimeEl) pillOnTimeEl.textContent = initial.avgOnTime;
-            if (pillLateEl) pillLateEl.textContent = initial.lateNote;
-            if (pillAbsentEl) pillAbsentEl.textContent = initial.avgAbsent;
-
-            // Konfigurasi 3 Garis Tren: Hijau (Hadir Tepat Waktu), Kuning (Terlambat), Merah (Alpa)
+            // Konfigurasi Dataset Paired Bar Chart: Metrik Terpilih vs Jumlah Hari Kerja (1 Bulan)
             const chartData = {
-                labels: initial.labels,
+                labels: chartEmpLabels,
                 datasets: [
                     {
-                        label: 'Hadir Tepat Waktu',
-                        data: initial.onTime,
-                        borderColor: '#10b981', // Emerald Green
-                        backgroundColor: 'rgba(16, 185, 129, 0.08)',
-                        borderWidth: 2.8,
-                        tension: 0.35,
-                        fill: true,
-                        pointBackgroundColor: '#10b981',
-                        pointBorderColor: '#ffffff',
-                        pointBorderWidth: 2,
-                        pointRadius: 3.5,
-                        pointHoverRadius: 6.5,
-                        pointHoverBackgroundColor: '#ffffff',
-                        pointHoverBorderColor: '#10b981',
-                        pointHoverBorderWidth: 3
+                        label: initialCfg.shortLabel,
+                        data: chartMetricData.tepat_waktu,
+                        backgroundColor: initialCfg.color,
+                        hoverBackgroundColor: initialCfg.hoverColor,
+                        borderColor: initialCfg.borderColor,
+                        borderWidth: 1.5,
+                        borderRadius: 6,
+                        borderSkipped: false,
+                        barPercentage: 0.65,
+                        categoryPercentage: 0.75
                     },
                     {
-                        label: 'Terlambat',
-                        data: initial.late,
-                        borderColor: '#f59e0b', // Amber Yellow
-                        backgroundColor: 'rgba(245, 158, 11, 0.08)',
-                        borderWidth: 2.8,
-                        tension: 0.35,
-                        fill: true,
-                        pointBackgroundColor: '#f59e0b',
-                        pointBorderColor: '#ffffff',
-                        pointBorderWidth: 2,
-                        pointRadius: 3.5,
-                        pointHoverRadius: 6.5,
-                        pointHoverBackgroundColor: '#ffffff',
-                        pointHoverBorderColor: '#f59e0b',
-                        pointHoverBorderWidth: 3
-                    },
-                    {
-                        label: 'Tidak Hadir / Alpa',
-                        data: initial.absent,
-                        borderColor: '#ef4444', // Red
-                        backgroundColor: 'rgba(239, 68, 68, 0.08)',
-                        borderWidth: 2.8,
-                        tension: 0.35,
-                        fill: true,
-                        pointBackgroundColor: '#ef4444',
-                        pointBorderColor: '#ffffff',
-                        pointBorderWidth: 2,
-                        pointRadius: 3.5,
-                        pointHoverRadius: 6.5,
-                        pointHoverBackgroundColor: '#ffffff',
-                        pointHoverBorderColor: '#ef4444',
-                        pointHoverBorderWidth: 3
+                        label: `Hari Kerja (${totalWorkingDays} Hari)`,
+                        data: chartBarPembanding,
+                        backgroundColor: 'rgba(148, 163, 184, 0.45)', // Abu-abu Slate Pembanding
+                        hoverBackgroundColor: 'rgba(148, 163, 184, 0.7)',
+                        borderColor: '#94A3B8',
+                        borderWidth: 1.5,
+                        borderRadius: 6,
+                        borderSkipped: false,
+                        barPercentage: 0.65,
+                        categoryPercentage: 0.75
                     }
                 ]
             };
 
             const config = {
-                type: 'line',
+                type: 'bar',
                 data: chartData,
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    interaction: {
-                        mode: 'index',
-                        intersect: false
+                    onClick: function (event, elements) {
+                        if (elements && elements.length > 0) {
+                            const clickedIdx = elements[0].index;
+                            openStatKehadiranModal(clickedIdx);
+                        }
                     },
                     plugins: {
                         legend: {
@@ -1474,7 +1523,7 @@
                             labels: {
                                 boxWidth: 14,
                                 boxHeight: 14,
-                                padding: 20,
+                                padding: 18,
                                 font: {
                                     family: "'Plus Jakarta Sans', sans-serif",
                                     size: 12.5,
@@ -1505,29 +1554,23 @@
                             callbacks: {
                                 title: function (context) {
                                     if (!context || !context.length) return '';
-                                    const idx = context[0].dataIndex;
-                                    if (currentActivePeriod === '1m' && novDayNames[idx]) {
-                                        return `${novDayNames[idx]}, ${context[0].label} 2026`;
-                                    }
-                                    return context[0].label;
+                                    return `Statistik Data Kehadiran Bulanan: ${context[0].label}`;
                                 },
                                 label: function (context) {
-                                    const label = context.dataset.label || '';
                                     const val = context.parsed.y ?? 0;
-                                    if (context.datasetIndex === 2) {
-                                        const onTimeVal = context.chart.data.datasets[0].data[context.dataIndex] || 0;
-                                        const lateVal = context.chart.data.datasets[1].data[context.dataIndex] || 0;
-                                        if (onTimeVal === 0 && lateVal === 0) {
-                                            return ` ${label}: ${val} Karyawan (Semua Belum Hadir)`;
-                                        }
-                                    }
-                                    if (context.datasetIndex === 1 && currentActivePeriod === '1m' && val > 0) {
-                                        const day = novDayNames[context.dataIndex] || '';
-                                        if (day === 'Senin' || day === 'Jumat') {
-                                            return ` ${label}: ${val} Karyawan (⚠️ Puncak Keterlambatan Hari ${day})`;
-                                        }
-                                    }
-                                    return ` ${label}: ${val} Karyawan`;
+                                    const dsLabel = context.dataset.label || '';
+                                    return ` ${dsLabel}: ${val} Hari`;
+                                },
+                                afterBody: function (context) {
+                                    if (!context || !context.length) return '';
+                                    const idx = context[0].dataIndex;
+                                    const det = chartBarDetails[idx];
+                                    if (!det) return ['👉 Klik batang untuk melihat rincian'];
+                                    return [
+                                        `Divisi: ${det.divisi || '-'}`,
+                                        `Capaian Kehadiran: ${det.persentase || '0%'}`,
+                                        `👉 Klik batang untuk membuka rincian lengkap`
+                                    ];
                                 }
                             }
                         }
@@ -1544,19 +1587,19 @@
                                     weight: '600'
                                 },
                                 color: '#64748b',
-                                maxRotation: 0,
-                                autoSkip: true,
-                                maxTicksLimit: 16
+                                maxRotation: 40,
+                                minRotation: 0,
+                                autoSkip: false
                             },
                             border: {
                                 display: false
                             }
                         },
                         y: {
-                            min: yConfig.min,
-                            max: yConfig.max,
+                            beginAtZero: true,
+                            max: Math.max(totalWorkingDays + 3, 25),
                             ticks: {
-                                stepSize: yConfig.stepSize,
+                                stepSize: 5,
                                 font: {
                                     family: "'Plus Jakarta Sans', sans-serif",
                                     size: 11.5,
@@ -1577,6 +1620,15 @@
             };
 
             window.monthlyChart = new Chart(ctx, config);
+
+            // Listener tambahan pada canvas untuk memastikan klik di area batang selalu membuka modal
+            chartCanvas.addEventListener('click', function (e) {
+                if (!window.monthlyChart) return;
+                const points = window.monthlyChart.getElementsAtEventForMode(e, 'nearest', { intersect: true }, false);
+                if (points && points.length > 0) {
+                    openStatKehadiranModal(points[0].index);
+                }
+            });
         });
     </script>
 

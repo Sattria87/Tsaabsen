@@ -6,6 +6,7 @@ import pymysql
 import random
 import csv
 from datetime import datetime, timedelta
+import calendar
 import re
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
@@ -574,6 +575,15 @@ def index():
     chart_employees = [0] * 6
     top_attendees = []
     other_attendees = []
+    chart_bar_labels = []
+    chart_bar_tepat_waktu = []
+    chart_bar_hadir_overall = []
+    chart_bar_izin = []
+    chart_bar_tidak_hadir = []
+    chart_bar_pembanding = []
+    chart_bar_details = []
+    total_working_days_month = 21
+    current_month_name = 'November 2026'
 
     try:
         conn = get_db_connection()
@@ -822,14 +832,106 @@ def index():
             announcement_history = cursor.fetchall()
         except Exception as ann_err:
             print(f"[Announcements Fetch Error]: {ann_err}")
-        finally:
-            try:
-                conn.close()
-            except Exception:
-                pass
+
+        # 9. Rekap Kehadiran Bulanan (Grafik Batang Statistik Per Karyawan Real Database)
+        # Sesuai permintaan: Menampilkan data statistik dalam 1 bulan
+        # Select option: Hadir Tepat Waktu (Hijau), Hadir Overall (Biru), Izin (Kuning), Tidak Hadir (Merah)
+        # Pembanding: Jumlah hari kerja dalam 1 bulan
+        curr_year = now.year
+        curr_month = now.month
+        num_days_in_month = calendar.monthrange(curr_year, curr_month)[1]
+        month_start_date = f"{curr_year:04d}-{curr_month:02d}-01"
+        month_end_date = f"{curr_year:04d}-{curr_month:02d}-{num_days_in_month:02d}"
+
+        # Hitung hari kerja kalender dalam 1 bulan penuh (Senin s/d Jumat)
+        total_working_days_month = sum(
+            1 for d in range(1, num_days_in_month + 1)
+            if datetime(curr_year, curr_month, d).weekday() < 5
+        )
+        total_working_days_month = max(1, total_working_days_month)
+        current_month_name = f"{indo_month_names.get(curr_month, 'Bulan')} {curr_year}"
+
+        # Ambil data rekapitulasi real dari database untuk bulan berjalan
+        try:
+            monthly_rekap = get_rekap_report_data(month_start_date, month_end_date, branch='all', site='all')
+            monthly_emp_list = monthly_rekap.get('data', [])
+        except Exception as e_mrek:
+            print(f"[Monthly Rekap Chart Error]: {e_mrek}")
+            monthly_emp_list = []
+
+        chart_bar_labels = []
+        chart_bar_tepat_waktu = []
+        chart_bar_hadir_overall = []
+        chart_bar_izin = []
+        chart_bar_tidak_hadir = []
+        chart_bar_pembanding = []
+        chart_bar_details = []
+
+        for emp in monthly_emp_list:
+            emp_name = emp.get('name') or emp.get('username') or 'Karyawan'
+            chart_bar_labels.append(emp_name)
+            
+            tw = int(emp.get('jumlah_tepat_waktu', 0))
+            hd = int(emp.get('jumlah_hadir', 0))
+            iz = int(emp.get('jumlah_izin_keperluan', 0)) + int(emp.get('jumlah_izin_sakit', 0)) + int(emp.get('jumlah_cuti', 0))
+            th = int(emp.get('jumlah_alpha', 0))
+            hk = int(total_working_days_month)
+
+            chart_bar_tepat_waktu.append(tw)
+            chart_bar_hadir_overall.append(hd)
+            chart_bar_izin.append(iz)
+            chart_bar_tidak_hadir.append(th)
+            chart_bar_pembanding.append(hk)
+
+            chart_bar_details.append({
+                'name': emp_name,
+                'email': emp.get('email', '-'),
+                'divisi': emp.get('divisi', 'Operasional'),
+                'branch': emp.get('branch', 'TUNGGAL SAHABAT ABADI'),
+                'tepat_waktu': tw,
+                'hadir_overall': hd,
+                'izin': iz,
+                'izin_keperluan': int(emp.get('jumlah_izin_keperluan', 0)),
+                'izin_sakit': int(emp.get('jumlah_izin_sakit', 0)),
+                'cuti': int(emp.get('jumlah_cuti', 0)),
+                'tidak_hadir': th,
+                'hari_kerja': hk,
+                'persentase': emp.get('persentase', '0%')
+            })
+
+        # Fallback jika data rekap kosong, ambil dari attendance_employees
+        if not chart_bar_labels and attendance_employees:
+            for emp in attendance_employees:
+                emp_name = emp.get('name') or emp.get('username') or 'Karyawan'
+                chart_bar_labels.append(emp_name)
+                chart_bar_tepat_waktu.append(0)
+                chart_bar_hadir_overall.append(0)
+                chart_bar_izin.append(0)
+                chart_bar_tidak_hadir.append(total_working_days_month)
+                chart_bar_pembanding.append(total_working_days_month)
+                chart_bar_details.append({
+                    'name': emp_name,
+                    'email': f"{emp.get('username', 'user')}@gmail.com",
+                    'divisi': emp.get('team', 'Operasional'),
+                    'branch': emp.get('branch', 'TUNGGAL SAHABAT ABADI'),
+                    'tepat_waktu': 0,
+                    'hadir_overall': 0,
+                    'izin': 0,
+                    'izin_keperluan': 0,
+                    'izin_sakit': 0,
+                    'cuti': 0,
+                    'tidak_hadir': total_working_days_month,
+                    'hari_kerja': total_working_days_month,
+                    'persentase': '0%'
+                })
 
     except Exception as dash_err:
         print(f"[Dashboard DB Error]: {dash_err}")
+    finally:
+        try:
+            conn.close()
+        except Exception:
+            pass
     
     return render_template(
         'homepage.html',
@@ -858,6 +960,15 @@ def index():
         absent_6m=absent_6m,
         top_attendees=top_attendees,
         other_attendees=other_attendees,
+        chart_bar_labels=chart_bar_labels,
+        chart_bar_tepat_waktu=chart_bar_tepat_waktu,
+        chart_bar_hadir_overall=chart_bar_hadir_overall,
+        chart_bar_izin=chart_bar_izin,
+        chart_bar_tidak_hadir=chart_bar_tidak_hadir,
+        chart_bar_pembanding=chart_bar_pembanding,
+        chart_bar_details=chart_bar_details,
+        total_working_days_month=total_working_days_month,
+        current_month_name=current_month_name,
         hrd_whatsapp=hrd_whatsapp if 'hrd_whatsapp' in locals() else '+62 851-9616-7691',
         hrd_name=hrd_name if 'hrd_name' in locals() else 'HRD PT TSA',
         announcements=announcements if 'announcements' in locals() else [],
@@ -2264,6 +2375,7 @@ def get_rekap_report_data(start_date, end_date, branch='all', site='all'):
         records = emp_records.get(uname, [])
 
         hadir_dates = set()
+        tepat_waktu_dates = set()
         cuti_dates = set()
         sakit_dates = set()
         izin_dates = set()
@@ -2277,6 +2389,18 @@ def get_rekap_report_data(start_date, end_date, branch='all', site='all'):
             matched = parse_record_dates(r_ts, r_reason, dt_start, dt_end)
             if not matched:
                 continue
+
+            # Cek apakah clock in tepat waktu (sebelum atau tepat jam 08:50)
+            is_on_time = False
+            try:
+                if isinstance(r_ts, str):
+                    ts_val = datetime.strptime(str(r_ts)[:19], '%Y-%m-%d %H:%M:%S')
+                else:
+                    ts_val = r_ts
+                if ts_val and (ts_val.hour < 8 or (ts_val.hour == 8 and ts_val.minute <= 50)):
+                    is_on_time = True
+            except Exception:
+                pass
 
             # Verifikasi apakah presensi dilakukan di Site / Others
             rec_is_site = (
@@ -2293,17 +2417,27 @@ def get_rekap_report_data(start_date, end_date, branch='all', site='all'):
                 if is_other_filter:
                     if rec_is_site:
                         hadir_dates.update(matched)
+                        if is_on_time:
+                            tepat_waktu_dates.update(matched)
                 elif is_site_category:
                     if 'site' in r_reason.lower() or any(t == 'On Site' for t in [e.get('tag1'), e.get('tag2'), e.get('tag3')]):
                         hadir_dates.update(matched)
+                        if is_on_time:
+                            tepat_waktu_dates.update(matched)
                 elif is_customer_category:
                     if 'customer' in r_reason.lower():
                         hadir_dates.update(matched)
+                        if is_on_time:
+                            tepat_waktu_dates.update(matched)
                 elif is_office_filter:
                     if not rec_is_site:
                         hadir_dates.update(matched)
+                        if is_on_time:
+                            tepat_waktu_dates.update(matched)
                 else:
                     hadir_dates.update(matched)
+                    if is_on_time:
+                        tepat_waktu_dates.update(matched)
             elif 'cuti' in r_type or 'cuti' in r_reason.lower():
                 cuti_dates.update(matched)
             elif 'sakit' in r_type or 'sakit' in r_reason.lower() or r_type == 'sick_leave':
@@ -2318,8 +2452,10 @@ def get_rekap_report_data(start_date, end_date, branch='all', site='all'):
         cuti_dates -= hadir_dates
         sakit_dates -= (hadir_dates | cuti_dates)
         izin_dates -= (hadir_dates | cuti_dates | sakit_dates)
+        tepat_waktu_dates &= hadir_dates
 
         hadir = len(hadir_dates)
+        tepat_waktu = len(tepat_waktu_dates)
         cuti = len(cuti_dates)
         izin_sakit = len(sakit_dates)
         izin_keperluan = len(izin_dates)
@@ -2357,6 +2493,7 @@ def get_rekap_report_data(start_date, end_date, branch='all', site='all'):
             'branch': branch_name,
             'total_hari_kerja': total_hari_kerja,
             'jumlah_hadir': hadir,
+            'jumlah_tepat_waktu': tepat_waktu,
             'jumlah_izin_keperluan': izin_keperluan,
             'jumlah_izin_sakit': izin_sakit,
             'jumlah_cuti': cuti,
