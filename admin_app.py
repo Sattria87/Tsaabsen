@@ -3482,18 +3482,34 @@ def manage_app_update():
     cursor.execute("""
         SELECT id, version_name, version_code, min_version_code, title, changelog, 
                apk_filename, download_url, is_mandatory, is_active,
-               DATE_FORMAT(created_at, '%%d %%b %%Y %%H:%%i') as formatted_date
+               created_at
         FROM app_updates
         ORDER BY version_code DESC
     """)
     all_updates = cursor.fetchall()
-    active_update = all_updates[0] if all_updates else None
+    for u in all_updates:
+        ca = u.get('created_at')
+        if isinstance(ca, datetime):
+            u['formatted_date'] = ca.strftime('%d %b %Y %H:%M')
+        elif ca:
+            u['formatted_date'] = str(ca)
+        else:
+            u['formatted_date'] = '-'
 
+    active_update = all_updates[0] if all_updates else None
     conn.close()
+
+    now = datetime.now()
+    current_day = now.strftime('%A')
+    current_date_formatted = f"{now.strftime('%B')} {now.day}, {now.year}"
+
     return render_template(
         'app_update.html',
         all_updates=all_updates,
         active_update=active_update,
+        current_day=current_day,
+        current_date_formatted=current_date_formatted,
+        tsa_logo_data_uri=TSA_LOGO_DATA_URI,
         current_page='app_update'
     )
 

@@ -150,3 +150,4 @@ class _ChartSegment {
   final Color color;
   _ChartSegment(this.value, this.color);
 }
+

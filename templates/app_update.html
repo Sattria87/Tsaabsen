@@ -3,324 +3,664 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pembaruan Aplikasi Mobile - Admin TSA</title>
-    <!-- Google Fonts: Plus Jakarta Sans -->
+    <title>Update App - Pembaruan Aplikasi Mobile</title>
+    <!-- Google Font: Plus Jakarta Sans -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 
     <style>
         :root {
-            --tsa-blue: #1d4ed8;
-            --tsa-navy: #0f172a;
-            --tsa-light: #f8fafc;
-            --menu-bg-active: #1e3a8a;
-            --menu-bg-inactive: #f1f5f9;
+            --bg-canvas: #f8f9fa;
+            --sidebar-width: 260px;
+            --text-dark: #121826;
+            --text-muted: #8c97a8;
+            --menu-bg-inactive: #d9dbdf;
+            --menu-bg-active: #131b3e;
+            --btn-blue: #0066ff;
+            --card-shadow: 0 8px 24px rgba(17, 24, 39, 0.04);
+            --card-border: 1px solid rgba(226, 232, 240, 0.9);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
 
         body {
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            background-color: var(--tsa-light);
-            color: #1e293b;
-        }
-
-        .dashboard-container {
-            display: flex;
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--bg-canvas);
+            color: var(--text-dark);
             min-height: 100vh;
+            overflow-x: hidden;
         }
 
+        /* ================= SIDEBAR (IDENTIK DENGAN HALAMAN LAIN) ================= */
         .sidebar {
-            width: 260px;
+            width: var(--sidebar-width);
+            height: 100vh;
             background: #ffffff;
-            border-right: 1px solid #e2e8f0;
+            position: fixed;
+            top: 0;
+            left: 0;
+            border-right: 1px solid #e5e7eb;
+            padding: 30px 20px 24px 20px;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            padding: 24px 16px;
-            position: sticky;
-            top: 0;
-            height: 100vh;
+            z-index: 1000;
         }
 
-        .sidebar-brand {
+        .sidebar-logo-container {
             display: flex;
+            justify-content: center;
             align-items: center;
-            gap: 12px;
-            padding: 0 10px 24px;
-            border-bottom: 1px solid #f1f5f9;
-            margin-bottom: 20px;
+            margin-bottom: 28px;
+            padding: 0 10px;
         }
 
-        .sidebar-brand img {
-            width: 38px;
-            height: 38px;
-            border-radius: 8px;
+        .sidebar-logo {
+            max-width: 155px;
+            height: auto;
+            max-height: 58px;
+            object-fit: contain;
+            transition: transform 0.2s ease;
         }
-
-        .sidebar-brand h4 {
-            font-size: 16px;
-            font-weight: 800;
-            margin: 0;
-            color: #0f172a;
+        .sidebar-logo:hover {
+            transform: scale(1.03);
         }
 
         .sidebar-menu {
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            gap: 12px;
         }
 
         .side-btn {
             background-color: var(--menu-bg-inactive);
-            color: #334155;
-            text-align: left;
-            padding: 12px 16px;
+            color: #111827;
+            text-align: center;
+            padding: 12px 14px;
             border-radius: 12px;
-            font-size: 14px;
-            font-weight: 600;
+            font-size: 14.5px;
+            font-weight: 700;
             text-decoration: none;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            transition: all 0.2s ease;
+            display: block;
+            border: none;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            user-select: none;
         }
 
         .side-btn:hover {
-            background-color: #e2e8f0;
-            color: #0f172a;
+            background-color: #cbced4;
+            color: #000000;
+            transform: translateY(-1px);
         }
 
         .side-btn.active {
-            background-color: var(--tsa-blue);
+            background-color: var(--menu-bg-active);
             color: #ffffff;
-            box-shadow: 0 4px 12px rgba(29, 78, 216, 0.25);
+            box-shadow: 0 4px 12px rgba(19, 27, 62, 0.25);
         }
 
-        .main-content {
-            flex: 1;
-            padding: 32px 40px;
-            overflow-y: auto;
+        .logout-btn {
+            background-color: var(--btn-blue);
+            color: #ffffff;
+            border: none;
+            border-radius: 14px;
+            padding: 13px;
+            width: 100%;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 14px rgba(0, 102, 255, 0.3);
+            text-align: center;
+            text-decoration: none;
+            display: block;
         }
 
-        .card-custom {
-            background: #ffffff;
-            border-radius: 16px;
+        .logout-btn:hover {
+            background-color: #0052cc;
+            color: #ffffff;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 18px rgba(0, 102, 255, 0.4);
+        }
+
+        .lang-switch-container {
+            display: flex;
+            background: #eef2f7;
             border: 1px solid #e2e8f0;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
-            padding: 24px;
+            border-radius: 12px;
+            padding: 3px;
+            gap: 3px;
+            margin-bottom: 10px;
+        }
+        .lang-btn {
+            flex: 1;
+            border: none;
+            background: transparent;
+            padding: 6px 8px;
+            border-radius: 9px;
+            font-size: 12px;
+            font-weight: 700;
+            color: #64748b;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .lang-btn:hover { color: #0f172a; }
+        .lang-btn.active {
+            background: #ffffff;
+            color: #0066ff;
+            box-shadow: 0 2px 6px rgba(0, 102, 255, 0.15);
+        }
+
+        /* ================= MAIN WRAPPER ================= */
+        .main-wrapper {
+            margin-left: var(--sidebar-width);
+            min-height: 100vh;
+            background-color: #ffffff;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Top Bar Header Dark Banner */
+        .top-navbar-banner {
+            background-color: var(--menu-bg-active);
+            color: #ffffff;
+            height: 64px;
+            padding: 0 36px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .navbar-brand-section {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .navbar-brand-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #ffffff;
+            letter-spacing: -0.2px;
+        }
+
+        .navbar-date-section {
+            font-size: 14px;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.95);
+            letter-spacing: 0.1px;
+        }
+
+        /* Content Area */
+        .content-body {
+            padding: 36px 44px 60px 44px;
+            flex: 1;
+            background-color: #ffffff;
+        }
+
+        /* Page Title & Breadcrumb */
+        .page-header-title {
+            font-size: 28px;
+            font-weight: 800;
+            color: #111827;
+            margin-bottom: 2px;
+            letter-spacing: -0.5px;
+        }
+
+        .page-breadcrumb {
+            font-size: 13.5px;
+            font-weight: 500;
+            color: #6b7280;
+            margin-bottom: 32px;
+        }
+
+        /* ================= CARDS & FORMS ================= */
+        .section-card {
+            background: #ffffff;
+            border-radius: 18px;
+            border: var(--card-border);
+            box-shadow: var(--card-shadow);
+            padding: 30px 32px;
+            height: 100%;
+        }
+
+        .card-inner-title {
+            font-size: 18.5px;
+            font-weight: 800;
+            color: #111827;
+            margin-bottom: 22px;
+            letter-spacing: -0.3px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .field-label {
+            font-size: 13.5px;
+            font-weight: 700;
+            color: #1f2937;
+            margin-bottom: 7px;
+            display: block;
+        }
+
+        .field-input {
+            border: 1.5px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 11px 16px;
+            font-size: 14px;
+            font-weight: 500;
+            color: #0f172a;
+            transition: all 0.2s ease;
+            width: 100%;
+            background-color: #ffffff;
+        }
+        .field-input:focus {
+            border-color: #0066ff;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(0, 102, 255, 0.1);
+        }
+
+        .btn-submit-release {
+            background-color: var(--btn-blue);
+            color: #ffffff;
+            border: none;
+            border-radius: 12px;
+            padding: 13px 24px;
+            font-size: 15px;
+            font-weight: 700;
+            width: 100%;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 14px rgba(0, 102, 255, 0.25);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .btn-submit-release:hover {
+            background-color: #0052cc;
+            color: #ffffff;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 18px rgba(0, 102, 255, 0.35);
+        }
+
+        .active-version-badge {
+            background-color: #10b981;
+            color: #ffffff;
+            font-size: 13px;
+            font-weight: 800;
+            padding: 5px 14px;
+            border-radius: 20px;
+            display: inline-block;
+        }
+
+        .changelog-box {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 14px 16px;
+            font-size: 13px;
+            line-height: 1.6;
+            color: #334155;
+            white-space: pre-wrap;
+        }
+
+        .guide-box {
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            border-radius: 14px;
+            padding: 16px;
+            font-size: 12.5px;
+            line-height: 1.6;
+            color: #1e40af;
+        }
+
+        .table-custom {
+            margin-bottom: 0;
+        }
+        .table-custom th {
+            font-size: 12.5px;
+            font-weight: 700;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1.5px solid #e2e8f0;
+            padding: 12px 14px;
+            background-color: #f8fafc;
+        }
+        .table-custom td {
+            font-size: 13.5px;
+            color: #1e293b;
+            padding: 14px;
+            vertical-align: middle;
+            border-bottom: 1px solid #f1f5f9;
         }
     </style>
 </head>
 <body>
 
-<div class="dashboard-container">
-    <!-- SIDEBAR -->
-    <aside class="sidebar">
+    <!-- ================= SIDEBAR (KONSISTEN 100% DENGAN HALAMAN LAIN) ================= -->
+    <div class="sidebar">
         <div>
-            <div class="sidebar-brand">
-                <img src="/assets/logo_tsa.png" alt="TSA Logo" onerror="this.src='/assets/avatar_mascot_centered.png'">
-                <div>
-                    <h4>TSA Presensi</h4>
-                    <span class="text-muted small">Admin Panel</span>
-                </div>
+            <!-- LOGO TSA -->
+            <div class="sidebar-logo-container">
+                <a href="/" title="TSA Home" style="display: inline-block; text-decoration: none;">
+                    <img src="/assets/tsa_logo.png" alt="TSA Logo" class="sidebar-logo" onerror="if(!this.dataset.fallback && '{{ tsa_logo_data_uri }}'){this.dataset.fallback='1'; this.src='{{ tsa_logo_data_uri }}';}">
+                </a>
             </div>
 
+            <!-- MENU TOMBOL SAMPING -->
             <nav class="sidebar-menu">
-                <a href="/" class="side-btn"><i class="bi bi-grid-fill"></i> Home page</a>
-                <a href="/employee" class="side-btn"><i class="bi bi-people-fill"></i> Employee</a>
-                <a href="/branch-company" class="side-btn"><i class="bi bi-geo-alt-fill"></i> Branch company</a>
-                <a href="/presence" class="side-btn"><i class="bi bi-calendar-check-fill"></i> Presence</a>
-                <a href="/request" class="side-btn"><i class="bi bi-clock-history"></i> Request</a>
-                <a href="/report" class="side-btn"><i class="bi bi-file-earmark-bar-graph-fill"></i> Report</a>
-                <a href="/app-update" class="side-btn active"><i class="bi bi-arrow-up-circle-fill"></i> Auto Update</a>
+                <a href="/" class="side-btn" id="menu-home" data-i18n="menu_home">Home page</a>
+                <a href="/employee" class="side-btn" id="menu-employee" data-i18n="menu_employee">Employee</a>
+                <a href="/branch-company" class="side-btn" id="menu-branch" data-i18n="menu_branch">Branch company</a>
+                <a href="/presence" class="side-btn" id="menu-presence" data-i18n="menu_presence">Presence</a>
+                <a href="/request" class="side-btn" id="menu-request" data-i18n="menu_request">Request</a>
+                <a href="/report" class="side-btn" id="menu-report" data-i18n="menu_report">Report</a>
+                <a href="/app-update" class="side-btn active" id="menu-app-update"><i class="bi bi-arrow-up-circle me-1"></i>Update App</a>
             </nav>
         </div>
 
-        <div class="mt-auto">
-            <a href="/logout" class="btn btn-outline-danger w-100 rounded-pill fw-semibold py-2">
-                <i class="bi bi-box-arrow-right me-1"></i> Keluar
-            </a>
+        <!-- LOGOUT BUTTON & LANG SWITCH (BLUE PILL) -->
+        <div class="w-100">
+            <!-- LANGUAGE SWITCHER (ID / EN) -->
+            <div class="lang-switch-container">
+                <button type="button" class="lang-btn" data-lang="id" onclick="changeLanguage('id')">
+                    <span>🇮🇩</span> Indonesia
+                </button>
+                <button type="button" class="lang-btn" data-lang="en" onclick="changeLanguage('en')">
+                    <span>🇬🇧</span> English
+                </button>
+            </div>
+
+            <button type="button" class="logout-btn" id="btn-logout" data-bs-toggle="modal" data-bs-target="#logoutModal" data-i18n="logout">
+                Logout
+            </button>
         </div>
-    </aside>
+    </div>
 
-    <!-- MAIN CONTENT -->
-    <main class="main-content">
-        <!-- HEADER -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <div>
-                <h2 class="fw-bold text-dark mb-1">Manajemen Pembaruan Aplikasi (Auto Update)</h2>
-                <p class="text-muted mb-0">Rilis pembaruan fitur atau APK baru agar aplikasi mobile karyawan otomatis meminta update in-app.</p>
+    <!-- ================= MAIN WRAPPER ================= -->
+    <main class="main-wrapper">
+
+        <!-- TOP BAR BANNER (DARK NAVY) -->
+        <header class="top-navbar-banner">
+            <div class="navbar-brand-section">
+                <i class="bi bi-list fs-3 text-white cursor-pointer" title="Menu"></i>
+                <span class="navbar-brand-title">Update App</span>
             </div>
-            <div>
-                <a href="/api/app/download" target="_blank" class="btn btn-outline-primary rounded-pill px-3 py-2 fw-semibold">
-                    <i class="bi bi-download me-1"></i> Unduh APK Aktif
-                </a>
+            <div class="navbar-date-section" id="realtime-clock">
+                {{ current_day }} {{ current_date_formatted }}
             </div>
-        </div>
+        </header>
 
-        <!-- FLASH MESSAGES -->
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ category if category != 'error' else 'danger' }} alert-dismissible fade show rounded-3 mb-4" role="alert">
-                        <i class="bi bi-info-circle-fill me-2"></i>{{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
+        <!-- CONTENT BODY -->
+        <div class="content-body">
 
-        <div class="row g-4 mb-4">
-            <!-- STATUS VERSI AKTIF -->
-            <div class="col-lg-5">
-                <div class="card-custom h-100">
-                    <h5 class="fw-bold text-dark mb-3"><i class="bi bi-shield-check text-success me-2"></i>Versi Publik Aktif</h5>
-                    
-                    {% if active_update %}
-                    <div class="p-3 rounded-4 mb-3" style="background-color: #f0fdf4; border: 1px solid #bbf7d0;">
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <span class="badge bg-success px-3 py-1.5 rounded-pill fw-bold">v{{ active_update.version_name }} (Build {{ active_update.version_code }})</span>
-                            {% if active_update.is_mandatory %}
-                                <span class="badge bg-danger px-2.5 py-1 rounded-pill">Wajib Update</span>
-                            {% else %}
-                                <span class="badge bg-secondary px-2.5 py-1 rounded-pill">Opsional</span>
-                            {% endif %}
+            <!-- FLASH ALERTS -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category if category != 'error' else 'danger' }} alert-dismissible fade show rounded-3 mb-4 shadow-sm" role="alert">
+                            <i class="bi bi-info-circle-fill me-2"></i>{{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                         </div>
-                        <h6 class="fw-bold text-dark mb-1">{{ active_update.title }}</h6>
-                        <small class="text-muted d-block mb-2">Dirilis: {{ active_update.formatted_date }}</small>
-                        <div class="p-2.5 bg-white rounded-3 border small text-secondary" style="white-space: pre-line;">
-                            {{ active_update.changelog }}
-                        </div>
-                    </div>
-                    {% else %}
-                    <div class="p-4 text-center text-muted border rounded-4">
-                        <i class="bi bi-exclamation-circle fs-2 d-block mb-2"></i>
-                        Belum ada rilis versi aplikasi aktif.
-                    </div>
-                    {% endif %}
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
 
-                    <div class="mt-3 p-3 bg-light rounded-3 border">
-                        <small class="fw-semibold text-secondary d-block mb-1"><i class="bi bi-info-circle me-1"></i>Cara Kerja Auto-Update:</small>
-                        <ol class="small text-muted ps-3 mb-0">
-                            <li>Setiap kali karyawan membuka aplikasi mobile, sistem akan mengecek versi ini secara otomatis.</li>
-                            <li>Jika versi di server lebih tinggi, pop-up dialog update akan langsung muncul menanyakan apakah ingin memperbarui.</li>
-                            <li>Jika pengguna memilih "Perbarui Sekarang", APK akan langsung diunduh dan dipasang di dalam aplikasi.</li>
-                        </ol>
-                    </div>
-                </div>
-            </div>
+            <!-- Page Title -->
+            <h1 class="page-header-title">Pembaruan Aplikasi Mobile</h1>
+            <p class="page-breadcrumb">Kelola rilis versi APK, changelog fitur baru, dan pantau sistem auto-update otomatis karyawan</p>
 
-            <!-- FORM RILIS UPDATE BARU -->
-            <div class="col-lg-7">
-                <div class="card-custom h-100">
-                    <h5 class="fw-bold text-dark mb-3"><i class="bi bi-cloud-arrow-up-fill text-primary me-2"></i>Rilis Versi Aplikasi Baru</h5>
-                    
-                    <form action="/app-update" method="POST" enctype="multipart/form-data">
-                        <input type="hidden" name="action" value="release_update">
-                        
-                        <div class="row g-3 mb-3">
-                            <div class="col-md-6">
-                                <label class="form-label small fw-bold">Nomor Versi Aplikasi <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control rounded-3" name="version_name" placeholder="Contoh: 1.0.1" required>
-                                <small class="text-muted" style="font-size: 11px;">Format X.Y.Z (harus lebih tinggi dari versi saat ini)</small>
+            <!-- Grid 2 Kolom: Versi Aktif & Form Rilis Baru -->
+            <div class="row g-4">
+                
+                <!-- KOLOM KIRI: STATUS VERSI AKTIF SAAT INI -->
+                <div class="col-lg-5">
+                    <div class="section-card">
+                        <h2 class="card-inner-title">
+                            <i class="bi bi-check-circle-fill text-success"></i>
+                            Versi Publik Aktif
+                        </h2>
+
+                        {% if active_update %}
+                            <div class="d-flex align-items-center justify-content-between mb-3">
+                                <span class="active-version-badge">
+                                    v{{ active_update.version_name }} (Build {{ active_update.version_code }})
+                                </span>
+                                {% if active_update.is_mandatory %}
+                                    <span class="badge bg-danger rounded-pill px-3 py-2 fw-bold">
+                                        <i class="bi bi-exclamation-triangle-fill me-1"></i> Wajib Update
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-secondary rounded-pill px-3 py-2 fw-semibold">
+                                        Opsional
+                                    </span>
+                                {% endif %}
                             </div>
-                            <div class="col-md-6">
-                                <label class="form-label small fw-bold">Build Version Code <span class="text-danger">*</span></label>
-                                <input type="number" class="form-control rounded-3" name="version_code" placeholder="Contoh: 2" min="1" required>
-                                <small class="text-muted" style="font-size: 11px;">Angka integer unik (contoh: 2, 3, 4...)</small>
+
+                            <h5 class="fw-bold text-dark mb-1">{{ active_update.title }}</h5>
+                            <p class="text-muted small mb-3">
+                                <i class="bi bi-clock me-1"></i>Dirilis: <strong>{{ active_update.formatted_date }}</strong>
+                            </p>
+
+                            <label class="field-label">Catatan Perubahan (Changelog):</label>
+                            <div class="changelog-box mb-4">{{ active_update.changelog or 'Tidak ada rincian catatan pembaruan.' }}</div>
+
+                            <div class="mb-4">
+                                <a href="/api/app/download" target="_blank" class="btn btn-outline-primary w-100 rounded-pill py-2 fw-bold">
+                                    <i class="bi bi-download me-1"></i> Unduh File APK Versi Ini
+                                </a>
                             </div>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label small fw-bold">Judul Pembaruan <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control rounded-3" name="title" placeholder="Contoh: Pembaruan Fitur Absensi & Peningkatan Kinerja" required>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label small fw-bold">Catatan Perubahan (Changelog / Fitur Baru) <span class="text-danger">*</span></label>
-                            <textarea class="form-control rounded-3" name="changelog" rows="4" placeholder="• Penambahan fitur auto update&#10;• Peningkatan akurasi lokasi GPS&#10;• Perbaikan bug kamera selfie" required></textarea>
-                            <small class="text-muted" style="font-size: 11px;">Teks ini akan tampil langsung di pop-up aplikasi karyawan.</small>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label small fw-bold">Upload File APK Baru (.apk)</label>
-                            <input type="file" class="form-control rounded-3" name="apk_file" accept=".apk">
-                            <small class="text-muted" style="font-size: 11px;">Unggah file <code>app-release.apk</code> hasil build Flutter. Jika dikosongkan, link download default akan tetap digunakan.</small>
-                        </div>
-
-                        <div class="form-check form-switch mb-4">
-                            <input class="form-check-input" type="checkbox" role="switch" id="mandatoryCheck" name="is_mandatory" value="1">
-                            <label class="form-check-label fw-semibold small" for="mandatoryCheck">
-                                Wajibkan Pengguna Update (Force Update / Karyawan tidak bisa lewati pembaruan)
-                            </label>
-                        </div>
-
-                        <button type="submit" class="btn btn-primary rounded-pill px-4 py-2.5 fw-bold w-100 shadow-sm">
-                            <i class="bi bi-send-fill me-2"></i>Rilis Pembaruan ke Seluruh Karyawan
-                        </button>
-                    </form>
-                </div>
-            </div>
-        </div>
-
-        <!-- TABEL RIWAYAT UPDATE -->
-        <div class="card-custom">
-            <h5 class="fw-bold text-dark mb-3"><i class="bi bi-clock-history me-2"></i>Riwayat Rilis Pembaruan</h5>
-            
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Versi</th>
-                            <th>Build Code</th>
-                            <th>Judul Pembaruan</th>
-                            <th>Tanggal Rilis</th>
-                            <th>Tipe Update</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% if all_updates %}
-                            {% for u in all_updates %}
-                            <tr>
-                                <td class="fw-bold">v{{ u.version_name }}</td>
-                                <td><span class="badge bg-light text-dark border">{{ u.version_code }}</span></td>
-                                <td>
-                                    <div class="fw-semibold">{{ u.title }}</div>
-                                    <small class="text-muted text-truncate d-block" style="max-width: 320px;">{{ u.changelog }}</small>
-                                </td>
-                                <td class="small text-muted">{{ u.formatted_date }}</td>
-                                <td>
-                                    {% if u.is_mandatory %}
-                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Wajib</span>
-                                    {% else %}
-                                        <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">Opsional</span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    {% if u.is_active %}
-                                        <span class="badge bg-success-subtle text-success border border-success-subtle"><i class="bi bi-check-circle me-1"></i>Aktif</span>
-                                    {% else %}
-                                        <span class="badge bg-light text-muted border">Nonaktif</span>
-                                    {% endif %}
-                                </td>
-                            </tr>
-                            {% endfor %}
                         {% else %}
-                            <tr>
-                                <td colspan="6" class="text-center text-muted py-4">Belum ada data pembaruan.</td>
-                            </tr>
+                            <div class="alert alert-warning rounded-3 small mb-4">
+                                <i class="bi bi-exclamation-circle me-1"></i> Belum ada rilis versi aktif yang terdaftar.
+                            </div>
                         {% endif %}
-                    </tbody>
-                </table>
+
+                        <!-- Panduan Cara Kerja Auto Update -->
+                        <div class="guide-box">
+                            <div class="fw-bold mb-2">
+                                <i class="bi bi-info-circle-fill me-1"></i> Cara Kerja Auto-Update:
+                            </div>
+                            <ol class="ps-3 mb-0">
+                                <li>Setiap kali karyawan membuka aplikasi mobile, sistem langsung mengecek ke server secara otomatis.</li>
+                                <li>Jika versi server lebih tinggi dari aplikasi di HP karyawan, pop-up pembaruan langsung muncul di layar.</li>
+                                <li>Saat karyawan menekan <strong>"Perbarui Sekarang"</strong>, APK langsung diunduh di dalam aplikasi lalu sistem Android otomatis memasangnya.</li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- KOLOM KANAN: FORM RILIS VERSI BARU -->
+                <div class="col-lg-7">
+                    <div class="section-card">
+                        <h2 class="card-inner-title">
+                            <i class="bi bi-cloud-arrow-up-fill text-primary"></i>
+                            Rilis Versi Aplikasi Baru
+                        </h2>
+
+                        <form action="/app-update" method="POST" enctype="multipart/form-data">
+                            <input type="hidden" name="action" value="release_update">
+
+                            <div class="row g-3 mb-3">
+                                <div class="col-sm-6">
+                                    <label class="field-label">Nomor Versi Aplikasi <span class="text-danger">*</span></label>
+                                    <input type="text" name="version_name" class="field-input" placeholder="Contoh: 1.0.1" required>
+                                    <span class="text-muted small">Format SemVer (X.Y.Z)</span>
+                                </div>
+                                <div class="col-sm-6">
+                                    <label class="field-label">Build Version Code <span class="text-danger">*</span></label>
+                                    <input type="number" name="version_code" class="field-input" placeholder="Contoh: 2" min="1" required>
+                                    <span class="text-muted small">Angka bulat naik (misal: 2, 3, 4...)</span>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="field-label">Judul Pembaruan <span class="text-danger">*</span></label>
+                                <input type="text" name="title" class="field-input" placeholder="Contoh: Pembaruan Fitur Absensi & Peningkatan Kinerja" required>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="field-label">Catatan Perubahan (Changelog / Fitur Baru) <span class="text-danger">*</span></label>
+                                <textarea name="changelog" rows="4" class="field-input" placeholder="• Penambahan fitur auto update&#10;• Peningkatan akurasi presensi GPS&#10;• Perbaikan performa sistem" required></textarea>
+                                <span class="text-muted small">Catatan ini akan langsung dibaca karyawan di pop-up aplikasi.</span>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="field-label">Upload File APK Baru (.apk)</label>
+                                <input type="file" name="apk_file" class="form-control rounded-3" accept=".apk">
+                                <span class="text-muted small">Unggah file APK release hasil build Flutter. Jika dikosongkan, file build internal yang tersedia akan tetap digunakan.</span>
+                            </div>
+
+                            <div class="form-check form-switch mb-4 p-3 bg-light rounded-3">
+                                <input class="form-check-input ms-0 me-3" type="checkbox" name="is_mandatory" id="forceUpdateSwitch" value="1">
+                                <label class="form-check-label fw-bold text-dark" for="forceUpdateSwitch">
+                                    Wajibkan Pengguna Update (Force Update)
+                                </label>
+                                <div class="text-muted small ms-5">
+                                    Jika diaktifkan, karyawan tidak bisa melewati pembaruan dan harus meng-update aplikasi sebelum bisa presensi.
+                                </div>
+                            </div>
+
+                            <button type="submit" class="btn-submit-release">
+                                <i class="bi bi-send-fill"></i>
+                                Publikasikan Pembaruan ke Seluruh Karyawan
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- BAGIAN BAWAH: TABEL RIWAYAT RILIS -->
+            <div class="row mt-4">
+                <div class="col-12">
+                    <div class="section-card">
+                        <h2 class="card-inner-title">
+                            <i class="bi bi-clock-history text-secondary"></i>
+                            Riwayat Rilis Pembaruan
+                        </h2>
+
+                        <div class="table-responsive">
+                            <table class="table table-custom">
+                                <thead>
+                                    <tr>
+                                        <th>Versi</th>
+                                        <th>Build Code</th>
+                                        <th>Judul & Changelog</th>
+                                        <th>Tanggal Rilis</th>
+                                        <th>Sifat</th>
+                                        <th>Status</th>
+                                        <th class="text-end">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for item in all_updates %}
+                                        <tr>
+                                            <td>
+                                                <span class="fw-bold text-dark">v{{ item.version_name }}</span>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-light text-dark border fw-bold">{{ item.version_code }}</span>
+                                            </td>
+                                            <td>
+                                                <div class="fw-bold text-dark">{{ item.title }}</div>
+                                                <div class="text-muted small text-truncate" style="max-width: 320px;">
+                                                    {{ item.changelog or '-' }}
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <span class="text-muted small">{{ item.formatted_date }}</span>
+                                            </td>
+                                            <td>
+                                                {% if item.is_mandatory %}
+                                                    <span class="badge bg-danger rounded-pill px-2.5 py-1">Wajib</span>
+                                                {% else %}
+                                                    <span class="badge bg-secondary rounded-pill px-2.5 py-1">Opsional</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if item.is_active %}
+                                                    <span class="badge bg-success-subtle text-success border border-success-subtle px-2.5 py-1 rounded-pill fw-bold">
+                                                        <i class="bi bi-check-circle-fill me-1"></i> Aktif
+                                                    </span>
+                                                {% else %}
+                                                    <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-2.5 py-1 rounded-pill">
+                                                        Nonaktif
+                                                    </span>
+                                                {% endif %}
+                                            </td>
+                                            <td class="text-end">
+                                                <div class="d-inline-flex gap-2">
+                                                    <form action="/app-update" method="POST" class="d-inline">
+                                                        <input type="hidden" name="action" value="toggle_status">
+                                                        <input type="hidden" name="update_id" value="{{ item.id }}">
+                                                        <input type="hidden" name="new_status" value="{{ 0 if item.is_active else 1 }}">
+                                                        <button type="submit" class="btn btn-sm {{ 'btn-outline-warning' if item.is_active else 'btn-outline-success' }} rounded-pill px-3 fw-semibold">
+                                                            {{ 'Nonaktifkan' if item.is_active else 'Aktifkan' }}
+                                                        </button>
+                                                    </form>
+                                                    <a href="/api/app/download" class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-semibold" title="Unduh File APK">
+                                                        <i class="bi bi-download"></i>
+                                                    </a>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    {% else %}
+                                        <tr>
+                                            <td colspan="7" class="text-center py-4 text-muted">
+                                                Belum ada riwayat pembaruan yang tercatat.
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- MODAL LOGOUT (PERSIS DENGAN HALAMAN LAIN) -->
+    <div class="modal fade" id="logoutModal" tabindex="-1" aria-labelledby="logoutModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" style="max-width: 380px;">
+            <div class="modal-content rounded-4 border-0 shadow">
+                <div class="modal-body text-center p-4">
+                    <div class="mb-3 text-primary">
+                        <i class="bi bi-box-arrow-right fs-1"></i>
+                    </div>
+                    <h5 class="fw-bold mb-2" id="logout-title" data-i18n="logout_title">Konfirmasi Logout</h5>
+                    <p class="text-muted small mb-4" id="logout-msg" data-i18n="logout_msg">Apakah Anda yakin ingin keluar dari Admin Dashboard TSA?</p>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-light w-50 fw-semibold rounded-3 py-2" data-bs-dismiss="modal" id="logout-btn-cancel" data-i18n="logout_cancel">Batal</button>
+                        <a href="/logout" class="btn btn-primary w-50 fw-semibold rounded-3 py-2" id="logout-btn-confirm" data-i18n="logout_confirm">Ya, Keluar</a>
+                    </div>
+                </div>
             </div>
         </div>
-    </main>
-</div>
+    </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Bootstrap 5 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Master Centralized i18n Engine -->
+    <script src="/assets/app_i18n.js?v=20261027_liveclock"></script>
 </body>
 </html>
-
