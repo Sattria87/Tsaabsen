@@ -57,3 +57,9 @@ ai_service/.venv/
 ai_service/embeddings/*.pkl
 ai_service/embeddings/*.npy
 
+# Uploaded APKs
+uploads/apk/*.apk
+*.apk
+.vscode/
+
+

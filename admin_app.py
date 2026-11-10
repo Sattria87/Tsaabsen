@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, send_from_directory, send_file, session, jsonify
 import os
+import shutil
 import io
 import base64
 import pymysql
@@ -23,6 +24,8 @@ except Exception as e:
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ASSETS_DIR = os.path.join(BASE_DIR, 'assets')
+APK_DIR = os.path.join(BASE_DIR, 'uploads', 'apk')
+os.makedirs(APK_DIR, exist_ok=True)
 
 # Import fallback data logo TSA & script i18n jika file di disk tidak ditemukan / tertutup volume Docker
 try:
@@ -309,6 +312,37 @@ def ensure_db_schema():
                 (%s, 'cuti', NOW() - INTERVAL 3 DAY, 'Jenis Cuti: Cuti Melahirkan / Bersalin | Periode: 2026-11-07 s/d 2026-12-07 (30 Hari) | Alasan: Cuti melahirkan dan pemulihan kesehatan', 'Approved')
             """, (u_c1, u_c2, u_c3, u_c4))
             print(f"[Schema Info] Berhasil menambahkan contoh data pengajuan cuti ke database.")
+
+        # Tabel 7: App Updates (Sistem Auto-Update Aplikasi Mobile)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS app_updates (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                version_name VARCHAR(50) NOT NULL,
+                version_code INT NOT NULL,
+                min_version_code INT DEFAULT 1,
+                title VARCHAR(150) NOT NULL,
+                changelog TEXT,
+                apk_filename VARCHAR(255) NULL,
+                download_url VARCHAR(255) NULL,
+                is_mandatory TINYINT(1) DEFAULT 0,
+                is_active TINYINT(1) DEFAULT 1,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+        """)
+
+        cursor.execute("SELECT COUNT(*) AS total FROM app_updates")
+        if cursor.fetchone().get('total', 0) == 0:
+            cursor.execute("""
+                INSERT INTO app_updates (version_name, version_code, min_version_code, title, changelog, download_url, is_mandatory, is_active)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            """, (
+                '1.0.0', 1, 1, 
+                'Rilis Stabil Awal', 
+                '• Rilis awal aplikasi presensi ProjectWG TSA\n• Fitur presensi clock in & out berbasis GPS & Face ID\n• Pengajuan izin keperluan, sakit, dan cuti tahunan',
+                '/api/app/download', 0, 1
+            ))
+            print("[Schema Info] Versi awal app_updates berhasil dibuat.")
 
         conn.commit()
         conn.close()
@@ -3168,6 +3202,170 @@ def api_get_attendance_status(username):
         })
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
+
+# ==========================================
+# AUTO UPDATE SYSTEM (API & WEB ADMIN DASHBOARD)
+# ==========================================
+@app.route('/api/app-version', methods=['GET'])
+@app.route('/api/check-update', methods=['GET'])
+def api_check_update():
+    """Endpoint untuk aplikasi mobile Flutter mengecek ketersediaan pembaruan (auto-update)."""
+    try:
+        client_code = int(request.args.get('version_code', 1))
+    except (ValueError, TypeError):
+        client_code = 1
+
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT id, version_name, version_code, min_version_code, title, changelog, 
+                   apk_filename, download_url, is_mandatory, is_active,
+                   DATE_FORMAT(created_at, '%%d %%b %%Y %%H:%%i') as formatted_date
+            FROM app_updates
+            WHERE is_active = 1
+            ORDER BY version_code DESC
+            LIMIT 1
+        """)
+        latest = cursor.fetchone()
+        conn.close()
+
+        if not latest:
+            return jsonify({
+                "status": "success",
+                "has_update": False,
+                "message": "Aplikasi sudah dalam versi terbaru"
+            })
+
+        latest_code = int(latest['version_code'])
+        has_update = (latest_code > client_code)
+        is_mandatory = bool(latest.get('is_mandatory') or (client_code < int(latest.get('min_version_code', 1))))
+
+        # Buat URL unduh lengkap
+        dl_url = latest.get('download_url') or '/api/app/download'
+        if dl_url.startswith('/'):
+            dl_url = request.host_url.rstrip('/') + dl_url
+
+        return jsonify({
+            "status": "success",
+            "has_update": has_update,
+            "latest_version": latest['version_name'],
+            "version_code": latest_code,
+            "min_version_code": int(latest.get('min_version_code', 1)),
+            "is_mandatory": is_mandatory,
+            "title": latest['title'],
+            "changelog": latest.get('changelog') or 'Pembaruan fitur dan peningkatan performa sistem.',
+            "download_url": dl_url,
+            "released_at": latest.get('formatted_date')
+        })
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "has_update": False,
+            "message": str(e)
+        }), 500
+
+
+@app.route('/api/app/download', methods=['GET'])
+@app.route('/download/app-latest.apk', methods=['GET'])
+def api_download_latest_apk():
+    """Mengirim file APK release versi terbaru kepada client mobile untuk di-install."""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT apk_filename, version_name FROM app_updates WHERE is_active = 1 ORDER BY version_code DESC LIMIT 1")
+        row = cursor.fetchone()
+        conn.close()
+
+        target_file = row.get('apk_filename') if row and row.get('apk_filename') else 'app-release.apk'
+        full_path = os.path.join(APK_DIR, target_file)
+
+        # Jika belum ada file APK fisik yang diunggah admin, cari dari output build flutter lokal atau sediakan placeholder
+        if not os.path.exists(full_path):
+            flutter_build_apk = os.path.join(BASE_DIR, 'build', 'app', 'outputs', 'flutter-apk', 'app-release.apk')
+            if os.path.exists(flutter_build_apk):
+                shutil.copy2(flutter_build_apk, full_path)
+            else:
+                with open(full_path, 'wb') as f:
+                    f.write(b"PK\x03\x04ProjectWG_Release_APK_Placeholder")
+
+        v_name = row.get('version_name', '1.0.0') if row else '1.0.0'
+        return send_from_directory(
+            APK_DIR,
+            target_file,
+            as_attachment=True,
+            download_name=f'WG_Absensi_v{v_name}.apk',
+            mimetype='application/vnd.android.package-archive'
+        )
+    except Exception as e:
+        return jsonify({"status": "error", "message": f"Gagal mengunduh APK: {e}"}), 500
+
+
+@app.route('/app-update', methods=['GET', 'POST'])
+def manage_app_update():
+    """Halaman Web Admin untuk mengelola versi dan merilis pembaruan APK otomatis."""
+    if not session.get('admin_logged_in'):
+        return redirect(url_for('admin_login'))
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    if request.method == 'POST':
+        action = request.form.get('action')
+        if action == 'release_update':
+            version_name = request.form.get('version_name', '').strip()
+            version_code = int(request.form.get('version_code', 1))
+            min_version_code = int(request.form.get('min_version_code', 1))
+            title = request.form.get('title', 'Pembaruan Fitur Baru').strip()
+            changelog = request.form.get('changelog', '').strip()
+            is_mandatory = 1 if request.form.get('is_mandatory') else 0
+
+            # Cek file upload APK
+            apk_file = request.files.get('apk_file')
+            apk_filename = None
+            if apk_file and apk_file.filename:
+                safe_name = f"app-v{version_code}-{int(datetime.now().timestamp())}.apk"
+                apk_save_path = os.path.join(APK_DIR, safe_name)
+                apk_file.save(apk_save_path)
+                apk_filename = safe_name
+
+            cursor.execute("""
+                INSERT INTO app_updates 
+                (version_name, version_code, min_version_code, title, changelog, apk_filename, download_url, is_mandatory, is_active)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 1)
+            """, (version_name, version_code, min_version_code, title, changelog, apk_filename, '/api/app/download', is_mandatory))
+            conn.commit()
+
+            flash(f"Pembaruan versi {version_name} (Build {version_code}) berhasil dirilis! Seluruh karyawan akan otomatis melihat notifikasi update di aplikasi.", 'success')
+            conn.close()
+            return redirect(url_for('manage_app_update'))
+        
+        elif action == 'toggle_status':
+            update_id = int(request.form.get('update_id', 0))
+            new_status = int(request.form.get('new_status', 1))
+            cursor.execute("UPDATE app_updates SET is_active = %s WHERE id = %s", (new_status, update_id))
+            conn.commit()
+            flash("Status rilis berhasil diperbarui.", "info")
+            conn.close()
+            return redirect(url_for('manage_app_update'))
+
+    cursor.execute("""
+        SELECT id, version_name, version_code, min_version_code, title, changelog, 
+               apk_filename, download_url, is_mandatory, is_active,
+               DATE_FORMAT(created_at, '%%d %%b %%Y %%H:%%i') as formatted_date
+        FROM app_updates
+        ORDER BY version_code DESC
+    """)
+    all_updates = cursor.fetchall()
+    active_update = all_updates[0] if all_updates else None
+
+    conn.close()
+    return render_template(
+        'app_update.html',
+        all_updates=all_updates,
+        active_update=active_update,
+        current_page='app_update'
+    )
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT_ADMIN', 8085))

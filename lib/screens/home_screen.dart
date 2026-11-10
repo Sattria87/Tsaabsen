@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../utils/mysql_helper.dart';
 import '../utils/auth_service.dart';
 import '../utils/holiday_helper.dart';
+import '../utils/app_update_helper.dart';
 import '../widgets/employee_avatar.dart';
 import '../utils/notification_helper.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -96,6 +97,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _scheduleNextResetTimer();
     _startPeriodicReminders();
     _startAnnouncementPolling();
+
+    // Periksa ketersediaan auto-update aplikasi dari server backend
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        AppUpdateHelper.checkUpdate(context);
+      }
+    });
   }
 
   @override
