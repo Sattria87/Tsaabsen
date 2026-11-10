@@ -507,7 +507,6 @@
                     <form action="/presence" method="GET" class="search-box-pill" id="searchBarForm">
                         <input type="text" name="search" class="search-input-field" placeholder="Cari berdasarkan Nama Kantor atau Kota" value="{{ search_query }}">
                         {% if selected_branch %}<input type="hidden" name="branch" value="{{ selected_branch }}">{% endif %}
-                        {% if selected_site %}<input type="hidden" name="site" value="{{ selected_site }}">{% endif %}
                         {% if selected_team %}<input type="hidden" name="team" value="{{ selected_team }}">{% endif %}
                         {% if selected_status %}<input type="hidden" name="status" value="{{ selected_status }}">{% endif %}
                         {% if selected_tag %}<input type="hidden" name="tag" value="{{ selected_tag }}">{% endif %}
@@ -554,18 +553,6 @@
                                         <option value="{{ b }}" {% if selected_branch == b %}selected{% endif %}>{{ b }}</option>
                                     {% endfor %}
                                     <option value="Others" {% if selected_branch == 'Others' %}selected{% endif %}>Others (Data Site / Lapangan)</option>
-                                </select>
-                            </div>
-
-                            <!-- Filter Data Site / Penugasan Luar (Others) -->
-                            <div class="mb-3">
-                                <label class="form-label small fw-bold text-muted text-uppercase mb-1" style="font-size: 11px;">Data Site / Penugasan (Others)</label>
-                                <select name="site" class="form-select form-select-sm rounded-3">
-                                    <option value="">Semua Lokasi & Site</option>
-                                    <option value="others" {% if selected_site == 'others' %}selected{% endif %}>Others (Semua Data Site / Lapangan)</option>
-                                    <option value="site" {% if selected_site == 'site' %}selected{% endif %}>Others: Berada di Site</option>
-                                    <option value="customer" {% if selected_site == 'customer' %}selected{% endif %}>Others: Bertemu Customer</option>
-                                    <option value="office" {% if selected_site == 'office' %}selected{% endif %}>Kantor Utama (Office)</option>
                                 </select>
                             </div>
 
@@ -625,42 +612,35 @@
                 {% if search_query %}
                     <span class="badge bg-light text-dark border rounded-pill px-3 py-2 fw-normal d-inline-flex align-items-center gap-1">
                         Pencarian: "<strong>{{ search_query }}</strong>"
-                        <a href="/presence?branch={{ selected_branch }}&site={{ selected_site }}&team={{ selected_team }}&status={{ selected_status }}&tag={{ selected_tag }}" class="text-secondary text-decoration-none ms-1">&times;</a>
+                        <a href="/presence?branch={{ selected_branch }}&team={{ selected_team }}&status={{ selected_status }}&tag={{ selected_tag }}" class="text-secondary text-decoration-none ms-1">&times;</a>
                     </span>
                 {% endif %}
 
                 {% if selected_branch %}
                     <span class="badge bg-light text-dark border rounded-pill px-3 py-2 fw-normal d-inline-flex align-items-center gap-1">
-                        Cabang: <strong>{{ selected_branch }}</strong>
-                        <a href="/presence?search={{ search_query }}&site={{ selected_site }}&team={{ selected_team }}&status={{ selected_status }}&tag={{ selected_tag }}" class="text-secondary text-decoration-none ms-1">&times;</a>
-                    </span>
-                {% endif %}
-
-                {% if selected_site %}
-                    <span class="badge bg-warning-subtle text-dark border border-warning rounded-pill px-3 py-2 fw-normal d-inline-flex align-items-center gap-1">
-                        Data Site: <strong>{{ 'Others (Semua Site)' if selected_site == 'others' else ('Others: Site' if selected_site == 'site' else ('Others: Customer' if selected_site == 'customer' else 'Kantor Utama')) }}</strong>
-                        <a href="/presence?search={{ search_query }}&branch={{ selected_branch }}&team={{ selected_team }}&status={{ selected_status }}&tag={{ selected_tag }}" class="text-secondary text-decoration-none ms-1">&times;</a>
+                        Cabang: <strong>{{ 'Others (Data Site)' if selected_branch.lower() == 'others' else selected_branch }}</strong>
+                        <a href="/presence?search={{ search_query }}&team={{ selected_team }}&status={{ selected_status }}&tag={{ selected_tag }}" class="text-secondary text-decoration-none ms-1">&times;</a>
                     </span>
                 {% endif %}
 
                 {% if selected_team %}
                     <span class="badge bg-light text-dark border rounded-pill px-3 py-2 fw-normal d-inline-flex align-items-center gap-1">
                         Tim: <strong>{{ selected_team }}</strong>
-                        <a href="/presence?search={{ search_query }}&branch={{ selected_branch }}&site={{ selected_site }}&status={{ selected_status }}&tag={{ selected_tag }}" class="text-secondary text-decoration-none ms-1">&times;</a>
+                        <a href="/presence?search={{ search_query }}&branch={{ selected_branch }}&status={{ selected_status }}&tag={{ selected_tag }}" class="text-secondary text-decoration-none ms-1">&times;</a>
                     </span>
                 {% endif %}
 
                 {% if selected_status %}
                     <span class="badge bg-light text-dark border rounded-pill px-3 py-2 fw-normal d-inline-flex align-items-center gap-1">
                         Status: <strong>{{ selected_status | capitalize }}</strong>
-                        <a href="/presence?search={{ search_query }}&branch={{ selected_branch }}&site={{ selected_site }}&team={{ selected_team }}&tag={{ selected_tag }}" class="text-secondary text-decoration-none ms-1">&times;</a>
+                        <a href="/presence?search={{ search_query }}&branch={{ selected_branch }}&team={{ selected_team }}&tag={{ selected_tag }}" class="text-secondary text-decoration-none ms-1">&times;</a>
                     </span>
                 {% endif %}
 
                 {% if selected_tag %}
                     <span class="badge bg-light text-dark border rounded-pill px-3 py-2 fw-normal d-inline-flex align-items-center gap-1">
                         Tag: <strong>{{ selected_tag }}</strong>
-                        <a href="/presence?search={{ search_query }}&branch={{ selected_branch }}&site={{ selected_site }}&team={{ selected_team }}&status={{ selected_status }}" class="text-secondary text-decoration-none ms-1">&times;</a>
+                        <a href="/presence?search={{ search_query }}&branch={{ selected_branch }}&team={{ selected_team }}&status={{ selected_status }}" class="text-secondary text-decoration-none ms-1">&times;</a>
                     </span>
                 {% endif %}
 
