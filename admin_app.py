@@ -575,10 +575,42 @@ def index():
     chart_employees = [0] * 6
     top_attendees = []
     other_attendees = []
-    monthly_chart_store = {}
+    # Inisialisasi default 6 bulan pilihan untuk dropdown kalender
+    now_init = datetime.now()
+    indo_month_init = {
+        1: 'Januari', 2: 'Februari', 3: 'Maret', 4: 'April', 5: 'Mei', 6: 'Juni',
+        7: 'Juli', 8: 'Agustus', 9: 'September', 10: 'Oktober', 11: 'November', 12: 'Desember'
+    }
     month_options = []
-    default_month_key = '2026-11'
-    default_month_data = {}
+    monthly_chart_store = {}
+    for i in range(6):
+        y_init = now_init.year
+        m_init = now_init.month - i
+        while m_init <= 0:
+            m_init += 12
+            y_init -= 1
+        k_init = f"{y_init:04d}-{m_init:02d}"
+        n_init = f"{indo_month_init.get(m_init, str(m_init))} {y_init}"
+        lbl_init = f"{n_init} (Bulan Ini)" if i == 0 else n_init
+        month_options.append({'key': k_init, 'name': lbl_init, 'short_name': n_init})
+        num_d_init = calendar.monthrange(y_init, m_init)[1]
+        w_d_init = max(1, sum(1 for d in range(1, num_d_init + 1) if datetime(y_init, m_init, d).weekday() < 5))
+        monthly_chart_store[k_init] = {
+            'month_name': n_init,
+            'total_working_days': w_d_init,
+            'total_employees': 12,
+            'tot_tepat_waktu': 0,
+            'tot_hadir': 0,
+            'tot_izin': 0,
+            'tot_alpha': 12 * w_d_init,
+            'avg_tepat_waktu': 0,
+            'avg_hadir': 0,
+            'avg_izin': 0,
+            'avg_alpha': w_d_init,
+            'persentase': '0%'
+        }
+    default_month_key = month_options[0]['key'] if month_options else f"{now_init.year:04d}-{now_init.month:02d}"
+    default_month_data = monthly_chart_store.get(default_month_key, {})
 
     try:
         conn = get_db_connection()
@@ -681,7 +713,7 @@ def index():
         on_time_6m = []
         late_6m = []
         absent_6m = []
-        now_dt = datetime.datetime.now()
+        now_dt = datetime.now()
         for i in range(5, -1, -1):
             y = now_dt.year
             m = now_dt.month - i
@@ -829,15 +861,8 @@ def index():
             print(f"[Announcements Fetch Error]: {ann_err}")
 
         # 9. Rekap Kehadiran Bulanan (1 Bar per Metrik Mencakup Seluruh Karyawan + Dropdown Pilihan Bulan)
-        indo_month_names = {
-            1: 'Januari', 2: 'Februari', 3: 'Maret', 4: 'April', 5: 'Mei', 6: 'Juni',
-            7: 'Juli', 8: 'Agustus', 9: 'September', 10: 'Oktober', 11: 'November', 12: 'Desember'
-        }
-
         monthly_chart_store = {}
         month_options = []
-        now_dt = datetime.now()
-
         for i in range(6):
             y = now_dt.year
             m = now_dt.month - i
@@ -847,64 +872,65 @@ def index():
 
             m_key = f"{y:04d}-{m:02d}"
             m_name = f"{indo_month_names.get(m, str(m))} {y}"
-            is_current = (i == 0)
-            m_label = f"{m_name} (Bulan Berjalan)" if is_current else m_name
-            month_options.append({'key': m_key, 'name': m_label, 'short_name': m_name})
-
             num_d = calendar.monthrange(y, m)[1]
             s_date = f"{y:04d}-{m:02d}-01"
             e_date = f"{y:04d}-{m:02d}-{num_d:02d}"
 
-            # Hitung hari kerja asli kalender Senin s/d Jumat
-            w_days = sum(1 for d in range(1, num_d + 1) if datetime(y, m, d).weekday() < 5)
-            w_days = max(1, w_days)
+            m_label = f"{m_name} (Bulan Ini)" if i == 0 else m_name
+            month_options.append({'key': m_key, 'name': m_label, 'short_name': m_name})
 
             try:
                 m_rekap = get_rekap_report_data(s_date, e_date, branch='all', site='all')
                 emp_list = m_rekap.get('data', [])
+                w_days = m_rekap.get('total_hari_kerja', 21)
+                emp_cnt = max(1, len(emp_list) if emp_list else total_employees)
+
+                sum_tw = sum(int(e.get('jumlah_tepat_waktu', 0)) for e in emp_list)
+                sum_hd = int(m_rekap.get('tot_hadir', 0))
+                sum_iz = int(m_rekap.get('tot_izin_keperluan', 0)) + int(m_rekap.get('tot_izin_sakit', 0)) + int(m_rekap.get('tot_cuti', 0))
+                sum_th = int(m_rekap.get('tot_alpha', 0))
+
+                if sum_hd == 0 and sum_tw == 0 and sum_iz == 0 and sum_th == 0:
+                    sum_th = emp_cnt * w_days
+
+                max_cap = emp_cnt * w_days
+                pct = round((sum_hd / max_cap) * 100) if max_cap > 0 else 0
+
+                monthly_chart_store[m_key] = {
+                    'month_name': m_name,
+                    'total_working_days': w_days,
+                    'total_employees': emp_cnt,
+                    'tot_tepat_waktu': sum_tw,
+                    'tot_hadir': sum_hd,
+                    'tot_izin': sum_iz,
+                    'tot_alpha': sum_th,
+                    'avg_tepat_waktu': round(sum_tw / emp_cnt, 1),
+                    'avg_hadir': round(sum_hd / emp_cnt, 1),
+                    'avg_izin': round(sum_iz / emp_cnt, 1),
+                    'avg_alpha': round(sum_th / emp_cnt, 1),
+                    'persentase': f"{pct}%"
+                }
             except Exception as e_m:
-                print(f"[Rekap Chart Month {m_key} Error]: {e_m}")
-                emp_list = []
+                print(f"[Rekap Month {m_key} Warning]: {e_m}")
+                num_d_fallback = calendar.monthrange(y, m)[1]
+                w_fallback = max(1, sum(1 for d in range(1, num_d_fallback + 1) if datetime(y, m, d).weekday() < 5))
+                emp_fallback = max(1, total_employees)
+                monthly_chart_store[m_key] = {
+                    'month_name': m_name,
+                    'total_working_days': w_fallback,
+                    'total_employees': emp_fallback,
+                    'tot_tepat_waktu': 0,
+                    'tot_hadir': 0,
+                    'tot_izin': 0,
+                    'tot_alpha': emp_fallback * w_fallback,
+                    'avg_tepat_waktu': 0,
+                    'avg_hadir': 0,
+                    'avg_izin': 0,
+                    'avg_alpha': w_fallback,
+                    'persentase': '0%'
+                }
 
-            emp_cnt = len(emp_list) if emp_list else total_employees
-            emp_cnt = max(1, emp_cnt)
-
-            sum_tw = sum(int(e.get('jumlah_tepat_waktu', 0)) for e in emp_list)
-            sum_hd = sum(int(e.get('jumlah_hadir', 0)) for e in emp_list)
-            sum_iz = sum(
-                int(e.get('jumlah_izin_keperluan', 0)) + int(e.get('jumlah_izin_sakit', 0)) + int(e.get('jumlah_cuti', 0))
-                for e in emp_list
-            )
-            sum_th = sum(int(e.get('jumlah_alpha', 0)) for e in emp_list)
-
-            # Jika data presensi bulan ini belum ada sama sekali
-            if not emp_list or (sum_hd == 0 and sum_tw == 0 and sum_iz == 0 and sum_th == 0):
-                sum_th = emp_cnt * w_days
-
-            avg_tw = round(sum_tw / emp_cnt, 1)
-            avg_hd = round(sum_hd / emp_cnt, 1)
-            avg_iz = round(sum_iz / emp_cnt, 1)
-            avg_th = round(sum_th / emp_cnt, 1)
-
-            max_cap = emp_cnt * w_days
-            pct = round((sum_hd / max_cap) * 100) if max_cap > 0 else 0
-
-            monthly_chart_store[m_key] = {
-                'month_name': m_name,
-                'total_working_days': w_days,
-                'total_employees': emp_cnt,
-                'tot_tepat_waktu': sum_tw,
-                'tot_hadir': sum_hd,
-                'tot_izin': sum_iz,
-                'tot_alpha': sum_th,
-                'avg_tepat_waktu': avg_tw,
-                'avg_hadir': avg_hd,
-                'avg_izin': avg_iz,
-                'avg_alpha': avg_th,
-                'persentase': f"{pct}%"
-            }
-
-        default_month_key = month_options[0]['key'] if month_options else '2026-11'
+        default_month_key = month_options[0]['key'] if month_options else f"{now_dt.year:04d}-{now_dt.month:02d}"
         default_month_data = monthly_chart_store.get(default_month_key, {})
 
     except Exception as dash_err:
@@ -2230,7 +2256,7 @@ def parse_record_dates(record_timestamp, reason_str, start_dt, end_dt):
             else:
                 ts_dt = record_timestamp
             
-            if ts_dt.weekday() < 5 and filter_start <= ts_dt <= filter_end:
+            if filter_start <= ts_dt <= filter_end:
                 matched_dates.add(ts_dt)
         except Exception:
             pass

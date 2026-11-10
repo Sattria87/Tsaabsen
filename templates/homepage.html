@@ -687,94 +687,95 @@
 
             <!-- LEFT: MONTHLY ATTENDANCE RECAP CHART (1 BAR PER METRIK MENCANGKUP SELURUH KARYAWAN) -->
             <section class="chart-card">
-                <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+                <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2 pb-2 border-bottom">
                     <div>
-                        <div class="d-flex align-items-center gap-2">
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
                             <h2 class="panel-title mb-0" id="chart-panel-title">Statistik Kehadiran Bulanan</h2>
                             <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2.5 py-1 small fw-bold" id="chart-badge-recap">
                                 <i class="bi bi-people-fill me-1"></i>Seluruh Karyawan (<span id="badge-total-emp">{{ default_month_data.total_employees if default_month_data else total_employees }}</span> Orang)
                             </span>
                         </div>
-                        <p class="text-muted small mb-0 mt-1" id="chart-sub-title">Grafik Batang Performa Kehadiran Seluruh Karyawan terhadap Hari Kerja Bulanan</p>
+                        <p class="text-muted small mb-0 mt-1" id="chart-sub-title">Performa kehadiran akumulasi seluruh karyawan terhadap total hari kerja bulanan</p>
                     </div>
 
-                    <!-- Dropdown Pilihan Bulan & Filter Metrik Berdampingan -->
-                    <div class="d-flex flex-wrap align-items-center gap-2">
-                        <!-- Pilihan Bulan -->
-                        <div class="d-flex align-items-center gap-1.5">
-                            <select id="chartMonthSelect" class="form-select form-select-sm fw-bold rounded-pill px-3 py-1.5 shadow-sm border-secondary-subtle" style="min-width: 195px; cursor: pointer; font-size: 13px;" onchange="changeAttendanceMonth(this.value)">
+                    <!-- Dropdown Pilihan Bulan & Filter Metrik (Sejajar & Rapi) -->
+                    <div class="d-flex align-items-center gap-2">
+                        <select id="chartMonthSelect" class="form-select form-select-sm fw-bold rounded-pill px-3 py-1.5 shadow-sm border-secondary-subtle" style="min-width: 185px; cursor: pointer; font-size: 13px;" onchange="changeAttendanceMonth(this.value)">
+                            {% if month_options %}
                                 {% for m in month_options %}
                                 <option value="{{ m.key }}" {% if m.key == default_month_key %}selected{% endif %}>📅 {{ m.name }}</option>
                                 {% endfor %}
-                            </select>
-                        </div>
+                            {% else %}
+                                <option value="2026-11" selected>📅 November 2026 (Bulan Ini)</option>
+                                <option value="2026-10">📅 Oktober 2026</option>
+                                <option value="2026-09">📅 September 2026</option>
+                                <option value="2026-08">📅 Agustus 2026</option>
+                                <option value="2026-07">📅 Juli 2026</option>
+                                <option value="2026-06">📅 Juni 2026</option>
+                            {% endif %}
+                        </select>
 
-                        <!-- Pilihan Metrik (Semua Metrik atau Spesifik) -->
-                        <div class="d-flex align-items-center gap-1.5">
-                            <select id="chartMetricSelect" class="form-select form-select-sm fw-bold rounded-pill px-3 py-1.5 shadow-sm border-secondary-subtle" style="min-width: 180px; cursor: pointer; font-size: 13px;" onchange="changeAttendanceMetric(this.value)">
-                                <option value="all" selected>📊 Semua Metrik</option>
-                                <option value="tepat_waktu">🟢 Hadir Tepat Waktu</option>
-                                <option value="hadir_overall">🔵 Hadir Overall</option>
-                                <option value="izin">🟡 Izin & Cuti</option>
-                                <option value="tidak_hadir">🔴 Tidak Hadir</option>
-                            </select>
-                        </div>
+                        <select id="chartMetricSelect" class="form-select form-select-sm fw-bold rounded-pill px-3 py-1.5 shadow-sm border-secondary-subtle" style="min-width: 175px; cursor: pointer; font-size: 13px;" onchange="changeAttendanceMetric(this.value)">
+                            <option value="all" selected>📊 Semua Metrik</option>
+                            <option value="tepat_waktu">🟢 Hadir Tepat Waktu</option>
+                            <option value="hadir_overall">🔵 Hadir Overall</option>
+                            <option value="izin">🟡 Izin & Cuti</option>
+                            <option value="tidak_hadir">🔴 Tidak Hadir</option>
+                        </select>
                     </div>
                 </div>
 
-                <!-- 5 Kartu Mini Ringkasan Metrik Kantor (Sangat Menarik & Rapi) -->
-                <div class="row g-2 mb-3 py-1" id="chart-summary-row">
+                <!-- 5 Kartu Mini Ringkasan Metrik Kantor (Bersih & Rapi) -->
+                <div class="row g-2 mb-3" id="chart-summary-row">
                     <div class="col">
                         <div class="p-2.5 rounded-3 border bg-light h-100 d-flex flex-column justify-content-between shadow-xs">
-                            <span class="text-muted small fw-semibold" style="font-size: 11px;"><i class="bi bi-calendar3 text-secondary me-1"></i>Hari Kerja (Bulan)</span>
+                            <span class="text-secondary small fw-bold" style="font-size: 11.5px;"><i class="bi bi-calendar3 me-1"></i>Hari Kerja</span>
                             <div class="d-flex align-items-baseline gap-1 mt-1">
                                 <span class="fw-bold fs-5 text-dark" id="stat-hk-val">{{ default_month_data.total_working_days if default_month_data else 21 }}</span>
-                                <span class="small text-muted" style="font-size: 11px;">Hari</span>
+                                <span class="small text-muted" style="font-size: 11px;">Hari/Org</span>
                             </div>
                         </div>
                     </div>
                     <div class="col">
-                        <div class="p-2.5 rounded-3 border h-100 d-flex flex-column justify-content-between shadow-xs" style="background-color: rgba(16, 185, 129, 0.08); border-color: rgba(16, 185, 129, 0.25) !important;">
-                            <span class="small fw-semibold" style="color: #059669; font-size: 11px;"><i class="bi bi-check-circle-fill me-1"></i>Hadir Tepat Waktu</span>
+                        <div class="p-2.5 rounded-3 border h-100 d-flex flex-column justify-content-between shadow-xs" style="background-color: rgba(16, 185, 129, 0.08); border-color: rgba(16, 185, 129, 0.3) !important;">
+                            <span class="small fw-bold" style="color: #059669; font-size: 11.5px;"><i class="bi bi-check-circle-fill me-1"></i>Tepat Waktu</span>
                             <div class="d-flex align-items-baseline gap-1 mt-1">
                                 <span class="fw-bold fs-5 text-dark" id="stat-tw-val">{{ default_month_data.tot_tepat_waktu if default_month_data else 0 }}</span>
-                                <span class="small text-muted" style="font-size: 11px;">Presensi (<span id="stat-tw-avg">{{ default_month_data.avg_tepat_waktu if default_month_data else 0 }}</span>h/org)</span>
+                                <span class="small text-muted" style="font-size: 11px;">Presensi (<span id="stat-tw-avg">{{ default_month_data.avg_tepat_waktu if default_month_data else 0 }}</span>h)</span>
                             </div>
                         </div>
                     </div>
                     <div class="col">
-                        <div class="p-2.5 rounded-3 border h-100 d-flex flex-column justify-content-between shadow-xs" style="background-color: rgba(37, 99, 235, 0.08); border-color: rgba(37, 99, 235, 0.25) !important;">
-                            <span class="small fw-semibold text-primary" style="font-size: 11px;"><i class="bi bi-person-check-fill me-1"></i>Hadir Overall</span>
+                        <div class="p-2.5 rounded-3 border h-100 d-flex flex-column justify-content-between shadow-xs" style="background-color: rgba(37, 99, 235, 0.08); border-color: rgba(37, 99, 235, 0.3) !important;">
+                            <span class="small fw-bold text-primary" style="font-size: 11.5px;"><i class="bi bi-person-check-fill me-1"></i>Hadir Overall</span>
                             <div class="d-flex align-items-baseline gap-1 mt-1">
                                 <span class="fw-bold fs-5 text-dark" id="stat-hd-val">{{ default_month_data.tot_hadir if default_month_data else 0 }}</span>
-                                <span class="small text-muted" style="font-size: 11px;">Presensi (<span id="stat-hd-avg">{{ default_month_data.avg_hadir if default_month_data else 0 }}</span>h/org)</span>
+                                <span class="small text-muted" style="font-size: 11px;">Presensi (<span id="stat-hd-avg">{{ default_month_data.avg_hadir if default_month_data else 0 }}</span>h)</span>
                             </div>
                         </div>
                     </div>
                     <div class="col">
-                        <div class="p-2.5 rounded-3 border h-100 d-flex flex-column justify-content-between shadow-xs" style="background-color: rgba(245, 158, 11, 0.08); border-color: rgba(245, 158, 11, 0.25) !important;">
-                            <span class="small fw-semibold" style="color: #b45309; font-size: 11px;"><i class="bi bi-file-earmark-text-fill me-1"></i>Izin & Cuti</span>
+                        <div class="p-2.5 rounded-3 border h-100 d-flex flex-column justify-content-between shadow-xs" style="background-color: rgba(245, 158, 11, 0.08); border-color: rgba(245, 158, 11, 0.3) !important;">
+                            <span class="small fw-bold" style="color: #b45309; font-size: 11.5px;"><i class="bi bi-file-earmark-text-fill me-1"></i>Izin & Cuti</span>
                             <div class="d-flex align-items-baseline gap-1 mt-1">
                                 <span class="fw-bold fs-5 text-dark" id="stat-iz-val">{{ default_month_data.tot_izin if default_month_data else 0 }}</span>
-                                <span class="small text-muted" style="font-size: 11px;">Presensi (<span id="stat-iz-avg">{{ default_month_data.avg_izin if default_month_data else 0 }}</span>h/org)</span>
+                                <span class="small text-muted" style="font-size: 11px;">Hari (<span id="stat-iz-avg">{{ default_month_data.avg_izin if default_month_data else 0 }}</span>h)</span>
                             </div>
                         </div>
                     </div>
                     <div class="col">
-                        <div class="p-2.5 rounded-3 border h-100 d-flex flex-column justify-content-between shadow-xs" style="background-color: rgba(239, 68, 68, 0.08); border-color: rgba(239, 68, 68, 0.25) !important;">
-                            <span class="small fw-semibold text-danger" style="font-size: 11px;"><i class="bi bi-x-circle-fill me-1"></i>Tidak Hadir</span>
+                        <div class="p-2.5 rounded-3 border h-100 d-flex flex-column justify-content-between shadow-xs" style="background-color: rgba(239, 68, 68, 0.08); border-color: rgba(239, 68, 68, 0.3) !important;">
+                            <span class="small fw-bold text-danger" style="font-size: 11.5px;"><i class="bi bi-x-circle-fill me-1"></i>Tidak Hadir</span>
                             <div class="d-flex align-items-baseline gap-1 mt-1">
                                 <span class="fw-bold fs-5 text-dark" id="stat-th-val">{{ default_month_data.tot_alpha if default_month_data else 0 }}</span>
-                                <span class="small text-muted" style="font-size: 11px;">Hari (<span id="stat-th-avg">{{ default_month_data.avg_alpha if default_month_data else 0 }}</span>h/org)</span>
+                                <span class="small text-muted" style="font-size: 11px;">Hari (<span id="stat-th-avg">{{ default_month_data.avg_alpha if default_month_data else 0 }}</span>h)</span>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <div class="chart-container-wrap" style="position: relative; height: 350px;">
-                    <canvas id="monthlyAttendanceChart"
-                            data-monthly-store='{{ monthly_chart_store | tojson }}'
-                            data-default-month='{{ default_month_key }}'></canvas>
+                    <canvas id="monthlyAttendanceChart"></canvas>
                 </div>
             </section>
 
@@ -1189,25 +1190,45 @@
     <!-- Bootstrap 5 JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
+    <!-- DATA STORE REKAP BULANAN REAL DATABASE -->
+    <script id="monthly-chart-data" type="application/json">
+        {{ monthly_chart_store | tojson | safe }}
+    </script>
+
     <!-- SCRIPT CHART.JS (1 BAR PER METRIK MENCANGKUP SELURUH KARYAWAN + DROPDOWN PILIHAN BULAN) -->
     <script>
         let monthlyStore = {};
-        let currentMonthKey = '';
+        try {
+            const rawEl = document.getElementById('monthly-chart-data');
+            if (rawEl && rawEl.textContent) {
+                monthlyStore = JSON.parse(rawEl.textContent.trim());
+            }
+        } catch (e) {
+            console.error("[Chart Store Parse Error]:", e);
+        }
+
+        let currentMonthKey = "{{ default_month_key }}";
+        if (!currentMonthKey || !monthlyStore[currentMonthKey]) {
+            currentMonthKey = Object.keys(monthlyStore)[0] || '2026-11';
+        }
         let currentMetricKey = 'all';
 
         function getCurrentMonthData() {
-            return monthlyStore[currentMonthKey] || {
+            const data = monthlyStore[currentMonthKey];
+            if (data) return data;
+
+            return {
                 month_name: 'November 2026',
                 total_working_days: 21,
                 total_employees: 12,
                 tot_tepat_waktu: 0,
                 tot_hadir: 0,
                 tot_izin: 0,
-                tot_alpha: 0,
+                tot_alpha: 252,
                 avg_tepat_waktu: 0,
                 avg_hadir: 0,
                 avg_izin: 0,
-                avg_alpha: 0,
+                avg_alpha: 21,
                 persentase: '0%'
             };
         }
@@ -1350,17 +1371,27 @@
         }
 
         document.addEventListener('DOMContentLoaded', function () {
+            // Sinkronisasi dropdown bulan
+            const monthSelect = document.getElementById('chartMonthSelect');
+            if (monthSelect) {
+                if (monthSelect.options.length === 0 && Object.keys(monthlyStore).length > 0) {
+                    Object.keys(monthlyStore).forEach((k, idx) => {
+                        const opt = document.createElement('option');
+                        opt.value = k;
+                        opt.textContent = `📅 ${monthlyStore[k].month_name || k}${idx === 0 ? ' (Bulan Ini)' : ''}`;
+                        if (k === currentMonthKey) opt.selected = true;
+                        monthSelect.appendChild(opt);
+                    });
+                } else if (currentMonthKey) {
+                    monthSelect.value = currentMonthKey;
+                }
+            }
+
             const chartCanvas = document.getElementById('monthlyAttendanceChart');
             if (!chartCanvas) return;
             const ctx = chartCanvas.getContext('2d');
 
-            try {
-                monthlyStore = JSON.parse(chartCanvas.dataset.monthlyStore || '{}');
-                currentMonthKey = chartCanvas.dataset.defaultMonth || Object.keys(monthlyStore)[0] || '2026-11';
-            } catch (e) {
-                console.error("[Chart Store Parse Error]:", e);
-            }
-
+            updateSummaryCards();
             const initialData = getCurrentMonthData();
             const initialChartCfg = buildBarChartConfig();
 
