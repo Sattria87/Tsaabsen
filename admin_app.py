@@ -6,6 +6,7 @@ import pymysql
 import random
 import csv
 from datetime import datetime, timedelta
+import re
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from reportlab.lib.pagesizes import letter, landscape
@@ -2068,6 +2069,55 @@ def delete_request(id):
 # RUTE LAPORAN KEHADIRAN (REPORT)
 # FORMAT REKAPITULASI (TANPA NIP)
 # ==========================================
+def parse_record_dates(record_timestamp, reason_str, start_dt, end_dt):
+    """
+    Mengembalikan set tanggal (date objects) hari kerja (Senin-Jumat)
+    yang jatuh dalam rentang filter [start_dt.date(), end_dt.date()].
+    Mendukung penguraian multi-hari seperti: 'Periode: YYYY-MM-DD s/d YYYY-MM-DD'.
+    """
+    filter_start = start_dt.date() if isinstance(start_dt, datetime) else start_dt
+    filter_end = end_dt.date() if isinstance(end_dt, datetime) else end_dt
+    if filter_start > filter_end:
+        filter_start, filter_end = filter_end, filter_start
+
+    matched_dates = set()
+    reason = str(reason_str or '')
+
+    # Deteksi pola rentang tanggal pada alasan: YYYY-MM-DD s/d YYYY-MM-DD
+    period_match = re.search(r'(\d{4}-\d{2}-\d{2})\s*(?:s/d|to|-)\s*(\d{4}-\d{2}-\d{2})', reason)
+    if period_match:
+        try:
+            p_start = datetime.strptime(period_match.group(1), '%Y-%m-%d').date()
+            p_end = datetime.strptime(period_match.group(2), '%Y-%m-%d').date()
+            if p_start > p_end:
+                p_start, p_end = p_end, p_start
+            
+            cur = p_start
+            while cur <= p_end:
+                # Hanya hari kerja (Senin-Jumat) dan berada di dalam rentang filter yang dipilih
+                if cur.weekday() < 5 and filter_start <= cur <= filter_end:
+                    matched_dates.add(cur)
+                cur += timedelta(days=1)
+        except Exception:
+            pass
+
+    # Jika bukan rentang tanggal multi-hari, gunakan tanggal dari record_timestamp
+    if not matched_dates and record_timestamp:
+        try:
+            if isinstance(record_timestamp, str):
+                ts_dt = datetime.strptime(record_timestamp[:10], '%Y-%m-%d').date()
+            elif isinstance(record_timestamp, datetime):
+                ts_dt = record_timestamp.date()
+            else:
+                ts_dt = record_timestamp
+            
+            if ts_dt.weekday() < 5 and filter_start <= ts_dt <= filter_end:
+                matched_dates.add(ts_dt)
+        except Exception:
+            pass
+
+    return matched_dates
+
 def get_rekap_report_data(start_date, end_date, branch='all'):
     try:
         dt_start = datetime.strptime(start_date, '%Y-%m-%d')
@@ -2079,73 +2129,77 @@ def get_rekap_report_data(start_date, end_date, branch='all'):
         # Hitung hari kerja asli sesuai tanggal kalender (Senin s/d Jumat, Sabtu & Minggu libur)
         working_days = sum(
             1 for i in range(total_days)
-            if (dt_start + timedelta(days=i)).weekday() < 5  # 0=Senin .. 4=Jumat (Sabtu=5 & Minggu=6 libur)
+            if (dt_start + timedelta(days=i)).weekday() < 5
         )
         total_hari_kerja = max(1, working_days)
     except Exception:
         total_hari_kerja = 22
-
-    start_ts = f"{start_date} 00:00:00"
-    end_ts = f"{end_date} 23:59:59"
+        dt_start = datetime.now().replace(day=1)
+        dt_end = datetime.now()
 
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    where_branch = ""
-    params = [start_ts, end_ts]
+    # Filter kantor cabang yang fleksibel dan akurat
+    where_sql = ""
+    params = []
     if branch and branch != 'all':
-        where_branch = "WHERE (e.branch = %s OR (%s = 'TUNGGAL SAHABAT ABADI' AND (e.branch = 'Surabaya' OR e.branch IS NULL)))"
-        params.extend([branch, branch])
+        where_sql = """
+            WHERE (
+                e.branch = %s 
+                OR e.branch LIKE %s 
+                OR %s LIKE CONCAT('%%', COALESCE(e.branch, ''), '%%')
+                OR (%s IN ('TUNGGAL SAHABAT ABADI', 'Kantor Pusat Surabaya') AND (e.branch IN ('Surabaya', 'Kantor Pusat Surabaya', 'TUNGGAL SAHABAT ABADI') OR e.branch IS NULL))
+            )
+        """
+        params = [branch, f"%{branch}%", branch, branch]
 
+    # Ambil seluruh karyawan sesuai filter cabang
     cursor.execute(f"""
         SELECT 
             e.id,
             e.name,
             e.username,
             COALESCE(e.team, 'Operasional') AS divisi,
-            COALESCE(e.branch, 'TUNGGAL SAHABAT ABADI') AS branch,
-            COALESCE(SUM(att.is_hadir), 0) AS jumlah_hadir,
-            COALESCE(SUM(CASE WHEN att.is_hadir = 0 AND att.is_izin_keperluan = 1 THEN 1 ELSE 0 END), 0) AS jumlah_izin_keperluan,
-            COALESCE(SUM(CASE WHEN att.is_hadir = 0 AND att.is_izin_sakit = 1 THEN 1 ELSE 0 END), 0) AS jumlah_izin_sakit,
-            COALESCE(SUM(CASE WHEN att.is_hadir = 0 AND att.is_cuti = 1 THEN 1 ELSE 0 END), 0) AS jumlah_cuti
+            COALESCE(e.branch, 'TUNGGAL SAHABAT ABADI') AS branch
         FROM employees e
-        LEFT JOIN (
-            SELECT 
-                username,
-                DATE(timestamp) AS att_date,
-                MAX(CASE WHEN type IN ('clock_in', 'hadir') THEN 1 ELSE 0 END) AS is_hadir,
-                MAX(CASE 
-                    WHEN (type IN ('cuti', 'izin_cuti') OR type LIKE '%%cuti%%')
-                      AND LOWER(COALESCE(status, '')) IN ('approved', 'disetujui')
-                    THEN 1 ELSE 0 
-                END) AS is_cuti,
-                MAX(CASE 
-                    WHEN (type IN ('sakit', 'izin_sakit', 'sick_leave') OR type LIKE '%%sakit%%')
-                      AND LOWER(COALESCE(status, '')) IN ('approved', 'disetujui')
-                    THEN 1 ELSE 0 
-                END) AS is_izin_sakit,
-                MAX(CASE 
-                    WHEN (type IN ('izin', 'izin_keperluan', 'necessity_leave') 
-                          OR (type LIKE 'izin_%%' AND type NOT LIKE '%%sakit%%' AND type NOT LIKE '%%cuti%%') 
-                          OR (reason IS NOT NULL AND reason != '' AND type NOT IN ('clock_in', 'clock_out', 'hadir', 'cuti', 'izin_cuti', 'sakit', 'izin_sakit')))
-                      AND LOWER(COALESCE(status, '')) IN ('approved', 'disetujui')
-                    THEN 1 ELSE 0 
-                END) AS is_izin_keperluan
-            FROM attendance
-            WHERE timestamp >= %s AND timestamp <= %s
-            GROUP BY username, DATE(timestamp)
-        ) att ON e.username = att.username
-        {where_branch}
-        GROUP BY e.id, e.name, e.username, e.team, e.branch
+        {where_sql}
         ORDER BY e.id ASC
     """, tuple(params))
-    rows = cursor.fetchall()
+    employees = cursor.fetchall()
 
+    # Ambil daftar kantor cabang untuk dropdown
     cursor.execute("SELECT branch_name FROM branch_companies ORDER BY id ASC")
     branches = [b['branch_name'] for b in cursor.fetchall()]
     if not branches:
         branches = ['TUNGGAL SAHABAT ABADI', 'Decoy']
+
+    # Ambil seluruh rekaman kehadiran yang relevan dari database (Approved maupun Pending, abaikan yang Rejected)
+    # Rentang query mencakup toleransi 60 hari sebelum dan 5 hari sesudah untuk menangkap pengajuan cuti berperiode
+    min_date_str = (dt_start - timedelta(days=60)).strftime('%Y-%m-%d 00:00:00')
+    max_date_str = (dt_end + timedelta(days=5)).strftime('%Y-%m-%d 23:59:59')
+    
+    cursor.execute("""
+        SELECT 
+            id,
+            username,
+            type,
+            timestamp,
+            reason,
+            status
+        FROM attendance
+        WHERE LOWER(COALESCE(status, '')) NOT IN ('rejected', 'ditolak')
+          AND timestamp >= %s AND timestamp <= %s
+    """, (min_date_str, max_date_str))
+    attendance_rows = cursor.fetchall()
     conn.close()
+
+    # Petakan kehadiran per username
+    emp_records = {}
+    for att in attendance_rows:
+        uname = (att.get('username') or '').strip().lower()
+        if uname:
+            emp_records.setdefault(uname, []).append(att)
 
     processed_data = []
     tot_hadir = 0
@@ -2154,29 +2208,70 @@ def get_rekap_report_data(start_date, end_date, branch='all'):
     tot_cuti = 0
     tot_alpha = 0
 
-    for idx, r in enumerate(rows, 1):
-        hadir = int(r['jumlah_hadir'] or 0)
-        izin_keperluan = int(r['jumlah_izin_keperluan'] or 0)
-        izin_sakit = int(r['jumlah_izin_sakit'] or 0)
-        cuti = int(r['jumlah_cuti'] or 0)
-        # Alpha: Hari kerja dikurangi hadir, izin keperluan, izin sakit, dan cuti
-        alpha = max(0, total_hari_kerja - hadir - izin_keperluan - izin_sakit - cuti)
+    for idx, e in enumerate(employees, 1):
+        uname = (e.get('username') or '').strip().lower()
+        records = emp_records.get(uname, [])
+
+        hadir_dates = set()
+        cuti_dates = set()
+        sakit_dates = set()
+        izin_dates = set()
+
+        for rec in records:
+            r_type = (rec.get('type') or '').lower().strip()
+            r_reason = rec.get('reason') or ''
+            r_ts = rec.get('timestamp')
+
+            # Ambil tanggal-tanggal hari kerja yang valid dalam rentang filter
+            matched = parse_record_dates(r_ts, r_reason, dt_start, dt_end)
+            if not matched:
+                continue
+
+            # Klasifikasi jenis absensi
+            if r_type in ('clock_in', 'hadir', 'present'):
+                hadir_dates.update(matched)
+            elif 'cuti' in r_type or 'cuti' in r_reason.lower():
+                cuti_dates.update(matched)
+            elif 'sakit' in r_type or 'sakit' in r_reason.lower() or r_type == 'sick_leave':
+                sakit_dates.update(matched)
+            elif (r_type in ('izin', 'izin_keperluan', 'necessity_leave') 
+                  or (r_type.startswith('izin') and 'sakit' not in r_type and 'cuti' not in r_type) 
+                  or ('keperluan' in r_reason.lower()) 
+                  or (r_reason and r_type not in ('clock_in', 'clock_out', 'hadir', 'cuti', 'izin_cuti', 'sakit', 'izin_sakit'))):
+                izin_dates.update(matched)
+
+        # Resolusi prioritas status jika tanggal bertabrakan: Hadir > Cuti > Sakit > Izin
+        cuti_dates -= hadir_dates
+        sakit_dates -= (hadir_dates | cuti_dates)
+        izin_dates -= (hadir_dates | cuti_dates | sakit_dates)
+
+        hadir = len(hadir_dates)
+        cuti = len(cuti_dates)
+        izin_sakit = len(sakit_dates)
+        izin_keperluan = len(izin_dates)
+
+        # Jumlah Alpha: Hari kerja dikurangi hari hadir, cuti, izin sakit, dan izin keperluan
+        alpha = max(0, total_hari_kerja - hadir - cuti - izin_sakit - izin_keperluan)
         pct = round((hadir / total_hari_kerja) * 100) if total_hari_kerja > 0 else 0
-        username = r['username'] or ''
+
+        username = e.get('username') or ''
         email = username if '@' in username else (f"{username.lower()}@gmail.com" if username else '-')
+        branch_name = e.get('branch') or 'TUNGGAL SAHABAT ABADI'
+        if branch_name == 'Surabaya':
+            branch_name = 'TUNGGAL SAHABAT ABADI'
 
         tot_hadir += hadir
-        tot_izin_keperluan += izin_keperluan
-        tot_izin_sakit += izin_sakit
         tot_cuti += cuti
+        tot_izin_sakit += izin_sakit
+        tot_izin_keperluan += izin_keperluan
         tot_alpha += alpha
 
         processed_data.append({
             'no': idx,
-            'name': r['name'] or username or '-',
+            'name': e.get('name') or username or '-',
             'email': email,
-            'divisi': r['divisi'] or 'Operasional',
-            'branch': r['branch'] if r['branch'] != 'Surabaya' else 'TUNGGAL SAHABAT ABADI',
+            'divisi': e.get('divisi') or 'Operasional',
+            'branch': branch_name,
             'total_hari_kerja': total_hari_kerja,
             'jumlah_hadir': hadir,
             'jumlah_izin_keperluan': izin_keperluan,
@@ -2204,8 +2299,11 @@ def report_page():
     current_day = now.strftime('%A')
     current_date_formatted = f"{now.strftime('%B')} {now.day}, {now.year}"
     
-    start_date = request.args.get('start_date', '2026-10-01')
-    end_date = request.args.get('end_date', '2026-10-31')
+    # Default dinamis: awal bulan berjalan hingga hari ini
+    first_day_of_month = now.strftime('%Y-%m-01')
+    today_str = now.strftime('%Y-%m-%d')
+    start_date = request.args.get('start_date') or first_day_of_month
+    end_date = request.args.get('end_date') or today_str
     selected_branch = request.args.get('branch', 'all')
     selected_format = request.args.get('format', 'xlsx')
     
@@ -2230,14 +2328,18 @@ def report_page():
 
 @app.route('/report/export', methods=['GET', 'POST'])
 def export_report():
+    now = datetime.now()
+    first_day_of_month = now.strftime('%Y-%m-01')
+    today_str = now.strftime('%Y-%m-%d')
+
     if request.method == 'POST':
-        start_date = request.form.get('start_date', '2026-10-01')
-        end_date = request.form.get('end_date', '2026-10-31')
+        start_date = request.form.get('start_date') or first_day_of_month
+        end_date = request.form.get('end_date') or today_str
         branch = request.form.get('branch', 'all')
         file_format = request.form.get('format', 'xlsx').lower()
     else:
-        start_date = request.args.get('start_date', '2026-10-01')
-        end_date = request.args.get('end_date', '2026-10-31')
+        start_date = request.args.get('start_date') or first_day_of_month
+        end_date = request.args.get('end_date') or today_str
         branch = request.args.get('branch', 'all')
         file_format = request.args.get('format', 'xlsx').lower()
 
@@ -2246,6 +2348,7 @@ def export_report():
     total_hari_kerja = rekap['total_hari_kerja']
 
     filename_base = f"Laporan_Kehadiran_Karyawan_{start_date}_sd_{end_date}"
+    branch_str = "Semua Cabang" if branch == 'all' else branch
 
     # PDF GENERATION (.PDF)
     if file_format == 'pdf':
@@ -2257,11 +2360,11 @@ def export_report():
         title_style = ParagraphStyle('ReportTitle', parent=styles['Heading1'], fontSize=15, leading=19, textColor=colors.HexColor('#131B3E'))
         sub_style = ParagraphStyle('ReportSub', parent=styles['Normal'], fontSize=9, leading=13, textColor=colors.HexColor('#4A5568'))
 
-        branch_str = "Semua Cabang" if branch == 'all' else branch
         elements.append(Paragraph("<b>LAPORAN REKAPITULASI KEHADIRAN KARYAWAN</b>", title_style))
         elements.append(Paragraph(f"Rentang Tanggal: {start_date} s/d {end_date} | Kantor Cabang: {branch_str} | Dicetak: {datetime.now().strftime('%d/%m/%Y %H:%M')}", sub_style))
         elements.append(Spacer(1, 14))
 
+        # 11 Kolom Sama Persis dengan Excel
         table_headers = [
             "No",
             "Nama Karyawan",
@@ -2273,7 +2376,7 @@ def export_report():
             "Izin Sakit",
             "Cuti",
             "Jumlah Alpha",
-            "Kehadiran (%)"
+            "Persentase Kehadiran (%)"
         ]
         table_rows = [table_headers]
 
@@ -2292,7 +2395,7 @@ def export_report():
                 r['persentase']
             ])
 
-        col_widths = [24, 110, 116, 72, 65, 55, 60, 55, 45, 65, 65]
+        col_widths = [24, 110, 116, 72, 65, 55, 60, 55, 45, 65, 75]
         pdf_table = Table(table_rows, colWidths=col_widths, repeatRows=1)
         pdf_table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#131B3E')),
@@ -2325,6 +2428,17 @@ def export_report():
         ws = wb.active
         ws.title = "Rekap Kehadiran"
 
+        # Judul & Metadata Laporan (Sama dengan PDF)
+        ws['A1'] = "LAPORAN REKAPITULASI KEHADIRAN KARYAWAN"
+        ws['A1'].font = Font(name="Calibri", size=14, bold=True, color="131B3E")
+        ws.merge_cells('A1:K1')
+        ws['A1'].alignment = Alignment(horizontal="left", vertical="center")
+
+        ws['A2'] = f"Rentang Tanggal: {start_date} s/d {end_date} | Kantor Cabang: {branch_str} | Dicetak: {datetime.now().strftime('%d/%m/%Y %H:%M')}"
+        ws['A2'].font = Font(name="Calibri", size=10, italic=True, color="4B5563")
+        ws.merge_cells('A2:K2')
+        ws['A2'].alignment = Alignment(horizontal="left", vertical="center")
+
         headers = [
             "No",
             "Nama Karyawan",
@@ -2338,23 +2452,29 @@ def export_report():
             "Jumlah Alpha",
             "Persentase Kehadiran (%)"
         ]
-        ws.append(headers)
 
+        ws.append([]) # Baris 3: Pemisah kosong
+        ws.append(headers) # Baris 4: Header Tabel
+
+        header_fill = PatternFill(start_color="131B3E", end_color="131B3E", fill_type="solid")
+        header_font = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
         thin_border = Border(
-            left=Side(style='thin', color='D1D5DB'),
-            right=Side(style='thin', color='D1D5DB'),
-            top=Side(style='thin', color='D1D5DB'),
-            bottom=Side(style='thin', color='D1D5DB')
+            left=Side(style='thin', color='CBD5E1'),
+            right=Side(style='thin', color='CBD5E1'),
+            top=Side(style='thin', color='CBD5E1'),
+            bottom=Side(style='thin', color='CBD5E1')
         )
 
-        # Style header row (Row 1)
+        # Style header row (Row 4)
+        ws.row_dimensions[4].height = 24
         for col_num in range(1, len(headers) + 1):
-            cell = ws.cell(row=1, column=col_num)
-            cell.font = Font(name="Calibri", bold=True, color="000000", size=11)
+            cell = ws.cell(row=4, column=col_num)
+            cell.font = header_font
+            cell.fill = header_fill
             cell.alignment = Alignment(horizontal="center" if col_num in [1, 5, 6, 7, 8, 9, 10, 11] else "left", vertical="center")
             cell.border = thin_border
 
-        # Isi data baris demi baris (Row 2+)
+        # Isi data baris demi baris (Row 5+)
         for r in processed_data:
             row_data = [
                 r['no'],
@@ -2371,19 +2491,23 @@ def export_report():
             ]
             ws.append(row_data)
             current_row = ws.max_row
+            ws.row_dimensions[current_row].height = 20
             for col_idx in range(1, len(row_data) + 1):
                 c = ws.cell(row=current_row, column=col_idx)
                 c.border = thin_border
-                c.font = Font(name="Calibri", size=11)
+                c.font = Font(name="Calibri", size=10)
                 if col_idx in [1, 5, 6, 7, 8, 9, 10, 11]:
-                    c.alignment = Alignment(horizontal="center")
+                    c.alignment = Alignment(horizontal="center", vertical="center")
                 else:
-                    c.alignment = Alignment(horizontal="left")
+                    c.alignment = Alignment(horizontal="left", vertical="center")
 
-        # Auto lebar kolom
+        # Auto lebar kolom (mengabaikan baris 1-3 agar tidak terpengaruh merge cells judul)
         for col in ws.columns:
-            max_len = max(len(str(cell.value or '')) for cell in col)
-            col_letter = openpyxl.utils.get_column_letter(col[0].column)
+            col_cells = [cell for cell in col if cell.row >= 4]
+            if not col_cells:
+                continue
+            max_len = max(len(str(cell.value or '')) for cell in col_cells)
+            col_letter = openpyxl.utils.get_column_letter(col_cells[0].column)
             ws.column_dimensions[col_letter].width = max(max_len + 4, 12)
 
         buf = io.BytesIO()
