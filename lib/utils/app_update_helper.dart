@@ -339,7 +339,9 @@ class AppUpdateHelper {
     int receivedBytes = 0;
     int totalBytes = 0;
     bool isDownloading = true;
+    bool isCancelled = false;
     String statusText = 'Menghubungkan ke server...';
+    http.Client? activeClient;
 
     // State setter dialog
     StateSetter? dialogSetState;
@@ -409,6 +411,25 @@ class AppUpdateHelper {
                           ),
                         ],
                       ),
+                      const SizedBox(height: 16),
+                      // Tombol Batalkan / Unduh via Browser jika koneksi melambat
+                      TextButton(
+                        onPressed: () {
+                          isCancelled = true;
+                          activeClient?.close();
+                          if (context.mounted) {
+                            Navigator.of(context, rootNavigator: true).pop();
+                            _showFallbackInstallDialog(context, null, fullUrl);
+                          }
+                        },
+                        child: const Text(
+                          'Batalkan atau Unduh via Browser',
+                          style: TextStyle(
+                            color: Color(0xFF64748B),
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -421,7 +442,14 @@ class AppUpdateHelper {
 
     try {
       final client = http.Client();
+      activeClient = client;
+
       final request = http.Request('GET', Uri.parse(fullUrl));
+      // Mencegah proxy/server melakukan kompresi ulang on-the-fly (penyebab utama stuck & lambat)
+      request.headers['Accept-Encoding'] = 'identity';
+      request.headers['Connection'] = 'keep-alive';
+      request.headers['User-Agent'] = 'ProjectWG-Mobile-Updater';
+
       final response = await client.send(request);
 
       if (response.statusCode != 200) {
@@ -436,26 +464,64 @@ class AppUpdateHelper {
       );
       final sink = apkFile.openWrite();
 
+      int lastUiUpdateTime = 0;
+      int lastSpeedCalcTime = DateTime.now().millisecondsSinceEpoch;
+      int lastSpeedBytes = 0;
+      String speedText = '';
+
       await for (final chunk in response.stream) {
+        if (isCancelled) break;
+
         sink.add(chunk);
         receivedBytes += chunk.length;
-        if (totalBytes > 0) {
-          progress = receivedBytes / totalBytes;
-          final mbRec = (receivedBytes / (1024 * 1024)).toStringAsFixed(1);
-          final mbTot = (totalBytes / (1024 * 1024)).toStringAsFixed(1);
-          statusText = '$mbRec MB dari $mbTot MB';
-        } else {
-          final mbRec = (receivedBytes / (1024 * 1024)).toStringAsFixed(1);
-          statusText = 'Terunduh $mbRec MB';
+
+        final now = DateTime.now().millisecondsSinceEpoch;
+
+        // Hitung kecepatan unduh setiap 500 ms
+        if (now - lastSpeedCalcTime >= 500) {
+          final elapsedSec = (now - lastSpeedCalcTime) / 1000.0;
+          final bytesDiff = receivedBytes - lastSpeedBytes;
+          if (elapsedSec > 0) {
+            final speedMBps = (bytesDiff / (1024 * 1024)) / elapsedSec;
+            speedText = '${speedMBps.toStringAsFixed(1)} MB/s';
+          }
+          lastSpeedCalcTime = now;
+          lastSpeedBytes = receivedBytes;
         }
-        if (dialogSetState != null) {
-          dialogSetState!(() {});
+
+        // THROTTLING UI: Update tampilan maksimal tiap 150 ms (Bukan tiap byte chunk!)
+        // Mencegah isolate UI Flutter mengalami stutter/macet
+        if (now - lastUiUpdateTime >= 150 || receivedBytes == totalBytes) {
+          lastUiUpdateTime = now;
+          if (totalBytes > 0) {
+            progress = (receivedBytes / totalBytes).clamp(0.0, 1.0);
+            final mbRec = (receivedBytes / (1024 * 1024)).toStringAsFixed(1);
+            final mbTot = (totalBytes / (1024 * 1024)).toStringAsFixed(1);
+            final suffix = speedText.isNotEmpty ? ' • $speedText' : '';
+            statusText = '$mbRec MB / $mbTot MB$suffix';
+          } else {
+            final mbRec = (receivedBytes / (1024 * 1024)).toStringAsFixed(1);
+            final suffix = speedText.isNotEmpty ? ' • $speedText' : '';
+            statusText = 'Terunduh $mbRec MB$suffix';
+          }
+          if (dialogSetState != null) {
+            dialogSetState!(() {});
+          }
         }
       }
 
       await sink.flush();
       await sink.close();
       client.close();
+
+      if (isCancelled) {
+        try {
+          if (await apkFile.exists()) {
+            await apkFile.delete();
+          }
+        } catch (_) {}
+        return;
+      }
 
       // Tutup dialog progress download
       if (context.mounted) {

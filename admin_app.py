@@ -3420,13 +3420,19 @@ def api_download_latest_apk():
                     f.write(b"PK\x03\x04ProjectWG_Release_APK_Placeholder")
 
         v_name = row.get('version_name', '1.0.0') if row else '1.0.0'
-        return send_from_directory(
+        response = send_from_directory(
             APK_DIR,
             target_file,
             as_attachment=True,
             download_name=f'WG_Absensi_v{v_name}.apk',
-            mimetype='application/vnd.android.package-archive'
+            mimetype='application/vnd.android.package-archive',
+            conditional=True
         )
+        response.headers['Accept-Ranges'] = 'bytes'
+        response.headers['Cache-Control'] = 'public, max-age=3600'
+        response.headers['Content-Encoding'] = 'identity'
+        response.headers['X-Content-Type-Options'] = 'nosniff'
+        return response
     except Exception as e:
         return jsonify({"status": "error", "message": f"Gagal mengunduh APK: {e}"}), 500
 
