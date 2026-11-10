@@ -536,7 +536,7 @@
 
                     <div class="row g-4">
                         <!-- Kolom 1: Rentang Tanggal -->
-                        <div class="col-lg-4 col-md-6">
+                        <div class="col-lg-3 col-md-6">
                             <label class="field-label" data-i18n="rep_lbl_range">Rentang tanggal</label>
                             <div class="pill-control-wrapper">
                                 <div class="date-range-box">
@@ -549,7 +549,7 @@
                         </div>
 
                         <!-- Kolom 2: Kantor Cabang -->
-                        <div class="col-lg-4 col-md-6">
+                        <div class="col-lg-3 col-md-6">
                             <label class="field-label" data-i18n="rep_lbl_branch">Kantor Cabang</label>
                             <div class="pill-control-wrapper">
                                 <select name="branch" class="pill-select" id="branchSelect">
@@ -557,13 +557,29 @@
                                     {% for b in branches %}
                                         <option value="{{ b }}" {% if selected_branch == b %}selected{% endif %}>{{ b }}</option>
                                     {% endfor %}
+                                    <option value="Others" {% if selected_branch == 'Others' %}selected{% endif %}>Others (Data Site / Lapangan)</option>
                                 </select>
                                 <i class="bi bi-funnel pill-icon" title="Filter Cabang"></i>
                             </div>
                         </div>
 
-                        <!-- Kolom 3: Format File -->
-                        <div class="col-lg-4 col-md-12">
+                        <!-- Kolom 3: Dropdown Data Site (Others) -->
+                        <div class="col-lg-3 col-md-6">
+                            <label class="field-label" data-i18n="rep_lbl_site">Data Site / Others</label>
+                            <div class="pill-control-wrapper">
+                                <select name="site" class="pill-select" id="siteSelect">
+                                    <option value="all" {% if selected_site == 'all' or not selected_site %}selected{% endif %} data-i18n="rep_opt_all_sites">Semua Lokasi & Site</option>
+                                    <option value="others" {% if selected_site == 'others' %}selected{% endif %} data-i18n="rep_opt_others_site">Others (Semua Data Site / Lapangan)</option>
+                                    <option value="site" {% if selected_site == 'site' %}selected{% endif %}>Others: Berada di Site</option>
+                                    <option value="customer" {% if selected_site == 'customer' %}selected{% endif %}>Others: Bertemu Customer</option>
+                                    <option value="office" {% if selected_site == 'office' %}selected{% endif %}>Kantor Utama (Office Only)</option>
+                                </select>
+                                <i class="bi bi-geo-alt pill-icon" title="Filter Data Site"></i>
+                            </div>
+                        </div>
+
+                        <!-- Kolom 4: Format File -->
+                        <div class="col-lg-3 col-md-6">
                             <label class="field-label" data-i18n="rep_lbl_format">Format</label>
                             <div class="pill-control-wrapper">
                                 <select name="format" class="pill-select" id="formatSelect">

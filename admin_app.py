@@ -1711,6 +1711,7 @@ def presence():
     
     search_query = request.args.get('search', '').strip()
     selected_branch = request.args.get('branch', '').strip()
+    selected_site = request.args.get('site', '').strip()
     selected_team = request.args.get('team', '').strip()
     selected_status = request.args.get('status', '').strip()
     selected_tag = request.args.get('tag', '').strip()
@@ -1746,10 +1747,39 @@ def presence():
         q = f"%{search_query}%"
         params.extend([q, q, q, q])
         
-    if selected_branch:
+    is_other_selected = (selected_site == 'others') or (selected_branch.lower() in ('others', 'other', 'site'))
+
+    if selected_branch and not is_other_selected:
         where_conditions.append("e.branch = %s")
         params.append(selected_branch)
         
+    if is_other_selected:
+        where_conditions.append("""
+            (
+                LOWER(COALESCE(a.reason, '')) LIKE '%other%' 
+                OR LOWER(COALESCE(a.reason, '')) LIKE '%site%' 
+                OR LOWER(COALESCE(a.reason, '')) LIKE '%tugas luar%'
+                OR (a.evidence_path IS NOT NULL AND a.evidence_path != '')
+                OR (e.tag1 = 'On Site' OR e.tag2 = 'On Site' OR e.tag3 = 'On Site')
+            )
+        """)
+    elif selected_site == 'site':
+        where_conditions.append("""
+            (
+                LOWER(COALESCE(a.reason, '')) LIKE '%site%' 
+                OR (e.tag1 = 'On Site' OR e.tag2 = 'On Site' OR e.tag3 = 'On Site')
+            )
+        """)
+    elif selected_site == 'customer':
+        where_conditions.append("(LOWER(COALESCE(a.reason, '')) LIKE '%customer%')")
+    elif selected_site == 'office':
+        where_conditions.append("""
+            (
+                (a.reason IS NULL OR (LOWER(a.reason) NOT LIKE '%other%' AND LOWER(a.reason) NOT LIKE '%site%' AND LOWER(a.reason) NOT LIKE '%customer%'))
+                AND (a.evidence_path IS NULL OR a.evidence_path = '')
+            )
+        """)
+
     if selected_team:
         where_conditions.append("e.team = %s")
         params.append(selected_team)
@@ -1866,13 +1896,14 @@ def presence():
     
     conn.close()
     
-    active_filter_count = sum(1 for val in [selected_branch, selected_team, selected_status, selected_tag] if val)
+    active_filter_count = sum(1 for val in [selected_branch, selected_site, selected_team, selected_status, selected_tag] if val)
     
     return render_template(
         'presence.html',
         presence_list=presence_list,
         search_query=search_query,
         selected_branch=selected_branch,
+        selected_site=selected_site,
         selected_team=selected_team,
         selected_status=selected_status,
         selected_tag=selected_tag,
@@ -2118,7 +2149,7 @@ def parse_record_dates(record_timestamp, reason_str, start_dt, end_dt):
 
     return matched_dates
 
-def get_rekap_report_data(start_date, end_date, branch='all'):
+def get_rekap_report_data(start_date, end_date, branch='all', site='all'):
     try:
         dt_start = datetime.strptime(start_date, '%Y-%m-%d')
         dt_end = datetime.strptime(end_date, '%Y-%m-%d')
@@ -2140,10 +2171,28 @@ def get_rekap_report_data(start_date, end_date, branch='all'):
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    # Filter kantor cabang yang fleksibel dan akurat
+    is_other_filter = (site == 'others') or (str(branch).lower() in ('others', 'other', 'site'))
+    is_site_category = (site == 'site')
+    is_customer_category = (site == 'customer')
+    is_office_filter = (site == 'office')
+
+    if is_other_filter:
+        branch_str = "Others (Data Site / Lapangan)"
+    elif is_site_category:
+        branch_str = "Others (Berada di Site)"
+    elif is_customer_category:
+        branch_str = "Others (Bertemu Customer)"
+    elif is_office_filter:
+        branch_str = "Kantor Utama (Office)"
+    elif branch == 'all':
+        branch_str = "Semua Cabang"
+    else:
+        branch_str = branch
+
+    # Filter kantor cabang yang fleksibel dan akurat (hanya diterapkan jika bukan filter khusus Data Site)
     where_sql = ""
     params = []
-    if branch and branch != 'all':
+    if branch and branch != 'all' and not is_other_filter:
         where_sql = """
             WHERE (
                 e.branch = %s 
@@ -2161,7 +2210,8 @@ def get_rekap_report_data(start_date, end_date, branch='all'):
             e.name,
             e.username,
             COALESCE(e.team, 'Operasional') AS divisi,
-            COALESCE(e.branch, 'TUNGGAL SAHABAT ABADI') AS branch
+            COALESCE(e.branch, 'TUNGGAL SAHABAT ABADI') AS branch,
+            e.tag1, e.tag2, e.tag3
         FROM employees e
         {where_sql}
         ORDER BY e.id ASC
@@ -2186,6 +2236,7 @@ def get_rekap_report_data(start_date, end_date, branch='all'):
             type,
             timestamp,
             reason,
+            evidence_path,
             status
         FROM attendance
         WHERE LOWER(COALESCE(status, '')) NOT IN ('rejected', 'ditolak')
@@ -2208,7 +2259,7 @@ def get_rekap_report_data(start_date, end_date, branch='all'):
     tot_cuti = 0
     tot_alpha = 0
 
-    for idx, e in enumerate(employees, 1):
+    for e in employees:
         uname = (e.get('username') or '').strip().lower()
         records = emp_records.get(uname, [])
 
@@ -2227,9 +2278,32 @@ def get_rekap_report_data(start_date, end_date, branch='all'):
             if not matched:
                 continue
 
-            # Klasifikasi jenis absensi
+            # Verifikasi apakah presensi dilakukan di Site / Others
+            rec_is_site = (
+                'other' in r_reason.lower() 
+                or 'site' in r_reason.lower() 
+                or 'tugas luar' in r_reason.lower() 
+                or 'customer' in r_reason.lower() 
+                or (rec.get('evidence_path') and str(rec.get('evidence_path')).strip() != '')
+                or any(t == 'On Site' for t in [e.get('tag1'), e.get('tag2'), e.get('tag3')])
+            )
+
+            # Klasifikasi jenis absensi sesuai filter site
             if r_type in ('clock_in', 'hadir', 'present'):
-                hadir_dates.update(matched)
+                if is_other_filter:
+                    if rec_is_site:
+                        hadir_dates.update(matched)
+                elif is_site_category:
+                    if 'site' in r_reason.lower() or any(t == 'On Site' for t in [e.get('tag1'), e.get('tag2'), e.get('tag3')]):
+                        hadir_dates.update(matched)
+                elif is_customer_category:
+                    if 'customer' in r_reason.lower():
+                        hadir_dates.update(matched)
+                elif is_office_filter:
+                    if not rec_is_site:
+                        hadir_dates.update(matched)
+                else:
+                    hadir_dates.update(matched)
             elif 'cuti' in r_type or 'cuti' in r_reason.lower():
                 cuti_dates.update(matched)
             elif 'sakit' in r_type or 'sakit' in r_reason.lower() or r_type == 'sick_leave':
@@ -2250,6 +2324,15 @@ def get_rekap_report_data(start_date, end_date, branch='all'):
         izin_sakit = len(sakit_dates)
         izin_keperluan = len(izin_dates)
 
+        # Jika filter khusus Data Site / Others aktif, tampilkan karyawan yang memiliki aktivitas Site/Others atau bertag 'On Site'
+        if is_other_filter or is_site_category or is_customer_category:
+            has_matching_site = (hadir > 0) or any(
+                ('other' in (rec.get('reason') or '').lower() or 'site' in (rec.get('reason') or '').lower() or (rec.get('evidence_path') and str(rec.get('evidence_path')).strip() != ''))
+                for rec in records
+            ) or any(t == 'On Site' for t in [e.get('tag1'), e.get('tag2'), e.get('tag3')])
+            if not has_matching_site:
+                continue
+
         # Jumlah Alpha: Hari kerja dikurangi hari hadir, cuti, izin sakit, dan izin keperluan
         alpha = max(0, total_hari_kerja - hadir - cuti - izin_sakit - izin_keperluan)
         pct = round((hadir / total_hari_kerja) * 100) if total_hari_kerja > 0 else 0
@@ -2267,7 +2350,7 @@ def get_rekap_report_data(start_date, end_date, branch='all'):
         tot_alpha += alpha
 
         processed_data.append({
-            'no': idx,
+            'no': len(processed_data) + 1,
             'name': e.get('name') or username or '-',
             'email': email,
             'divisi': e.get('divisi') or 'Operasional',
@@ -2285,6 +2368,7 @@ def get_rekap_report_data(start_date, end_date, branch='all'):
     return {
         'data': processed_data,
         'branches': branches,
+        'branch_str': branch_str,
         'total_hari_kerja': total_hari_kerja,
         'tot_hadir': tot_hadir,
         'tot_izin_keperluan': tot_izin_keperluan,
@@ -2305,6 +2389,7 @@ def report_page():
     start_date = request.args.get('start_date') or first_day_of_month
     end_date = request.args.get('end_date') or today_str
     selected_branch = request.args.get('branch', 'all')
+    selected_site = request.args.get('site', 'all')
     selected_format = request.args.get('format', 'xlsx')
     
     conn = get_db_connection()
@@ -2320,6 +2405,7 @@ def report_page():
         start_date=start_date,
         end_date=end_date,
         selected_branch=selected_branch,
+        selected_site=selected_site,
         selected_format=selected_format,
         branches=branches,
         current_day=current_day,
@@ -2336,19 +2422,21 @@ def export_report():
         start_date = request.form.get('start_date') or first_day_of_month
         end_date = request.form.get('end_date') or today_str
         branch = request.form.get('branch', 'all')
+        site = request.form.get('site', 'all')
         file_format = request.form.get('format', 'xlsx').lower()
     else:
         start_date = request.args.get('start_date') or first_day_of_month
         end_date = request.args.get('end_date') or today_str
         branch = request.args.get('branch', 'all')
+        site = request.args.get('site', 'all')
         file_format = request.args.get('format', 'xlsx').lower()
 
-    rekap = get_rekap_report_data(start_date, end_date, branch)
+    rekap = get_rekap_report_data(start_date, end_date, branch, site)
     processed_data = rekap['data']
     total_hari_kerja = rekap['total_hari_kerja']
 
     filename_base = f"Laporan_Kehadiran_Karyawan_{start_date}_sd_{end_date}"
-    branch_str = "Semua Cabang" if branch == 'all' else branch
+    branch_str = rekap.get('branch_str') or ("Semua Cabang" if branch == 'all' else branch)
 
     # PDF GENERATION (.PDF)
     if file_format == 'pdf':
