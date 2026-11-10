@@ -311,11 +311,11 @@
             border-radius: 8px;
         }
 
-        /* ================= 4 METRICS CARDS ROW ================= */
+        /* ================= 5 METRICS CARDS ROW ================= */
         .metrics-grid {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 20px;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 16px;
             margin-bottom: 28px;
         }
 
@@ -354,6 +354,7 @@
         .metric-icon-green { color: #10b981; }
         .metric-icon-red { color: #ef4444; }
         .metric-icon-yellow { color: #f59e0b; }
+        .metric-icon-purple { color: #8b5cf6; }
 
         .metric-value {
             font-size: 40px;
@@ -486,6 +487,9 @@
 
         /* Responsive styles */
         @media (max-width: 1200px) {
+            .metrics-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
             .dashboard-panels-row {
                 grid-template-columns: 1fr;
             }
@@ -505,6 +509,12 @@
             }
             .metrics-grid {
                 grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 520px) {
+            .metrics-grid {
+                grid-template-columns: 1fr;
             }
         }
     </style>
@@ -624,10 +634,10 @@
             </div>
         </header>
 
-        <!-- 4 METRICS CARDS ROW (REAL DATABASE) -->
+        <!-- 5 METRICS CARDS ROW (REAL DATABASE) -->
         <section class="metrics-grid">
             <!-- CARD 1: EMPLOYEES -->
-            <div class="metric-card" id="card-employees">
+            <div class="metric-card" id="card-employees" style="cursor: pointer;" onclick="location.href='/employee'">
                 <div class="metric-icon-wrap metric-icon-blue">
                     <i class="bi bi-people"></i>
                 </div>
@@ -636,7 +646,7 @@
             </div>
 
             <!-- CARD 2: PRESENCE TODAY -->
-            <div class="metric-card" id="card-presence">
+            <div class="metric-card" id="card-presence" style="cursor: pointer;" onclick="location.href='/presence'">
                 <div class="metric-icon-wrap metric-icon-green">
                     <i class="bi bi-clock"></i>
                 </div>
@@ -645,7 +655,7 @@
             </div>
 
             <!-- CARD 3: ABSENCE TODAY -->
-            <div class="metric-card" id="card-absence">
+            <div class="metric-card" id="card-absence" style="cursor: pointer;" onclick="location.href='/presence'">
                 <div class="metric-icon-wrap metric-icon-red">
                     <i class="bi bi-dash-circle"></i>
                 </div>
@@ -653,13 +663,22 @@
                 <div class="metric-label" data-i18n="home_metric_abs">Tidak Hadir Hari Ini</div>
             </div>
 
-            <!-- CARD 4: REQUEST OBS -->
-            <div class="metric-card" id="card-request">
+            <!-- CARD 4: REQUEST OBS (IZIN & SAKIT) -->
+            <div class="metric-card" id="card-request" style="cursor: pointer;" onclick="location.href='/request?type=izin'">
                 <div class="metric-icon-wrap metric-icon-yellow">
                     <i class="bi bi-arrow-repeat"></i>
                 </div>
                 <div class="metric-value">{{ request_obs }}</div>
-                <div class="metric-label" data-i18n="home_metric_req">Pengajuan Izin</div>
+                <div class="metric-label" data-i18n="home_metric_req">Pengajuan Izin / Sakit</div>
+            </div>
+
+            <!-- CARD 5: CUTI (DARI DATABASE) -->
+            <div class="metric-card" id="card-cuti" style="cursor: pointer;" onclick="location.href='/request?type=cuti'">
+                <div class="metric-icon-wrap metric-icon-purple">
+                    <i class="bi bi-calendar2-check"></i>
+                </div>
+                <div class="metric-value">{{ cuti_obs }}</div>
+                <div class="metric-label" data-i18n="home_metric_cuti">Pengajuan Cuti</div>
             </div>
         </section>
 
@@ -772,7 +791,11 @@
                                 {{ emp.team }}
                                 {% if emp.today_type == 'clock_in' %}
                                     <span class="badge bg-success-subtle text-success border border-success-subtle ms-1 attendee-status-badge" data-status="hadir" data-time="{{ emp.today_clock_in }}" style="font-size: 11px;">Hadir {{ emp.today_clock_in }}</span>
-                                {% elif emp.today_type in ['izin', 'izin_sakit', 'izin_keperluan', 'cuti', 'sakit'] or (emp.today_type and emp.today_type.startswith('izin')) %}
+                                {% elif emp.today_type == 'cuti' or 'cuti' in (emp.today_type or '') %}
+                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle ms-1 attendee-status-badge" data-status="cuti" style="font-size: 11px;">Cuti</span>
+                                {% elif emp.today_type == 'sakit' or 'sakit' in (emp.today_type or '') %}
+                                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle ms-1 attendee-status-badge" data-status="sakit" style="font-size: 11px;">Sakit</span>
+                                {% elif emp.today_type in ['izin', 'izin_sakit', 'izin_keperluan'] or (emp.today_type and emp.today_type.startswith('izin')) %}
                                     <span class="badge bg-warning-subtle text-warning border border-warning-subtle ms-1 attendee-status-badge" data-status="izin" style="font-size: 11px;">Izin</span>
                                 {% else %}
                                     <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle ms-1 attendee-status-badge" data-status="belum" style="font-size: 11px;">Belum Presensi</span>

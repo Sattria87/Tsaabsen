@@ -283,6 +283,31 @@ def ensure_db_schema():
                 VALUES ('Pemberitahuan Sistem Absensi Online', 'Pastikan selalu melakukan Clock In dan Clock Out tepat waktu setiap hari kerja.', 'info', 1)
             """)
 
+        # Seed Data Contoh Pengajuan Cuti (jika belum ada di tabel attendance)
+        cursor.execute("""
+            SELECT COUNT(*) AS total 
+            FROM attendance 
+            WHERE type IN ('cuti', 'izin_cuti') OR type LIKE '%cuti%'
+        """)
+        cuti_check = cursor.fetchone()
+        if not cuti_check or cuti_check.get('total', 0) == 0:
+            cursor.execute("SELECT username FROM employees ORDER BY id ASC")
+            available_emps = [row['username'] for row in cursor.fetchall()]
+            
+            u_c1 = 'aan' if 'aan' in available_emps else (available_emps[0] if available_emps else 'satriya')
+            u_c2 = 'ridho' if 'ridho' in available_emps else (available_emps[1] if len(available_emps) > 1 else 'satriya')
+            u_c3 = 'rifky' if 'rifky' in available_emps else (available_emps[2] if len(available_emps) > 2 else 'satriya')
+            u_c4 = 'moh' if 'moh' in available_emps else (available_emps[3] if len(available_emps) > 3 else 'satriya')
+
+            cursor.execute("""
+                INSERT INTO attendance (username, type, timestamp, reason, status) VALUES
+                (%s, 'cuti', NOW(), 'Jenis Cuti: Cuti Tahunan | Periode: 2026-11-10 s/d 2026-11-14 (5 Hari) | Alasan: Cuti tahunan agenda keluarga luar kota', 'Pending'),
+                (%s, 'izin_cuti', NOW() - INTERVAL 1 DAY, 'Jenis Cuti: Cuti Menikah | Periode: 2026-11-09 s/d 2026-11-11 (3 Hari) | Alasan: Acara pernikahan saudara kandung', 'Approved'),
+                (%s, 'cuti', NOW() - INTERVAL 2 DAY, 'Jenis Cuti: Cuti Khusus / Alasan Penting | Periode: 2026-11-08 s/d 2026-11-09 (2 Hari) | Alasan: Keperluan renovasi dan pindahan rumah', 'Approved'),
+                (%s, 'cuti', NOW() - INTERVAL 3 DAY, 'Jenis Cuti: Cuti Melahirkan / Bersalin | Periode: 2026-11-07 s/d 2026-12-07 (30 Hari) | Alasan: Cuti melahirkan dan pemulihan kesehatan', 'Approved')
+            """, (u_c1, u_c2, u_c3, u_c4))
+            print(f"[Schema Info] Berhasil menambahkan contoh data pengajuan cuti ke database.")
+
         conn.commit()
         conn.close()
         print("[Schema Info] Seluruh tabel database absensi_wg berhasil diverifikasi.")
@@ -530,6 +555,7 @@ def index():
     presence_today = 0
     absence_today = 0
     request_obs = 0
+    cuti_obs = 0
     daily_on_time = [0] * 30
     daily_late = [0] * 30
     daily_absent = [0] * 30
@@ -566,15 +592,54 @@ def index():
         presence_res = cursor.fetchone()
         presence_today = presence_res['total'] if presence_res else 0
         
-        # 4. Total Request / Izin / Sakit / OBS Hari Ini
+        # 4. Total Request Izin / Sakit Hari Ini (Eksklusif Izin & Sakit, cuti dipisah ke kartu khusus)
         cursor.execute("""
             SELECT COUNT(*) AS total 
             FROM attendance 
             WHERE DATE(timestamp) = CURDATE() 
-              AND ((reason IS NOT NULL AND reason != '') OR type IN ('izin', 'sakit', 'cuti', 'sick_leave', 'necessity_leave', 'izin_cuti', 'izin_sakit', 'izin_keperluan') OR type LIKE 'izin_%')
+              AND (
+                  (reason IS NOT NULL AND reason != '') 
+                  OR type IN ('izin', 'sakit', 'sick_leave', 'necessity_leave', 'izin_sakit', 'izin_keperluan') 
+                  OR (type LIKE 'izin_%' AND type NOT LIKE '%cuti%')
+              )
+              AND type NOT IN ('clock_in', 'clock_out', 'hadir', 'cuti', 'izin_cuti')
+              AND type NOT LIKE '%cuti%'
         """)
         obs_res = cursor.fetchone()
         request_obs = obs_res['total'] if obs_res else 0
+        if request_obs == 0:
+            # Fallback jika hari ini 0: tampilkan akumulasi izin/sakit aktif di database
+            cursor.execute("""
+                SELECT COUNT(*) AS total 
+                FROM attendance 
+                WHERE (
+                    type IN ('izin', 'sakit', 'sick_leave', 'necessity_leave', 'izin_sakit', 'izin_keperluan') 
+                    OR (type LIKE 'izin_%' AND type NOT LIKE '%cuti%')
+                )
+                AND type NOT IN ('clock_in', 'clock_out', 'hadir', 'cuti', 'izin_cuti')
+                AND type NOT LIKE '%cuti%'
+            """)
+            fb_obs = cursor.fetchone()
+            request_obs = fb_obs['total'] if fb_obs else 0
+
+        # 4b. Total Request Cuti Hari Ini / Keseluruhan dari Database
+        cursor.execute("""
+            SELECT COUNT(*) AS total 
+            FROM attendance 
+            WHERE DATE(timestamp) = CURDATE() 
+              AND (type IN ('cuti', 'izin_cuti') OR type LIKE '%cuti%')
+        """)
+        cuti_res = cursor.fetchone()
+        cuti_obs = cuti_res['total'] if cuti_res else 0
+        if cuti_obs == 0:
+            # Fallback jika hari ini 0: tampilkan total data pengajuan cuti yang ada di database
+            cursor.execute("""
+                SELECT COUNT(*) AS total 
+                FROM attendance 
+                WHERE (type IN ('cuti', 'izin_cuti') OR type LIKE '%cuti%')
+            """)
+            fb_cuti = cursor.fetchone()
+            cuti_obs = fb_cuti['total'] if fb_cuti else 0
         
         # 5. Ketidakhadiran Hari Ini (karyawan yang belum clock_in hari ini)
         absence_today = max(0, total_employees - presence_today)
@@ -699,7 +764,11 @@ def index():
         attendance_employees = cursor.fetchall()
         for emp in attendance_employees:
             raw_type = (emp.get('today_type') or '').lower()
-            if raw_type in ('izin', 'izin_sakit', 'izin_keperluan', 'cuti', 'sakit') or raw_type.startswith('izin'):
+            if 'cuti' in raw_type:
+                emp['today_type'] = 'cuti'
+            elif 'sakit' in raw_type:
+                emp['today_type'] = 'sakit'
+            elif raw_type in ('izin', 'izin_sakit', 'izin_keperluan') or raw_type.startswith('izin'):
                 emp['today_type'] = 'izin'
 
         top_attendees = attendance_employees[:3]
@@ -770,6 +839,7 @@ def index():
         presence_today=presence_today,
         absence_today=absence_today,
         request_obs=request_obs,
+        cuti_obs=cuti_obs,
         chart_labels=chart_labels,
         chart_presence=chart_presence,
         chart_absence=chart_absence,
@@ -1814,7 +1884,7 @@ def presence():
     )
 
 # ==========================================
-# RUTE PENGAJUAN IZIN / SAKIT (REQUEST)
+# RUTE PENGAJUAN IZIN / SAKIT / CUTI (REQUEST)
 # ==========================================
 @app.route('/request')
 @app.route('/requests')
@@ -1822,14 +1892,18 @@ def request_page():
     now = datetime.now()
     current_day = now.strftime('%A')
     current_date_formatted = f"{now.strftime('%B')} {now.day}, {now.year}"
+    type_filter = request.args.get('type', '').strip().lower()
     
     requests_list = []
     employees_list = []
+    count_total_all = 0
+    count_total_cuti = 0
+    count_total_izin = 0
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        # 1. Query seluruh pengajuan izin / sakit langsung dari tabel attendance JOIN employees
+        # 1. Query seluruh pengajuan izin / sakit / cuti langsung dari tabel attendance JOIN employees
         cursor.execute("""
             SELECT 
                 a.id,
@@ -1838,6 +1912,7 @@ def request_page():
                 a.timestamp,
                 a.clock_out,
                 a.image_path,
+                a.evidence_path,
                 a.reason,
                 COALESCE(a.status, 'Pending') AS status,
                 DATE_FORMAT(a.timestamp, '%b %e, %Y') AS formatted_date,
@@ -1854,27 +1929,24 @@ def request_page():
             LEFT JOIN employees e ON a.username = e.username
             WHERE a.type IN ('izin', 'sakit', 'izin_sakit', 'izin_keperluan', 'cuti', 'izin_cuti')
                OR a.type LIKE 'izin_%'
+               OR a.type LIKE '%cuti%'
                OR (a.reason IS NOT NULL AND a.reason != '' AND a.type NOT IN ('clock_in', 'clock_out', 'hadir'))
             ORDER BY 
                 CASE 
-                    WHEN e.username = 'reva' AND a.type = 'sakit' THEN 1
-                    WHEN e.username = 'Satriya' THEN 2
-                    WHEN e.username = 'bambang' THEN 3
-                    WHEN e.username = 'rina' THEN 4
-                    WHEN e.username = 'dimas' THEN 5
-                    WHEN e.username = 'eko' THEN 6
-                    ELSE 100
+                    WHEN COALESCE(a.status, 'Pending') = 'Pending' THEN 1
+                    ELSE 2
                 END ASC,
                 a.id DESC
         """)
         raw_requests = cursor.fetchall()
         
+        all_requests_parsed = []
         for r in raw_requests:
             r_type = r['type'].lower() if r['type'] else ''
-            if 'sakit' in r_type:
-                display_type = 'Sakit'
-            elif 'cuti' in r_type:
+            if 'cuti' in r_type:
                 display_type = 'Cuti'
+            elif 'sakit' in r_type:
+                display_type = 'Sakit'
             elif 'keperluan' in r_type:
                 display_type = 'Izin Keperluan'
             elif 'izin' in r_type:
@@ -1883,7 +1955,18 @@ def request_page():
                 display_type = 'Izin'
                 
             r['display_type'] = display_type
-            requests_list.append(r)
+            all_requests_parsed.append(r)
+            
+        count_total_all = len(all_requests_parsed)
+        count_total_cuti = len([r for r in all_requests_parsed if r['display_type'] == 'Cuti'])
+        count_total_izin = len([r for r in all_requests_parsed if r['display_type'] != 'Cuti'])
+
+        if type_filter == 'cuti':
+            requests_list = [r for r in all_requests_parsed if r['display_type'] == 'Cuti']
+        elif type_filter in ('izin', 'sakit'):
+            requests_list = [r for r in all_requests_parsed if r['display_type'] != 'Cuti']
+        else:
+            requests_list = all_requests_parsed
             
         # 2. Ambil daftar karyawan untuk modal tambah pengajuan
         cursor.execute("SELECT employee_id, username, name, team, branch FROM employees ORDER BY name ASC")
@@ -1908,6 +1991,10 @@ def request_page():
         count_pending=len(pending_list),
         count_approved=len(approved_list),
         count_rejected=len(rejected_list),
+        count_total_all=count_total_all,
+        count_total_cuti=count_total_cuti,
+        count_total_izin=count_total_izin,
+        active_type_filter=type_filter,
         employees_list=employees_list,
         current_day=current_day,
         current_date_formatted=current_date_formatted
@@ -1916,13 +2003,13 @@ def request_page():
 @app.route('/add-request', methods=['POST'])
 def add_request():
     username = request.form.get('username')
-    req_type = request.form.get('type', 'sakit')
+    req_type = request.form.get('type', 'sakit').lower()
     reason = request.form.get('reason', '')
     req_date = request.form.get('date') or datetime.now().strftime('%Y-%m-%d')
     timestamp_str = f"{req_date} 08:00:00"
 
     if not username or not reason:
-        flash('Karyawan dan Alasan izin/sakit wajib diisi!', 'danger')
+        flash('Karyawan dan Alasan izin/cuti wajib diisi!', 'danger')
         return redirect(url_for('request_page'))
 
     try:
@@ -1933,7 +2020,7 @@ def add_request():
         cursor.execute("""
             DELETE FROM attendance 
             WHERE username = %s AND status = 'Rejected' 
-              AND (type IN ('izin', 'sakit', 'izin_sakit', 'izin_keperluan', 'cuti') OR type LIKE 'izin_%%')
+              AND (type IN ('izin', 'sakit', 'izin_sakit', 'izin_keperluan', 'cuti', 'izin_cuti') OR type LIKE 'izin_%%' OR type LIKE '%%cuti%%')
         """, (username,))
 
         cursor.execute("""
@@ -1942,11 +2029,12 @@ def add_request():
         """, (username, req_type, timestamp_str, reason))
         conn.commit()
         conn.close()
-        flash(f'Pengajuan {req_type.capitalize()} untuk @{username} berhasil disimpan dan langsung masuk ke database!', 'success')
+        label = 'Cuti' if 'cuti' in req_type else ('Sakit' if 'sakit' in req_type else 'Izin')
+        flash(f'Pengajuan {label} untuk @{username} berhasil disimpan dan langsung masuk ke database!', 'success')
     except Exception as e:
         flash(f'Gagal menambahkan pengajuan: {e}', 'danger')
 
-    return redirect(url_for('request_page'))
+    return redirect(url_for('request_page', type='cuti' if 'cuti' in req_type else ''))
 
 @app.route('/update-request-status/<int:id>', methods=['POST'])
 def update_request_status(id):
@@ -2516,3 +2604,153 @@ def api_get_announcements():
         'success': True,
         'data': announcements
     })
+
+# ==========================================
+# REST API ATTENDANCE & PENGAJUAN IZIN / CUTI (UNTUK APLIKASI FLUTTER MOBILE)
+# ==========================================
+@app.route('/api/attendance', methods=['POST'])
+def api_save_attendance():
+    """Menyimpan absensi dan pengajuan cuti/izin langsung ke MySQL dari Flutter mobile."""
+    data = request.get_json(silent=True) or request.form
+    username = (data.get('username') or '').strip()
+    req_type = (data.get('type') or '').strip().lower()
+    reason = (data.get('reason') or '').strip()
+    image = data.get('image') or ''
+    evidence_image = data.get('evidence_image') or ''
+
+    if not username or not req_type:
+        return jsonify({'success': False, 'message': 'username dan type wajib diisi'}), 400
+
+    saved_img_path = None
+    if image and len(image) > 50:
+        try:
+            upload_dir = os.path.join(app.root_path, 'assets', 'foto_izin')
+            os.makedirs(upload_dir, exist_ok=True)
+            clean_b64 = image.split(',')[-1] if ',' in image else image
+            img_data = base64.b64decode(clean_b64)
+            filename = f"izin_{username}_{int(time.time())}.jpg"
+            file_path = os.path.join(upload_dir, filename)
+            with open(file_path, 'wb') as f:
+                f.write(img_data)
+            saved_img_path = f"assets/foto_izin/{filename}"
+        except Exception as img_err:
+            print(f"[API Attendance Image Error]: {img_err}")
+
+    saved_ev_path = None
+    if evidence_image and len(evidence_image) > 50:
+        try:
+            upload_dir = os.path.join(app.root_path, 'assets', 'foto_izin')
+            os.makedirs(upload_dir, exist_ok=True)
+            clean_b64 = evidence_image.split(',')[-1] if ',' in evidence_image else evidence_image
+            img_data = base64.b64decode(clean_b64)
+            filename = f"ev_{username}_{int(time.time())}.jpg"
+            file_path = os.path.join(upload_dir, filename)
+            with open(file_path, 'wb') as f:
+                f.write(img_data)
+            saved_ev_path = f"assets/foto_izin/{filename}"
+        except Exception as ev_err:
+            print(f"[API Attendance Evidence Error]: {ev_err}")
+
+    is_permission = req_type in ('izin', 'sakit', 'izin_sakit', 'izin_keperluan', 'cuti', 'izin_cuti') or req_type.startswith('izin_')
+    status = 'Pending' if is_permission else 'Approved'
+
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        if is_permission:
+            # Hapus pengajuan lama yang berstatus Rejected untuk digantikan pengajuan baru
+            cursor.execute("""
+                DELETE FROM attendance 
+                WHERE username = %s AND status = 'Rejected' 
+                  AND (type IN ('izin', 'sakit', 'izin_sakit', 'izin_keperluan', 'cuti', 'izin_cuti') OR type LIKE 'izin_%%' OR type LIKE '%%cuti%%')
+            """, (username,))
+
+        cursor.execute("""
+            INSERT INTO attendance (username, type, timestamp, image_path, evidence_path, reason, status)
+            VALUES (%s, %s, NOW(), %s, %s, %s, %s)
+        """, (username, req_type, saved_img_path, saved_ev_path, reason, status))
+        conn.commit()
+        conn.close()
+
+        msg = 'Pengajuan cuti/izin berhasil disimpan dan menunggu verifikasi Admin!' if is_permission else 'Presensi berhasil disimpan!'
+        return jsonify({'success': True, 'message': msg})
+    except Exception as e:
+        print(f"[API Attendance Error]: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/attendance/status/<username>', methods=['GET'])
+def api_get_attendance_status(username):
+    """Mengembalikan status presensi dan pengajuan cuti/izin hari ini untuk aplikasi mobile."""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT id, type, timestamp, clock_out, reason, status
+            FROM attendance
+            WHERE username = %s AND DATE(timestamp) = CURDATE()
+            ORDER BY id ASC
+        """, (username,))
+        rows = cursor.fetchall()
+        conn.close()
+
+        has_clocked_in = False
+        has_clocked_out = False
+        clock_in_time = '--:--'
+        clock_out_time = '--:--'
+        clock_in_location = 'Kantor Pusat'
+        has_permission = False
+        permission_type = None
+        permission_status = None
+        permission_reason = None
+        permission_time = None
+        permission_id = None
+
+        for r in rows:
+            t = (r.get('type') or '').lower()
+            ts = r.get('timestamp')
+            time_str = ts.strftime('%H:%M') if ts else '--:--'
+            r_status = r.get('status') or 'Pending'
+
+            if t in ('izin', 'sakit', 'izin_sakit', 'izin_keperluan', 'cuti', 'izin_cuti') or t.startswith('izin_') or 'cuti' in t:
+                has_permission = True
+                permission_id = r.get('id')
+                permission_type = t
+                permission_status = r_status
+                permission_reason = r.get('reason') or ''
+                permission_time = time_str
+            elif t == 'clock_in':
+                has_clocked_in = True
+                has_clocked_out = False
+                clock_in_time = time_str
+                if r.get('reason'):
+                    clock_in_location = r.get('reason')
+                if r.get('clock_out'):
+                    has_clocked_out = True
+                    clock_out_time = r.get('clock_out').strftime('%H:%M')
+            elif t == 'clock_out':
+                has_clocked_out = True
+                clock_out_time = time_str
+
+        return jsonify({
+            'success': True,
+            'hasClockedIn': has_clocked_in,
+            'hasClockedOut': has_clocked_out,
+            'clockInTime': clock_in_time,
+            'clockInLocation': clock_in_location,
+            'clockOutTime': clock_out_time,
+            'hasPermission': has_permission,
+            'permissionType': permission_type,
+            'permissionStatus': permission_status,
+            'permissionReason': permission_reason,
+            'permissionTime': permission_time,
+            'permissionId': permission_id
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+if __name__ == '__main__':
+    port = int(os.environ.get('PORT_ADMIN', 8085))
+    debug = os.environ.get('FLASK_DEBUG', 'False').lower() in ('true', '1', 't')
+    app.run(host='0.0.0.0', port=port, debug=debug)
+

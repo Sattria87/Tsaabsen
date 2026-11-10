@@ -577,12 +577,12 @@
             <!-- PAGE TITLE & BREADCRUMB -->
             <div class="d-flex justify-content-between align-items-end mb-4 flex-wrap gap-2">
                 <div>
-                    <h1 class="page-header-title" id="page-header-title" data-i18n="req_page_title">Data Pengajuan Izin / Sakit</h1>
-                    <p class="page-breadcrumb mb-0" id="page-breadcrumb" data-i18n="req_breadcrumb">Request / Data Pengajuan Izin Sakit</p>
+                    <h1 class="page-header-title" id="page-header-title" data-i18n="req_page_title">Data Pengajuan Izin, Sakit & Cuti</h1>
+                    <p class="page-breadcrumb mb-0" id="page-breadcrumb" data-i18n="req_breadcrumb">Request / Data Pengajuan Izin, Sakit & Cuti</p>
                 </div>
                 <div>
                     <button type="button" class="btn btn-primary rounded-3 fw-bold px-3 py-2 shadow-sm" data-bs-toggle="modal" data-bs-target="#addRequestModal" id="btn-open-add-modal">
-                        <i class="bi bi-plus-lg me-1"></i> <span class="btn-text" data-i18n="req_btn_create">Ajukan Izin / Sakit</span>
+                        <i class="bi bi-plus-lg me-1"></i> <span class="btn-text" data-i18n="req_btn_create">Ajukan Izin / Cuti</span>
                     </button>
                 </div>
             </div>
@@ -710,6 +710,29 @@
                 </div>
                 {% endif %}
             {% endmacro %}
+
+            <!-- =============== FILTER KATEGORI: SEMUA / IZIN & SAKIT / CUTI =============== -->
+            <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <span class="fw-bold text-secondary small me-1"><i class="bi bi-funnel-fill text-primary me-1"></i> Kategori:</span>
+                    <a href="/request" class="btn btn-sm rounded-pill px-3 py-1 fw-bold {% if not active_type_filter %}btn-dark text-white shadow-sm{% else %}btn-outline-secondary bg-white text-dark{% endif %}" style="font-size: 12.5px;">
+                        Semua ({{ count_total_all }})
+                    </a>
+                    <a href="/request?type=izin" class="btn btn-sm rounded-pill px-3 py-1 fw-bold {% if active_type_filter == 'izin' %}btn-warning text-dark shadow-sm{% else %}btn-outline-warning text-dark bg-white{% endif %}" style="font-size: 12.5px;">
+                        <i class="bi bi-clock-history me-1"></i> Izin & Sakit ({{ count_total_izin }})
+                    </a>
+                    <a href="/request?type=cuti" class="btn btn-sm rounded-pill px-3 py-1 fw-bold {% if active_type_filter == 'cuti' %}btn-primary text-white shadow-sm{% else %}btn-outline-primary bg-white text-primary{% endif %}" style="font-size: 12.5px;">
+                        <i class="bi bi-calendar2-check me-1"></i> Cuti ({{ count_total_cuti }})
+                    </a>
+                </div>
+                {% if active_type_filter %}
+                <div>
+                    <a href="/request" class="btn btn-sm btn-link text-decoration-none text-muted small p-0">
+                        <i class="bi bi-x-circle me-1"></i> Reset Filter
+                    </a>
+                </div>
+                {% endif %}
+            </div>
 
             <!-- =============== TABS NAVIGASI STATUS (SESUAI GAMBAR ACUAN) =============== -->
             <div class="request-table-card mb-4">
@@ -954,9 +977,9 @@
                         <div class="mb-3">
                             <label class="form-label fw-bold small text-muted text-uppercase mb-1" style="font-size: 11px;">Jenis Pengajuan</label>
                             <select name="type" class="form-select rounded-3 py-2" required>
-                                <option value="sakit">Sakit</option>
-                                <option value="izin">Izin</option>
-                                <option value="cuti">Cuti</option>
+                                <option value="cuti" {% if active_type_filter == 'cuti' %}selected{% endif %}>Cuti (Tahunan / Menikah / Melahirkan / Khusus)</option>
+                                <option value="izin" {% if active_type_filter == 'izin' %}selected{% endif %}>Izin (Keperluan Pribadi / Keluarga)</option>
+                                <option value="sakit">Sakit (Istirahat Dokter)</option>
                             </select>
                         </div>
 
@@ -969,7 +992,7 @@
                         <!-- Alasan -->
                         <div class="mb-3">
                             <label class="form-label fw-bold small text-muted text-uppercase mb-1" style="font-size: 11px;">Alasan / Keterangan</label>
-                            <textarea name="reason" class="form-control rounded-3" rows="3" placeholder="Contoh: Sakit flu burung, izin keperluan keluarga mendesak..." required></textarea>
+                            <textarea name="reason" class="form-control rounded-3" rows="3" placeholder="Contoh: Cuti Tahunan agenda keluarga luar kota, Sakit flu demam, dsb." required></textarea>
                         </div>
                     </div>
                     <div class="modal-footer bg-light px-4 py-3">

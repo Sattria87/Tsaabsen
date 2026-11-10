@@ -732,7 +732,15 @@
                                                 </span>
                                             {% endif %}
                                         </div>
-                                    {% elif emp.today_type in ['izin', 'izin_sakit', 'izin_keperluan', 'cuti', 'sakit'] or (emp.today_type and emp.today_type.startswith('izin')) %}
+                                    {% elif emp.today_type in ['cuti', 'izin_cuti'] or (emp.today_type and 'cuti' in emp.today_type) %}
+                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1">
+                                            <i class="bi bi-calendar2-check me-1"></i> Cuti
+                                        </span>
+                                    {% elif emp.today_type in ['sakit', 'izin_sakit'] or (emp.today_type and 'sakit' in emp.today_type) %}
+                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1">
+                                            <i class="bi bi-heart-pulse me-1"></i> Sakit
+                                        </span>
+                                    {% elif emp.today_type in ['izin', 'izin_keperluan'] or (emp.today_type and emp.today_type.startswith('izin')) %}
                                         <span class="badge bg-warning-subtle text-warning border border-warning-subtle px-2 py-1">
                                             <i class="bi bi-clock-history me-1"></i> Izin
                                         </span>

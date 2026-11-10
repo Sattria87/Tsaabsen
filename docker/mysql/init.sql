@@ -122,7 +122,11 @@ CREATE TABLE IF NOT EXISTS `attendance` (
 INSERT INTO `attendance` (`username`, `type`, `timestamp`, `clock_out`, `reason`, `status`) VALUES
 ('satriya', 'clock_in', NOW() - INTERVAL 4 HOUR, NULL, NULL, 'Approved'),
 ('aan', 'izin', NOW() - INTERVAL 1 DAY, NULL, 'Izin menghadiri keperluan keluarga', 'Approved'),
-('reva', 'sakit', NOW() - INTERVAL 2 DAY, NULL, 'Flu dan demam tinggi istirahat 1 hari', 'Approved')
+('reva', 'sakit', NOW() - INTERVAL 2 DAY, NULL, 'Flu dan demam tinggi istirahat 1 hari', 'Approved'),
+('aan', 'cuti', NOW(), NULL, 'Jenis Cuti: Cuti Tahunan | Periode: 2026-11-10 s/d 2026-11-14 (5 Hari) | Alasan: Cuti tahunan agenda keluarga luar kota', 'Pending'),
+('ridho', 'cuti', NOW() - INTERVAL 1 DAY, NULL, 'Jenis Cuti: Cuti Menikah | Periode: 2026-11-09 s/d 2026-11-11 (3 Hari) | Alasan: Acara pernikahan saudara kandung', 'Approved'),
+('rifky', 'cuti', NOW() - INTERVAL 2 DAY, NULL, 'Jenis Cuti: Cuti Khusus / Alasan Penting | Periode: 2026-11-08 s/d 2026-11-09 (2 Hari) | Alasan: Keperluan renovasi dan pindahan rumah', 'Approved'),
+('moh', 'cuti', NOW() - INTERVAL 3 DAY, NULL, 'Jenis Cuti: Cuti Melahirkan / Bersalin | Periode: 2026-11-07 s/d 2026-12-07 (30 Hari) | Alasan: Cuti melahirkan dan pemulihan kesehatan', 'Approved')
 ON DUPLICATE KEY UPDATE `username` = VALUES(`username`);
 
 -- ------------------------------------------------------------

@@ -47,6 +47,7 @@
             home_metric_pres: "Hadir Hari Ini",
             home_metric_abs: "Tidak Hadir Hari Ini",
             home_metric_req: "Pengajuan Izin / Sakit",
+            home_metric_cuti: "Pengajuan Cuti",
             home_chart_title: "Statistik Kehadiran Bulanan",
             home_chart_badge: "Rekapitulasi Tahun Berjalan",
             home_quick_title: "Aktivitas Presensi Terkini",
@@ -203,11 +204,11 @@
             pres_modal_lbl_photo: "Foto Verifikasi Wajah",
             pres_modal_close: "Tutup",
 
-            // ================= REQUEST (PENGAJUAN IZIN) =================
-            req_banner_title: "Pengajuan Izin",
-            req_page_title: "Data Pengajuan Izin / Sakit",
-            req_breadcrumb: "Request / Data Pengajuan Izin Sakit",
-            req_btn_create: "Ajukan Izin / Sakit",
+            // ================= REQUEST (PENGAJUAN IZIN & CUTI) =================
+            req_banner_title: "Pengajuan Izin & Cuti",
+            req_page_title: "Data Pengajuan Izin, Sakit & Cuti",
+            req_breadcrumb: "Request / Data Pengajuan Izin, Sakit & Cuti",
+            req_btn_create: "Ajukan Izin / Cuti",
             req_tab_pending: "Pending",
             req_tab_approved: "Disetujui",
             req_tab_rejected: "Ditolak",
@@ -331,7 +332,8 @@
             home_metric_emp: "Employees",
             home_metric_pres: "Present Today",
             home_metric_abs: "Absent Today",
-            home_metric_req: "Leave / Sick Requests",
+            home_metric_req: "Permission / Sick Requests",
+            home_metric_cuti: "Leave Requests",
             home_chart_title: "Monthly Attendance Statistics",
             home_chart_badge: "Current Year Recapitulation",
             home_quick_title: "Recent Attendance Activity",
@@ -488,11 +490,11 @@
             pres_modal_lbl_photo: "Face Verification Photo",
             pres_modal_close: "Close",
 
-            // ================= REQUEST (PENGAJUAN IZIN) =================
-            req_banner_title: "Request",
-            req_page_title: "Leave & Sick Requests",
-            req_breadcrumb: "Request / Leave & Sick Permission Records",
-            req_btn_create: "Apply Leave / Sick",
+            // ================= REQUEST (PENGAJUAN IZIN & CUTI) =================
+            req_banner_title: "Requests & Leaves",
+            req_page_title: "Permissions, Sickness & Leaves",
+            req_breadcrumb: "Request / Permissions, Sickness & Leaves",
+            req_btn_create: "Apply Request / Leave",
             req_tab_pending: "Pending",
             req_tab_approved: "Approved",
             req_tab_rejected: "Rejected",

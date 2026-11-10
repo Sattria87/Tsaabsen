@@ -129,6 +129,23 @@ def migrate():
                 """, (u2,))
             print("[3] Data contoh pengajuan izin/sakit berhasil ditambahkan.")
 
+    # 3b. Pastikan data contoh cuti ada di database
+    cursor.execute("SELECT COUNT(*) AS total FROM attendance WHERE type IN ('cuti', 'izin_cuti') OR type LIKE '%cuti%'")
+    count_cuti = cursor.fetchone()['total']
+    if count_cuti == 0:
+        cursor.execute("SELECT username FROM employees ORDER BY id ASC")
+        all_emps = [r['username'] for r in cursor.fetchall()]
+        u1 = 'aan' if 'aan' in all_emps else (all_emps[0] if all_emps else 'satriya')
+        u2 = 'ridho' if 'ridho' in all_emps else (all_emps[1] if len(all_emps) > 1 else 'satriya')
+        u3 = 'rifky' if 'rifky' in all_emps else (all_emps[2] if len(all_emps) > 2 else 'satriya')
+        cursor.execute("""
+            INSERT INTO attendance (username, type, timestamp, reason, status) VALUES
+            (%s, 'cuti', NOW(), 'Jenis Cuti: Cuti Tahunan | Periode: 2026-11-10 s/d 2026-11-14 (5 Hari) | Alasan: Cuti tahunan agenda keluarga luar kota', 'Pending'),
+            (%s, 'cuti', NOW() - INTERVAL 1 DAY, 'Jenis Cuti: Cuti Menikah | Periode: 2026-11-09 s/d 2026-11-11 (3 Hari) | Alasan: Acara pernikahan saudara kandung', 'Approved'),
+            (%s, 'cuti', NOW() - INTERVAL 2 DAY, 'Jenis Cuti: Cuti Khusus / Alasan Penting | Periode: 2026-11-08 s/d 2026-11-09 (2 Hari) | Alasan: Keperluan renovasi dan pindahan rumah', 'Approved')
+        """, (u1, u2, u3))
+        print("[3b] Data contoh pengajuan cuti berhasil ditambahkan.")
+
     # 4. Pastikan tabel admins ada untuk autentikasi Web Dashboard
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS admins (
