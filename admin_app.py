@@ -599,15 +599,19 @@ def index():
             'month_name': n_init,
             'total_working_days': w_d_init,
             'total_employees': 12,
+            'max_capacity': 12 * w_d_init,
             'tot_tepat_waktu': 0,
+            'tot_terlambat': 0,
             'tot_hadir': 0,
             'tot_izin': 0,
+            'tot_cuti': 0,
             'tot_alpha': 12 * w_d_init,
-            'avg_tepat_waktu': 0,
-            'avg_hadir': 0,
-            'avg_izin': 0,
-            'avg_alpha': w_d_init,
-            'persentase': '0%'
+            'pct_tepat_waktu': 0.0,
+            'pct_terlambat': 0.0,
+            'pct_izin': 0.0,
+            'pct_cuti': 0.0,
+            'pct_alpha': 100.0,
+            'persentase_kehadiran': '0%'
         }
     default_month_key = month_options[0]['key'] if month_options else f"{now_init.year:04d}-{now_init.month:02d}"
     default_month_data = monthly_chart_store.get(default_month_key, {})
@@ -887,47 +891,63 @@ def index():
 
                 sum_tw = sum(int(e.get('jumlah_tepat_waktu', 0)) for e in emp_list)
                 sum_hd = int(m_rekap.get('tot_hadir', 0))
-                sum_iz = int(m_rekap.get('tot_izin_keperluan', 0)) + int(m_rekap.get('tot_izin_sakit', 0)) + int(m_rekap.get('tot_cuti', 0))
+                sum_tl = max(0, sum_hd - sum_tw)
+                sum_iz = int(m_rekap.get('tot_izin_keperluan', 0))
+                sum_ct = int(m_rekap.get('tot_izin_sakit', 0)) + int(m_rekap.get('tot_cuti', 0))
                 sum_th = int(m_rekap.get('tot_alpha', 0))
 
-                if sum_hd == 0 and sum_tw == 0 and sum_iz == 0 and sum_th == 0:
-                    sum_th = emp_cnt * w_days
-
                 max_cap = emp_cnt * w_days
-                pct = round((sum_hd / max_cap) * 100) if max_cap > 0 else 0
+                if sum_hd == 0 and sum_tw == 0 and sum_iz == 0 and sum_ct == 0 and sum_th == 0:
+                    sum_th = max_cap
+
+                pct_tw = round((sum_tw / max_cap) * 100, 1) if max_cap > 0 else 0.0
+                pct_tl = round((sum_tl / max_cap) * 100, 1) if max_cap > 0 else 0.0
+                pct_iz = round((sum_iz / max_cap) * 100, 1) if max_cap > 0 else 0.0
+                pct_ct = round((sum_ct / max_cap) * 100, 1) if max_cap > 0 else 0.0
+                pct_th = round((sum_th / max_cap) * 100, 1) if max_cap > 0 else 0.0
+                pct_hdr_overall = round((sum_hd / max_cap) * 100, 1) if max_cap > 0 else 0.0
 
                 monthly_chart_store[m_key] = {
                     'month_name': m_name,
                     'total_working_days': w_days,
                     'total_employees': emp_cnt,
+                    'max_capacity': max_cap,
                     'tot_tepat_waktu': sum_tw,
+                    'tot_terlambat': sum_tl,
                     'tot_hadir': sum_hd,
                     'tot_izin': sum_iz,
+                    'tot_cuti': sum_ct,
                     'tot_alpha': sum_th,
-                    'avg_tepat_waktu': round(sum_tw / emp_cnt, 1),
-                    'avg_hadir': round(sum_hd / emp_cnt, 1),
-                    'avg_izin': round(sum_iz / emp_cnt, 1),
-                    'avg_alpha': round(sum_th / emp_cnt, 1),
-                    'persentase': f"{pct}%"
+                    'pct_tepat_waktu': pct_tw,
+                    'pct_terlambat': pct_tl,
+                    'pct_izin': pct_iz,
+                    'pct_cuti': pct_ct,
+                    'pct_alpha': pct_th,
+                    'persentase_kehadiran': f"{pct_hdr_overall}%"
                 }
             except Exception as e_m:
                 print(f"[Rekap Month {m_key} Warning]: {e_m}")
                 num_d_fallback = calendar.monthrange(y, m)[1]
                 w_fallback = max(1, sum(1 for d in range(1, num_d_fallback + 1) if datetime(y, m, d).weekday() < 5))
                 emp_fallback = max(1, total_employees)
+                max_fallback = emp_fallback * w_fallback
                 monthly_chart_store[m_key] = {
                     'month_name': m_name,
                     'total_working_days': w_fallback,
                     'total_employees': emp_fallback,
+                    'max_capacity': max_fallback,
                     'tot_tepat_waktu': 0,
+                    'tot_terlambat': 0,
                     'tot_hadir': 0,
                     'tot_izin': 0,
-                    'tot_alpha': emp_fallback * w_fallback,
-                    'avg_tepat_waktu': 0,
-                    'avg_hadir': 0,
-                    'avg_izin': 0,
-                    'avg_alpha': w_fallback,
-                    'persentase': '0%'
+                    'tot_cuti': 0,
+                    'tot_alpha': max_fallback,
+                    'pct_tepat_waktu': 0.0,
+                    'pct_terlambat': 0.0,
+                    'pct_izin': 0.0,
+                    'pct_cuti': 0.0,
+                    'pct_alpha': 100.0,
+                    'persentase_kehadiran': '0%'
                 }
 
         default_month_key = month_options[0]['key'] if month_options else f"{now_dt.year:04d}-{now_dt.month:02d}"

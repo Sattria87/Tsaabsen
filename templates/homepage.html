@@ -685,97 +685,106 @@
         <!-- DASHBOARD 2-PANEL LAYOUT -->
         <div class="dashboard-panels-row">
 
-            <!-- LEFT: MONTHLY ATTENDANCE RECAP CHART (1 BAR PER METRIK MENCANGKUP SELURUH KARYAWAN) -->
-            <section class="chart-card">
-                <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2 pb-2 border-bottom">
+            <!-- LEFT: MONTHLY ATTENDANCE DONUT CHART (MINIMALIST & MODERN SESUAI GAMBAR REFERENSI) -->
+            <section class="chart-card p-4 rounded-4 shadow-sm bg-white border-0">
+                <!-- Header: Title & Month Dropdown -->
+                <div class="d-flex justify-content-between align-items-center mb-3">
                     <div>
-                        <div class="d-flex align-items-center gap-2 flex-wrap">
-                            <h2 class="panel-title mb-0" id="chart-panel-title">Statistik Kehadiran Bulanan</h2>
-                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2.5 py-1 small fw-bold" id="chart-badge-recap">
-                                <i class="bi bi-people-fill me-1"></i>Seluruh Karyawan (<span id="badge-total-emp">{{ default_month_data.total_employees if default_month_data else total_employees }}</span> Orang)
-                            </span>
-                        </div>
-                        <p class="text-muted small mb-0 mt-1" id="chart-sub-title">Performa kehadiran akumulasi seluruh karyawan terhadap total hari kerja bulanan</p>
+                        <h2 class="fw-bolder mb-0 text-dark tracking-wide" style="font-size: 22px; letter-spacing: 0.5px; color: #1e293b;">KEHADIRAN</h2>
+                        <span class="text-muted small fw-medium" id="chart-sub-title">Statistik distribusi presensi bulanan</span>
                     </div>
 
-                    <!-- Dropdown Pilihan Bulan & Filter Metrik (Sejajar & Rapi) -->
-                    <div class="d-flex align-items-center gap-2">
-                        <select id="chartMonthSelect" class="form-select form-select-sm fw-bold rounded-pill px-3 py-1.5 shadow-sm border-secondary-subtle" style="min-width: 185px; cursor: pointer; font-size: 13px;" onchange="changeAttendanceMonth(this.value)">
-                            {% if month_options %}
+                    <!-- Dropdown Pilihan Bulan (Pill Button Style seperti di gambar) -->
+                    <div>
+                        <select id="chartMonthSelect" class="form-select form-select-sm fw-semibold rounded-pill px-3 py-1.5 shadow-none bg-light text-secondary border-0" style="min-width: 165px; cursor: pointer; font-size: 13px;" onchange="changeAttendanceMonth(this.value)">
+                            {% if month_options and month_options|length > 0 %}
                                 {% for m in month_options %}
-                                <option value="{{ m.key }}" {% if m.key == default_month_key %}selected{% endif %}>📅 {{ m.name }}</option>
+                                <option value="{{ m.key }}" {% if m.key == default_month_key %}selected{% endif %}>{{ m.short_name }}</option>
                                 {% endfor %}
                             {% else %}
-                                <option value="2026-11" selected>📅 November 2026 (Bulan Ini)</option>
-                                <option value="2026-10">📅 Oktober 2026</option>
-                                <option value="2026-09">📅 September 2026</option>
-                                <option value="2026-08">📅 Agustus 2026</option>
-                                <option value="2026-07">📅 Juli 2026</option>
-                                <option value="2026-06">📅 Juni 2026</option>
+                                <option value="2026-11" selected>November 2026</option>
+                                <option value="2026-10">Oktober 2026</option>
+                                <option value="2026-09">September 2026</option>
+                                <option value="2026-08">Agustus 2026</option>
+                                <option value="2026-07">Juli 2026</option>
+                                <option value="2026-06">Juni 2026</option>
                             {% endif %}
                         </select>
-
-                        <select id="chartMetricSelect" class="form-select form-select-sm fw-bold rounded-pill px-3 py-1.5 shadow-sm border-secondary-subtle" style="min-width: 175px; cursor: pointer; font-size: 13px;" onchange="changeAttendanceMetric(this.value)">
-                            <option value="all" selected>📊 Semua Metrik</option>
-                            <option value="tepat_waktu">🟢 Hadir Tepat Waktu</option>
-                            <option value="hadir_overall">🔵 Hadir Overall</option>
-                            <option value="izin">🟡 Izin & Cuti</option>
-                            <option value="tidak_hadir">🔴 Tidak Hadir</option>
-                        </select>
                     </div>
                 </div>
 
-                <!-- 5 Kartu Mini Ringkasan Metrik Kantor (Bersih & Rapi) -->
-                <div class="row g-2 mb-3" id="chart-summary-row">
-                    <div class="col">
-                        <div class="p-2.5 rounded-3 border bg-light h-100 d-flex flex-column justify-content-between shadow-xs">
-                            <span class="text-secondary small fw-bold" style="font-size: 11.5px;"><i class="bi bi-calendar3 me-1"></i>Hari Kerja</span>
-                            <div class="d-flex align-items-baseline gap-1 mt-1">
-                                <span class="fw-bold fs-5 text-dark" id="stat-hk-val">{{ default_month_data.total_working_days if default_month_data else 21 }}</span>
-                                <span class="small text-muted" style="font-size: 11px;">Hari/Org</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col">
-                        <div class="p-2.5 rounded-3 border h-100 d-flex flex-column justify-content-between shadow-xs" style="background-color: rgba(16, 185, 129, 0.08); border-color: rgba(16, 185, 129, 0.3) !important;">
-                            <span class="small fw-bold" style="color: #059669; font-size: 11.5px;"><i class="bi bi-check-circle-fill me-1"></i>Tepat Waktu</span>
-                            <div class="d-flex align-items-baseline gap-1 mt-1">
-                                <span class="fw-bold fs-5 text-dark" id="stat-tw-val">{{ default_month_data.tot_tepat_waktu if default_month_data else 0 }}</span>
-                                <span class="small text-muted" style="font-size: 11px;">Presensi (<span id="stat-tw-avg">{{ default_month_data.avg_tepat_waktu if default_month_data else 0 }}</span>h)</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col">
-                        <div class="p-2.5 rounded-3 border h-100 d-flex flex-column justify-content-between shadow-xs" style="background-color: rgba(37, 99, 235, 0.08); border-color: rgba(37, 99, 235, 0.3) !important;">
-                            <span class="small fw-bold text-primary" style="font-size: 11.5px;"><i class="bi bi-person-check-fill me-1"></i>Hadir Overall</span>
-                            <div class="d-flex align-items-baseline gap-1 mt-1">
-                                <span class="fw-bold fs-5 text-dark" id="stat-hd-val">{{ default_month_data.tot_hadir if default_month_data else 0 }}</span>
-                                <span class="small text-muted" style="font-size: 11px;">Presensi (<span id="stat-hd-avg">{{ default_month_data.avg_hadir if default_month_data else 0 }}</span>h)</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col">
-                        <div class="p-2.5 rounded-3 border h-100 d-flex flex-column justify-content-between shadow-xs" style="background-color: rgba(245, 158, 11, 0.08); border-color: rgba(245, 158, 11, 0.3) !important;">
-                            <span class="small fw-bold" style="color: #b45309; font-size: 11.5px;"><i class="bi bi-file-earmark-text-fill me-1"></i>Izin & Cuti</span>
-                            <div class="d-flex align-items-baseline gap-1 mt-1">
-                                <span class="fw-bold fs-5 text-dark" id="stat-iz-val">{{ default_month_data.tot_izin if default_month_data else 0 }}</span>
-                                <span class="small text-muted" style="font-size: 11px;">Hari (<span id="stat-iz-avg">{{ default_month_data.avg_izin if default_month_data else 0 }}</span>h)</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col">
-                        <div class="p-2.5 rounded-3 border h-100 d-flex flex-column justify-content-between shadow-xs" style="background-color: rgba(239, 68, 68, 0.08); border-color: rgba(239, 68, 68, 0.3) !important;">
-                            <span class="small fw-bold text-danger" style="font-size: 11.5px;"><i class="bi bi-x-circle-fill me-1"></i>Tidak Hadir</span>
-                            <div class="d-flex align-items-baseline gap-1 mt-1">
-                                <span class="fw-bold fs-5 text-dark" id="stat-th-val">{{ default_month_data.tot_alpha if default_month_data else 0 }}</span>
-                                <span class="small text-muted" style="font-size: 11px;">Hari (<span id="stat-th-avg">{{ default_month_data.avg_alpha if default_month_data else 0 }}</span>h)</span>
-                            </div>
+                <!-- Donut Chart Container dengan Center Badge -->
+                <div class="position-relative d-flex justify-content-center align-items-center my-2" style="min-height: 270px;">
+                    <div style="width: 260px; height: 260px; position: relative;">
+                        <canvas id="monthlyAttendanceChart"></canvas>
+                        <!-- Center Ring Overlay -->
+                        <div class="position-absolute top-50 start-50 translate-middle text-center" style="pointer-events: none;">
+                            <div class="fw-bold fs-2 lh-1" style="color: #1e293b;" id="donut-center-pct">0%</div>
+                            <span class="text-muted fw-semibold text-uppercase mt-1 d-block" style="font-size: 11px; letter-spacing: 0.5px;" id="donut-center-label">Kehadiran</span>
                         </div>
                     </div>
                 </div>
 
-                <div class="chart-container-wrap" style="position: relative; height: 350px;">
-                    <canvas id="monthlyAttendanceChart"></canvas>
+                <!-- 5 Capsule Progress Bars (Persis seperti layout gambar) -->
+                <div class="mt-3 px-1">
+                    <div class="row g-3">
+                        <!-- Col 1 Kiri: Tepat Waktu -->
+                        <div class="col-6">
+                            <div class="d-flex justify-content-between align-items-baseline mb-1">
+                                <span class="fw-semibold text-secondary" style="font-size: 13px;">Tepat Waktu</span>
+                                <span class="fw-bold" style="font-size: 12.5px; color: #0284c7;" id="lbl-pct-tw">0%</span>
+                            </div>
+                            <div class="progress rounded-pill bg-light" style="height: 14px; background-color: #f1f5f9;">
+                                <div class="progress-bar rounded-pill" id="bar-tw" role="progressbar" style="width: 0%; background-color: #22d3ee; transition: width 0.6s ease;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                            </div>
+                        </div>
+
+                        <!-- Col 2 Kanan: Terlambat -->
+                        <div class="col-6">
+                            <div class="d-flex justify-content-between align-items-baseline mb-1">
+                                <span class="fw-semibold text-secondary" style="font-size: 13px;">Terlambat</span>
+                                <span class="fw-bold" style="font-size: 12.5px; color: #0284c7;" id="lbl-pct-tl">0%</span>
+                            </div>
+                            <div class="progress rounded-pill bg-light" style="height: 14px; background-color: #f1f5f9;">
+                                <div class="progress-bar rounded-pill" id="bar-tl" role="progressbar" style="width: 0%; background-color: #38bdf8; transition: width 0.6s ease;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                            </div>
+                        </div>
+
+                        <!-- Col 3 Kiri: Izin Keperluan -->
+                        <div class="col-6">
+                            <div class="d-flex justify-content-between align-items-baseline mb-1">
+                                <span class="fw-semibold text-secondary" style="font-size: 13px;">Izin Keperluan</span>
+                                <span class="fw-bold" style="font-size: 12.5px; color: #0369a1;" id="lbl-pct-iz">0%</span>
+                            </div>
+                            <div class="progress rounded-pill bg-light" style="height: 14px; background-color: #f1f5f9;">
+                                <div class="progress-bar rounded-pill" id="bar-iz" role="progressbar" style="width: 0%; background-color: #0284c7; transition: width 0.6s ease;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                            </div>
+                        </div>
+
+                        <!-- Col 4 Kanan: Sakit & Cuti -->
+                        <div class="col-6">
+                            <div class="d-flex justify-content-between align-items-baseline mb-1">
+                                <span class="fw-semibold text-secondary" style="font-size: 13px;">Sakit & Cuti</span>
+                                <span class="fw-bold" style="font-size: 12.5px; color: #1e40af;" id="lbl-pct-ct">0%</span>
+                            </div>
+                            <div class="progress rounded-pill bg-light" style="height: 14px; background-color: #f1f5f9;">
+                                <div class="progress-bar rounded-pill" id="bar-ct" role="progressbar" style="width: 0%; background-color: #2563eb; transition: width 0.6s ease;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                            </div>
+                        </div>
+
+                        <!-- Col 5 Bawah Tengah: Tidak Hadir / Alpa -->
+                        <div class="col-12 d-flex flex-column align-items-center mt-2">
+                            <div style="width: 50%; min-width: 200px;">
+                                <div class="d-flex justify-content-between align-items-baseline mb-1">
+                                    <span class="fw-semibold text-secondary" style="font-size: 13px;">Tidak Hadir</span>
+                                    <span class="fw-bold text-dark" style="font-size: 12.5px;" id="lbl-pct-th">0%</span>
+                                </div>
+                                <div class="progress rounded-pill bg-light" style="height: 14px; background-color: #f1f5f9;">
+                                    <div class="progress-bar rounded-pill" id="bar-th" role="progressbar" style="width: 0%; background-color: #1e1b4b; transition: width 0.6s ease;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </section>
 
@@ -1195,7 +1204,7 @@
         {{ monthly_chart_store | tojson | safe }}
     </script>
 
-    <!-- SCRIPT CHART.JS (1 BAR PER METRIK MENCANGKUP SELURUH KARYAWAN + DROPDOWN PILIHAN BULAN) -->
+    <!-- SCRIPT CHART.JS (DOUGHNUT CHART MODERN & CAPSULE PROGRESS BARS SESUAI REFERENSI) -->
     <script>
         let monthlyStore = {};
         try {
@@ -1211,7 +1220,6 @@
         if (!currentMonthKey || !monthlyStore[currentMonthKey]) {
             currentMonthKey = Object.keys(monthlyStore)[0] || '2026-11';
         }
-        let currentMetricKey = 'all';
 
         function getCurrentMonthData() {
             const data = monthlyStore[currentMonthKey];
@@ -1221,150 +1229,87 @@
                 month_name: 'November 2026',
                 total_working_days: 21,
                 total_employees: 12,
+                max_capacity: 252,
                 tot_tepat_waktu: 0,
+                tot_terlambat: 0,
                 tot_hadir: 0,
                 tot_izin: 0,
+                tot_cuti: 0,
                 tot_alpha: 252,
-                avg_tepat_waktu: 0,
-                avg_hadir: 0,
-                avg_izin: 0,
-                avg_alpha: 21,
-                persentase: '0%'
+                pct_tepat_waktu: 0.0,
+                pct_terlambat: 0.0,
+                pct_izin: 0.0,
+                pct_cuti: 0.0,
+                pct_alpha: 100.0,
+                persentase_kehadiran: '0%'
             };
         }
 
-        // Bangun Konfigurasi Data Chart Batang
-        function buildBarChartConfig() {
+        // Bangun Konfigurasi Data Donut Chart
+        function buildDoughnutConfig() {
             const data = getCurrentMonthData();
-            let labels = [];
-            let values = [];
-            let bgColors = [];
-            let hoverColors = [];
-            let borderColors = [];
+            const labels = ['Tepat Waktu', 'Terlambat', 'Izin Keperluan', 'Sakit & Cuti', 'Tidak Hadir'];
+            const bgColors = ['#22d3ee', '#38bdf8', '#0284c7', '#2563eb', '#1e1b4b'];
+            const hoverColors = ['#06b6d4', '#0ea5e9', '#0369a1', '#1d4ed8', '#0f172a'];
 
-            if (currentMetricKey === 'all') {
-                labels = [
-                    'Hadir Tepat Waktu (Hijau)',
-                    'Hadir Overall (Biru)',
-                    'Izin (Kuning)',
-                    'Tidak Hadir (Merah)',
-                    'Hari Kerja (Pembanding)'
-                ];
-                values = [
-                    data.avg_tepat_waktu,
-                    data.avg_hadir,
-                    data.avg_izin,
-                    data.avg_alpha,
-                    data.total_working_days
-                ];
-                bgColors = [
-                    '#10B981', // Hijau
-                    '#2563EB', // Biru
-                    '#F59E0B', // Kuning
-                    '#EF4444', // Merah
-                    '#94A3B8'  // Abu-abu Slate Pembanding
-                ];
-                hoverColors = [
-                    '#059669',
-                    '#1D4ED8',
-                    '#D97706',
-                    '#DC2626',
-                    '#64748B'
-                ];
-                borderColors = [
-                    '#047857',
-                    '#1E40AF',
-                    '#B45309',
-                    '#B91C1C',
-                    '#475569'
-                ];
-            } else if (currentMetricKey === 'tepat_waktu') {
-                labels = ['Hadir Tepat Waktu (Hijau)', 'Hari Kerja (Pembanding)'];
-                values = [data.avg_tepat_waktu, data.total_working_days];
-                bgColors = ['#10B981', '#94A3B8'];
-                hoverColors = ['#059669', '#64748B'];
-                borderColors = ['#047857', '#475569'];
-            } else if (currentMetricKey === 'hadir_overall') {
-                labels = ['Hadir Overall (Biru)', 'Hari Kerja (Pembanding)'];
-                values = [data.avg_hadir, data.total_working_days];
-                bgColors = ['#2563EB', '#94A3B8'];
-                hoverColors = ['#1D4ED8', '#64748B'];
-                borderColors = ['#1E40AF', '#475569'];
-            } else if (currentMetricKey === 'izin') {
-                labels = ['Izin & Cuti (Kuning)', 'Hari Kerja (Pembanding)'];
-                values = [data.avg_izin, data.total_working_days];
-                bgColors = ['#F59E0B', '#94A3B8'];
-                hoverColors = ['#D97706', '#64748B'];
-                borderColors = ['#B45309', '#475569'];
-            } else if (currentMetricKey === 'tidak_hadir') {
-                labels = ['Tidak Hadir (Merah)', 'Hari Kerja (Pembanding)'];
-                values = [data.avg_alpha, data.total_working_days];
-                bgColors = ['#EF4444', '#94A3B8'];
-                hoverColors = ['#DC2626', '#64748B'];
-                borderColors = ['#B91C1C', '#475569'];
+            let values = [
+                data.pct_tepat_waktu || 0,
+                data.pct_terlambat || 0,
+                data.pct_izin || 0,
+                data.pct_cuti || 0,
+                data.pct_alpha || 0
+            ];
+
+            const totalPct = values.reduce((a, b) => a + b, 0);
+            if (totalPct === 0) {
+                values = [0, 0, 0, 0, 100];
             }
 
             return {
                 labels: labels,
                 datasets: [{
-                    label: 'Performa Kehadiran',
                     data: values,
                     backgroundColor: bgColors,
                     hoverBackgroundColor: hoverColors,
-                    borderColor: borderColors,
-                    borderWidth: 1.5,
-                    borderRadius: 8,
-                    borderSkipped: false,
-                    maxBarThickness: 56
+                    borderWidth: 3,
+                    borderColor: '#ffffff',
+                    hoverOffset: 6
                 }]
             };
         }
 
-        // Perbarui Tampilan Angka pada Kartu Ringkasan
-        function updateSummaryCards() {
+        // Perbarui Tampilan Capsule Progress Bars & Center Text
+        function updateDonutAndCapsules() {
             const data = getCurrentMonthData();
-            const badgeTotalEmp = document.getElementById('badge-total-emp');
-            const statHk = document.getElementById('stat-hk-val');
-            const statTw = document.getElementById('stat-tw-val');
-            const statTwAvg = document.getElementById('stat-tw-avg');
-            const statHd = document.getElementById('stat-hd-val');
-            const statHdAvg = document.getElementById('stat-hd-avg');
-            const statIz = document.getElementById('stat-iz-val');
-            const statIzAvg = document.getElementById('stat-iz-avg');
-            const statTh = document.getElementById('stat-th-val');
-            const statThAvg = document.getElementById('stat-th-avg');
 
-            if (badgeTotalEmp) badgeTotalEmp.textContent = data.total_employees;
-            if (statHk) statHk.textContent = data.total_working_days;
-            if (statTw) statTw.textContent = data.tot_tepat_waktu;
-            if (statTwAvg) statTwAvg.textContent = data.avg_tepat_waktu;
-            if (statHd) statHd.textContent = data.tot_hadir;
-            if (statHdAvg) statHdAvg.textContent = data.avg_hadir;
-            if (statIz) statIz.textContent = data.tot_izin;
-            if (statIzAvg) statIzAvg.textContent = data.avg_izin;
-            if (statTh) statTh.textContent = data.tot_alpha;
-            if (statThAvg) statThAvg.textContent = data.avg_alpha;
+            // Center text inside donut
+            const centerPct = document.getElementById('donut-center-pct');
+            if (centerPct) {
+                centerPct.textContent = data.persentase_kehadiran || '0%';
+            }
+
+            // Update 5 Capsule Progress Bars & Labels
+            const setCapsule = (barId, lblId, pct, count) => {
+                const bar = document.getElementById(barId);
+                const lbl = document.getElementById(lblId);
+                if (bar) bar.style.width = Math.min(Math.max(pct, 0), 100) + '%';
+                if (lbl) lbl.textContent = pct + '%';
+            };
+
+            setCapsule('bar-tw', 'lbl-pct-tw', data.pct_tepat_waktu || 0, data.tot_tepat_waktu || 0);
+            setCapsule('bar-tl', 'lbl-pct-tl', data.pct_terlambat || 0, data.tot_terlambat || 0);
+            setCapsule('bar-iz', 'lbl-pct-iz', data.pct_izin || 0, data.tot_izin || 0);
+            setCapsule('bar-ct', 'lbl-pct-ct', data.pct_cuti || 0, data.tot_cuti || 0);
+            setCapsule('bar-th', 'lbl-pct-th', data.pct_alpha || 0, data.tot_alpha || 0);
         }
 
         // Event Handler Ubah Pilihan Bulan
         function changeAttendanceMonth(monthKey) {
             if (!monthlyStore[monthKey] || !window.monthlyChart) return;
             currentMonthKey = monthKey;
-            updateSummaryCards();
+            updateDonutAndCapsules();
 
-            const chartCfg = buildBarChartConfig();
-            window.monthlyChart.data.labels = chartCfg.labels;
-            window.monthlyChart.data.datasets = chartCfg.datasets;
-            const data = getCurrentMonthData();
-            window.monthlyChart.options.scales.y.max = Math.max((data.total_working_days || 21) + 4, 25);
-            window.monthlyChart.update();
-        }
-
-        // Event Handler Ubah Pilihan Metrik
-        function changeAttendanceMetric(metricKey) {
-            if (!window.monthlyChart) return;
-            currentMetricKey = metricKey;
-            const chartCfg = buildBarChartConfig();
+            const chartCfg = buildDoughnutConfig();
             window.monthlyChart.data.labels = chartCfg.labels;
             window.monthlyChart.data.datasets = chartCfg.datasets;
             window.monthlyChart.update();
@@ -1378,7 +1323,7 @@
                     Object.keys(monthlyStore).forEach((k, idx) => {
                         const opt = document.createElement('option');
                         opt.value = k;
-                        opt.textContent = `📅 ${monthlyStore[k].month_name || k}${idx === 0 ? ' (Bulan Ini)' : ''}`;
+                        opt.textContent = monthlyStore[k].month_name || k;
                         if (k === currentMonthKey) opt.selected = true;
                         monthSelect.appendChild(opt);
                     });
@@ -1391,16 +1336,16 @@
             if (!chartCanvas) return;
             const ctx = chartCanvas.getContext('2d');
 
-            updateSummaryCards();
-            const initialData = getCurrentMonthData();
-            const initialChartCfg = buildBarChartConfig();
+            updateDonutAndCapsules();
+            const initialChartCfg = buildDoughnutConfig();
 
             const config = {
-                type: 'bar',
+                type: 'doughnut',
                 data: initialChartCfg,
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    cutout: '64%',
                     plugins: {
                         legend: {
                             display: false
@@ -1427,84 +1372,24 @@
                                     return context[0].label;
                                 },
                                 label: function (context) {
-                                    const val = context.parsed.y ?? 0;
-                                    return ` Rata-rata: ${val} Hari / Karyawan`;
-                                },
-                                afterBody: function (context) {
-                                    if (!context || !context.length) return [];
-                                    const label = context[0].label || '';
+                                    const pct = context.parsed ?? 0;
                                     const cur = getCurrentMonthData();
-                                    const wDays = cur.total_working_days || 21;
-                                    const empCount = cur.total_employees || 12;
-
-                                    if (label.includes('Tepat Waktu')) {
-                                        return [
-                                            `Total Presensi Kantor: ${cur.tot_tepat_waktu} Presensi`,
-                                            `Acuan Hari Kerja: ${wDays} Hari (${empCount} Karyawan)`
-                                        ];
-                                    } else if (label.includes('Overall')) {
-                                        return [
-                                            `Total Presensi Kantor: ${cur.tot_hadir} Presensi`,
-                                            `Persentase Kehadiran: ${cur.persentase || '0%'}`,
-                                            `Acuan Hari Kerja: ${wDays} Hari (${empCount} Karyawan)`
-                                        ];
-                                    } else if (label.includes('Izin')) {
-                                        return [
-                                            `Total Izin & Cuti Kantor: ${cur.tot_izin} Hari`,
-                                            `Acuan Hari Kerja: ${wDays} Hari (${empCount} Karyawan)`
-                                        ];
-                                    } else if (label.includes('Tidak Hadir')) {
-                                        return [
-                                            `Total Tidak Hadir / Alpa: ${cur.tot_alpha} Hari`,
-                                            `Acuan Hari Kerja: ${wDays} Hari (${empCount} Karyawan)`
-                                        ];
-                                    } else {
-                                        return [
-                                            `Total Hari Kerja Kalender: ${wDays} Hari Kerja`,
-                                            `Kapasitas Kantor: ${wDays * empCount} Orang-Hari (${empCount} Karyawan)`
-                                        ];
-                                    }
+                                    const idx = context.dataIndex;
+                                    let count = 0;
+                                    if (idx === 0) count = cur.tot_tepat_waktu;
+                                    else if (idx === 1) count = cur.tot_terlambat;
+                                    else if (idx === 2) count = cur.tot_izin;
+                                    else if (idx === 3) count = cur.tot_cuti;
+                                    else if (idx === 4) count = cur.tot_alpha;
+                                    return ` Porsi: ${pct}% (${count} Hari/Presensi)`;
+                                },
+                                afterBody: function () {
+                                    const cur = getCurrentMonthData();
+                                    return [
+                                        `Bulan: ${cur.month_name}`,
+                                        `Hari Kerja: ${cur.total_working_days} Hari (${cur.total_employees} Karyawan)`
+                                    ];
                                 }
-                            }
-                        }
-                    },
-                    scales: {
-                        x: {
-                            grid: {
-                                display: false
-                            },
-                            ticks: {
-                                font: {
-                                    family: "'Plus Jakarta Sans', sans-serif",
-                                    size: 11.5,
-                                    weight: '600'
-                                },
-                                color: '#475569',
-                                maxRotation: 0,
-                                autoSkip: false
-                            },
-                            border: {
-                                display: false
-                            }
-                        },
-                        y: {
-                            beginAtZero: true,
-                            max: Math.max((initialData.total_working_days || 21) + 4, 25),
-                            ticks: {
-                                stepSize: 5,
-                                font: {
-                                    family: "'Plus Jakarta Sans', sans-serif",
-                                    size: 11.5,
-                                    weight: '600'
-                                },
-                                color: '#94a3b8'
-                            },
-                            grid: {
-                                color: '#f1f5f9',
-                                borderDash: [4, 4]
-                            },
-                            border: {
-                                display: false
                             }
                         }
                     }
