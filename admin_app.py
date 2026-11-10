@@ -2353,12 +2353,17 @@ def export_report():
     # PDF GENERATION (.PDF)
     if file_format == 'pdf':
         buf = io.BytesIO()
-        doc = SimpleDocTemplate(buf, pagesize=landscape(letter), rightMargin=24, leftMargin=24, topMargin=24, bottomMargin=24)
+        doc = SimpleDocTemplate(buf, pagesize=landscape(letter), rightMargin=20, leftMargin=20, topMargin=20, bottomMargin=20)
         elements = []
 
         styles = getSampleStyleSheet()
         title_style = ParagraphStyle('ReportTitle', parent=styles['Heading1'], fontSize=15, leading=19, textColor=colors.HexColor('#131B3E'))
         sub_style = ParagraphStyle('ReportSub', parent=styles['Normal'], fontSize=9, leading=13, textColor=colors.HexColor('#4A5568'))
+
+        th_center = ParagraphStyle('THC', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=8, leading=10, textColor=colors.whitesmoke, alignment=1)
+        th_left = ParagraphStyle('THL', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=8, leading=10, textColor=colors.whitesmoke, alignment=0)
+        td_center = ParagraphStyle('TDC', parent=styles['Normal'], fontName='Helvetica', fontSize=8, leading=10, textColor=colors.HexColor('#1F2937'), alignment=1)
+        td_left = ParagraphStyle('TDL', parent=styles['Normal'], fontName='Helvetica', fontSize=8, leading=10, textColor=colors.HexColor('#1F2937'), alignment=0)
 
         elements.append(Paragraph("<b>LAPORAN REKAPITULASI KEHADIRAN KARYAWAN</b>", title_style))
         elements.append(Paragraph(f"Rentang Tanggal: {start_date} s/d {end_date} | Kantor Cabang: {branch_str} | Dicetak: {datetime.now().strftime('%d/%m/%Y %H:%M')}", sub_style))
@@ -2366,61 +2371,61 @@ def export_report():
 
         # 11 Kolom Sama Persis dengan Excel
         table_headers = [
-            "No",
-            "Nama Karyawan",
-            "Email",
-            "Divisi",
-            "Total Hari Kerja",
-            "Jumlah Hadir",
-            "Izin Keperluan",
-            "Izin Sakit",
-            "Cuti",
-            "Jumlah Alpha",
-            "Persentase Kehadiran (%)"
+            Paragraph("<b>No</b>", th_center),
+            Paragraph("<b>Nama Karyawan</b>", th_left),
+            Paragraph("<b>Email</b>", th_left),
+            Paragraph("<b>Divisi</b>", th_left),
+            Paragraph("<b>Total Hari<br/>Kerja</b>", th_center),
+            Paragraph("<b>Jumlah<br/>Hadir</b>", th_center),
+            Paragraph("<b>Izin<br/>Keperluan</b>", th_center),
+            Paragraph("<b>Izin<br/>Sakit</b>", th_center),
+            Paragraph("<b>Cuti</b>", th_center),
+            Paragraph("<b>Jumlah<br/>Alpha</b>", th_center),
+            Paragraph("<b>Persentase<br/>Kehadiran (%)</b>", th_center)
         ]
         table_rows = [table_headers]
 
         for r in processed_data:
             table_rows.append([
-                str(r['no']),
-                str(r['name'])[:20],
-                str(r['email'])[:22],
-                str(r['divisi'])[:16],
-                str(r['total_hari_kerja']),
-                str(r['jumlah_hadir']),
-                str(r['jumlah_izin_keperluan']),
-                str(r['jumlah_izin_sakit']),
-                str(r['jumlah_cuti']),
-                str(r['jumlah_alpha']),
-                r['persentase']
+                Paragraph(str(r['no']), td_center),
+                Paragraph(str(r['name']), td_left),
+                Paragraph(str(r['email']), td_left),
+                Paragraph(str(r['divisi']), td_left),
+                Paragraph(str(r['total_hari_kerja']), td_center),
+                Paragraph(str(r['jumlah_hadir']), td_center),
+                Paragraph(str(r['jumlah_izin_keperluan']), td_center),
+                Paragraph(str(r['jumlah_izin_sakit']), td_center),
+                Paragraph(str(r['jumlah_cuti']), td_center),
+                Paragraph(str(r['jumlah_alpha']), td_center),
+                Paragraph(str(r['persentase']), td_center)
             ])
 
-        col_widths = [24, 110, 116, 72, 65, 55, 60, 55, 45, 65, 75]
+        col_widths = [22, 115, 115, 75, 58, 50, 58, 50, 42, 58, 75]
         pdf_table = Table(table_rows, colWidths=col_widths, repeatRows=1)
         pdf_table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#131B3E')),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-            ('ALIGN', (1, 1), (3, -1), 'LEFT'),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, 0), 8.5),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
             ('BOTTOMPADDING', (0, 0), (-1, 0), 6),
             ('TOPPADDING', (0, 0), (-1, 0), 6),
+            ('BOTTOMPADDING', (0, 1), (-1, -1), 4),
+            ('TOPPADDING', (0, 1), (-1, -1), 4),
             ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#F8FAFC')]),
             ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#E2E8F0')),
-            ('FONTSIZE', (0, 1), (-1, -1), 8),
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
         ]))
         elements.append(pdf_table)
 
         doc.build(elements)
         buf.seek(0)
-        return send_file(
+        resp = send_file(
             buf,
             as_attachment=True,
             download_name=f"{filename_base}.pdf",
             mimetype="application/pdf"
         )
+        resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        resp.headers['Pragma'] = 'no-cache'
+        resp.headers['Expires'] = '0'
+        return resp
 
     # EXCEL GENERATION (.XLSX) - Default template
     else:
@@ -2513,12 +2518,16 @@ def export_report():
         buf = io.BytesIO()
         wb.save(buf)
         buf.seek(0)
-        return send_file(
+        resp = send_file(
             buf,
             as_attachment=True,
             download_name=f"{filename_base}.xlsx",
             mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
+        resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        resp.headers['Pragma'] = 'no-cache'
+        resp.headers['Expires'] = '0'
+        return resp
 
 @app.route('/logout')
 def logout():
