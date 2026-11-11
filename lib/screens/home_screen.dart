@@ -190,7 +190,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           _isLoading = false;
         });
 
-        if (_hasClockedIn && !_hasClockedOut) {
+        if ((_hasClockedIn && !_hasClockedOut) || _hasPermission) {
           _loadMonthlyAttendanceStats();
         }
       } else {
@@ -1102,25 +1102,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   // TAMPILAN 2: SUDAH CLOCK IN -> TAMPILAN RINGKASAN KEHADIRAN (DONUT CHART & PERFORMA) + BANNER TOMBOL CLOCK OUT
   Widget _buildClockOutView() {
-    final int sangatBaik = (_monthlyStatsData?['sangat_baik'] as num?)?.toInt() ?? 0;
-    final int baik = (_monthlyStatsData?['baik'] as num?)?.toInt() ?? 0;
-    final int cukup = (_monthlyStatsData?['cukup'] as num?)?.toInt() ?? 0;
-    final int kurang = (_monthlyStatsData?['kurang'] as num?)?.toInt() ?? 0;
-    final int totalHadir = (_monthlyStatsData?['total_hadir'] as num?)?.toInt() ?? 0;
-    final String ratingStatus = _monthlyStatsData?['rating_status']?.toString() ?? 'Belum Ada Data';
-    final String summaryText = _monthlyStatsData?['summary_text']?.toString() ??
-        'Bulan ini Anda telah melakukan presensi sebanyak $totalHadir kali.';
-    final Color ratingColor = _parseHexColor(
-      _monthlyStatsData?['rating_color'],
-      const Color(0xFF10B981),
-    );
-
-    const monthNames = [
-      'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
-    ];
-    final years = [2024, 2025, 2026, 2027];
-
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20.0),
       child: Column(
@@ -1183,240 +1164,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           const SizedBox(height: 16),
 
           // 2. CARD RINGKASAN KEHADIRAN (DONUT CHART & FILTER BULAN/TAHUN)
-          Container(
-            padding: const EdgeInsets.all(18),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
-                  blurRadius: 18,
-                  offset: const Offset(0, 6),
-                ),
-              ],
-              border: Border.all(color: const Color(0xFFF1F5F9), width: 1.2),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Header Baris: Judul + Dropdown Filter Bulan & Tahun
-                Row(
-                  children: [
-                    const Expanded(
-                      child: Text(
-                        'Ringkasan Kehadiran',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
-                          color: Color(0xFF1E293B),
-                        ),
-                      ),
-                    ),
-                    // Dropdown Bulan
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF8FAFC),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: const Color(0xFFE2E8F0)),
-                      ),
-                      child: DropdownButtonHideUnderline(
-                        child: DropdownButton<int>(
-                          value: _selectedStatsMonth,
-                          isDense: true,
-                          icon: const Icon(
-                            Icons.keyboard_arrow_down_rounded,
-                            color: Color(0xFFDC2626),
-                            size: 18,
-                          ),
-                          items: List.generate(12, (index) {
-                            return DropdownMenuItem<int>(
-                              value: index + 1,
-                              child: Text(
-                                monthNames[index],
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                  color: Color(0xFF1E293B),
-                                ),
-                              ),
-                            );
-                          }),
-                          onChanged: (val) {
-                            if (val != null) {
-                              setState(() => _selectedStatsMonth = val);
-                              _loadMonthlyAttendanceStats();
-                            }
-                          },
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    // Dropdown Tahun
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF8FAFC),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: const Color(0xFFE2E8F0)),
-                      ),
-                      child: DropdownButtonHideUnderline(
-                        child: DropdownButton<int>(
-                          value: _selectedStatsYear,
-                          isDense: true,
-                          icon: const Icon(
-                            Icons.keyboard_arrow_down_rounded,
-                            color: Color(0xFFDC2626),
-                            size: 18,
-                          ),
-                          items: years.map((y) {
-                            return DropdownMenuItem<int>(
-                              value: y,
-                              child: Text(
-                                '$y',
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                  color: Color(0xFF1E293B),
-                                ),
-                              ),
-                            );
-                          }).toList(),
-                          onChanged: (val) {
-                            if (val != null) {
-                              setState(() => _selectedStatsYear = val);
-                              _loadMonthlyAttendanceStats();
-                            }
-                          },
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 20),
-
-                // Diagram Donut di kiri & Legend di kanan (Sesuai Referensi Gambar)
-                _isLoadingMonthlyStats
-                    ? const Center(
-                        child: Padding(
-                          padding: EdgeInsets.symmetric(vertical: 24.0),
-                          child: CircularProgressIndicator(strokeWidth: 2.5),
-                        ),
-                      )
-                    : Row(
-                        children: [
-                          MonthlyAttendanceDonutChart(
-                            sangatBaik: sangatBaik,
-                            baik: baik,
-                            cukup: cukup,
-                            kurang: kurang,
-                            totalHadir: totalHadir,
-                            size: 122,
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                _buildLegendItem(
-                                  const Color(0xFF00BFA5),
-                                  'Sangat Baik',
-                                  sangatBaik,
-                                ),
-                                _buildLegendItem(
-                                  const Color(0xFF38BDF8),
-                                  'Baik',
-                                  baik,
-                                ),
-                                _buildLegendItem(
-                                  const Color(0xFFF59E0B),
-                                  'Cukup',
-                                  cukup,
-                                ),
-                                _buildLegendItem(
-                                  const Color(0xFFEF4444),
-                                  'Kurang',
-                                  kurang,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-
-                const Divider(height: 26, color: Color(0xFFF1F5F9), thickness: 1.2),
-
-                // Card Ulasan Performa Kehadiran User (Berapa kali absen & Baik/Buruknya)
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF8FAFC),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: const Color(0xFFE2E8F0), width: 0.8),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: ratingColor.withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(
-                                color: ratingColor.withValues(alpha: 0.35),
-                                width: 0.8,
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.verified_rounded,
-                                  size: 13,
-                                  color: ratingColor,
-                                ),
-                                const SizedBox(width: 5),
-                                Text(
-                                  ratingStatus,
-                                  style: TextStyle(
-                                    fontSize: 11.5,
-                                    fontWeight: FontWeight.w800,
-                                    color: ratingColor,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const Spacer(),
-                          Text(
-                            '$totalHadir Hari Hadir',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w800,
-                              color: Color(0xFF1E293B),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        summaryText,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Color(0xFF475569),
-                          height: 1.45,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
+          _buildMonthlyStatsSummaryCard(),
 
           const SizedBox(height: 14),
 
@@ -1679,6 +1427,264 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           ),
 
           const SizedBox(height: 40),
+        ],
+      ),
+    );
+  }
+
+  // WIDGET KARTU RINGKASAN KEHADIRAN (DONUT CHART & FILTER BULAN/TAHUN)
+  // Dipakai baik saat sudah Clock In maupun saat Pengajuan Izin/Sakit/Cuti
+  Widget _buildMonthlyStatsSummaryCard() {
+    final int sangatBaik = (_monthlyStatsData?['sangat_baik'] as num?)?.toInt() ?? 0;
+    final int baik = (_monthlyStatsData?['baik'] as num?)?.toInt() ?? 0;
+    final int cukup = (_monthlyStatsData?['cukup'] as num?)?.toInt() ?? 0;
+    final int kurang = (_monthlyStatsData?['kurang'] as num?)?.toInt() ?? 0;
+    final int totalHadir = (_monthlyStatsData?['total_hadir'] as num?)?.toInt() ?? 0;
+    final String ratingStatus = _monthlyStatsData?['rating_status']?.toString() ?? 'Belum Ada Data';
+    final String summaryText = _monthlyStatsData?['summary_text']?.toString() ??
+        'Bulan ini Anda telah melakukan presensi sebanyak $totalHadir kali.';
+    final Color ratingColor = _parseHexColor(
+      _monthlyStatsData?['rating_color'],
+      const Color(0xFF10B981),
+    );
+
+    const monthNames = [
+      'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+    ];
+    final years = [2024, 2025, 2026, 2027];
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 18,
+            offset: const Offset(0, 6),
+          ),
+        ],
+        border: Border.all(color: const Color(0xFFF1F5F9), width: 1.2),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header Baris: Judul + Dropdown Filter Bulan & Tahun
+          Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'Ringkasan Kehadiran',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF1E293B),
+                  ),
+                ),
+              ),
+              // Dropdown Bulan
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<int>(
+                    value: _selectedStatsMonth,
+                    isDense: true,
+                    icon: const Icon(
+                      Icons.keyboard_arrow_down_rounded,
+                      color: Color(0xFFDC2626),
+                      size: 18,
+                    ),
+                    items: List.generate(12, (index) {
+                      return DropdownMenuItem<int>(
+                        value: index + 1,
+                        child: Text(
+                          monthNames[index],
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF1E293B),
+                          ),
+                        ),
+                      );
+                    }),
+                    onChanged: (val) {
+                      if (val != null) {
+                        setState(() => _selectedStatsMonth = val);
+                        _loadMonthlyAttendanceStats();
+                      }
+                    },
+                  ),
+                ),
+              ),
+              const SizedBox(width: 6),
+              // Dropdown Tahun
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<int>(
+                    value: _selectedStatsYear,
+                    isDense: true,
+                    icon: const Icon(
+                      Icons.keyboard_arrow_down_rounded,
+                      color: Color(0xFFDC2626),
+                      size: 18,
+                    ),
+                    items: years.map((y) {
+                      return DropdownMenuItem<int>(
+                        value: y,
+                        child: Text(
+                          '$y',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF1E293B),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                    onChanged: (val) {
+                      if (val != null) {
+                        setState(() => _selectedStatsYear = val);
+                        _loadMonthlyAttendanceStats();
+                      }
+                    },
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 20),
+
+          // Diagram Donut di kiri & Legend di kanan (Sesuai Referensi Gambar)
+          _isLoadingMonthlyStats
+              ? const Center(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(vertical: 24.0),
+                    child: CircularProgressIndicator(strokeWidth: 2.5),
+                  ),
+                )
+              : Row(
+                  children: [
+                    MonthlyAttendanceDonutChart(
+                      sangatBaik: sangatBaik,
+                      baik: baik,
+                      cukup: cukup,
+                      kurang: kurang,
+                      totalHadir: totalHadir,
+                      size: 122,
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildLegendItem(
+                            const Color(0xFF00BFA5),
+                            'Sangat Baik',
+                            sangatBaik,
+                          ),
+                          _buildLegendItem(
+                            const Color(0xFF38BDF8),
+                            'Baik',
+                            baik,
+                          ),
+                          _buildLegendItem(
+                            const Color(0xFFF59E0B),
+                            'Cukup',
+                            cukup,
+                          ),
+                          _buildLegendItem(
+                            const Color(0xFFEF4444),
+                            'Kurang',
+                            kurang,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+
+          const Divider(height: 26, color: Color(0xFFF1F5F9), thickness: 1.2),
+
+          // Card Ulasan Performa Kehadiran User (Berapa kali absen & Baik/Buruknya)
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: const Color(0xFFE2E8F0), width: 0.8),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: ratingColor.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: ratingColor.withValues(alpha: 0.35),
+                          width: 0.8,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.verified_rounded,
+                            size: 13,
+                            color: ratingColor,
+                          ),
+                          const SizedBox(width: 5),
+                          Text(
+                            ratingStatus,
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w800,
+                              color: ratingColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Spacer(),
+                    Text(
+                      '$totalHadir Hari Hadir',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF1E293B),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  summaryText,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFF475569),
+                    height: 1.45,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -2204,6 +2210,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               ),
             ),
           ],
+
+          const SizedBox(height: 20),
+
+          // ========================================================
+          // 7. CARD RINGKASAN KEHADIRAN (DONUT CHART & STATISTIK BULANAN)
+          // Menampilkan dashboard statistik bulanan yang sama persis
+          // seperti saat user sudah clock in
+          // ========================================================
+          _buildMonthlyStatsSummaryCard(),
 
           const SizedBox(height: 40),
         ],
