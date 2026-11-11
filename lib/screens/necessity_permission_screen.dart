@@ -81,24 +81,12 @@ class _NecessityPermissionScreenState extends State<NecessityPermissionScreen> {
       return;
     }
 
-    // Foto bukti keperluan WAJIB dilampirkan
-    if (_selectedImage == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Foto bukti keperluan wajib dilampirkan! Ketuk kotak foto untuk membuka kamera.',
-          ),
-          backgroundColor: Colors.orange,
-          duration: Duration(seconds: 3),
-        ),
-      );
-      return;
-    }
-
+    // Foto bukti keperluan OPSIONAL — tidak wajib dilampirkan
     setState(() => _isLoading = true);
 
+    final bool adaFoto = _selectedImage != null;
     String fullReason =
-        'Jenis Urusan: ${_jenisUrusanController.text.trim()} | Tanggal: ${_dateController.text} | Alasan: ${_reasonController.text.trim()} | [Dokumen Bukti Terlampir]';
+        'Jenis Urusan: ${_jenisUrusanController.text.trim()} | Tanggal: ${_dateController.text} | Alasan: ${_reasonController.text.trim()}${adaFoto ? ' | [Dokumen Bukti Terlampir]' : ''}';
 
     // Konversi foto ke base64 untuk dikirim ke backend
     String? imageBase64;
@@ -485,7 +473,7 @@ class _NecessityPermissionScreenState extends State<NecessityPermissionScreen> {
 
                     const SizedBox(height: 20),
 
-                    // D. LABEL & UNGGAH DOKUMEN PENDUKUNG (WAJIB — BUKA KAMERA)
+                    // D. LABEL & UNGGAH DOKUMEN PENDUKUNG (OPSIONAL — BUKA KAMERA)
                     Row(
                       children: [
                         const Text(
@@ -503,20 +491,20 @@ class _NecessityPermissionScreenState extends State<NecessityPermissionScreen> {
                             vertical: 2,
                           ),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFFF3B30)
+                            color: const Color(0xFF34C759)
                                 .withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(20),
                             border: Border.all(
-                              color: const Color(0xFFFF3B30),
+                              color: const Color(0xFF34C759),
                               width: 0.8,
                             ),
                           ),
                           child: const Text(
-                            'Wajib',
+                            'Opsional',
                             style: TextStyle(
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
-                              color: Color(0xFFFF3B30),
+                              color: Color(0xFF34C759),
                             ),
                           ),
                         ),
@@ -524,7 +512,7 @@ class _NecessityPermissionScreenState extends State<NecessityPermissionScreen> {
                     ),
                     const SizedBox(height: 6),
                     const Text(
-                      'Ketuk untuk membuka kamera',
+                      'Boleh dikosongkan — ketuk untuk membuka kamera',
                       style: TextStyle(
                         fontSize: 11.5,
                         color: Color(0xFF94A3B8),
@@ -631,7 +619,7 @@ class _NecessityPermissionScreenState extends State<NecessityPermissionScreen> {
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
-                                    'Foto bukti keperluan diperlukan',
+                                    'Foto bukti keperluan (opsional)',
                                     style: TextStyle(
                                       fontSize: 11,
                                       color: Colors.grey.shade500,
