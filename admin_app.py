@@ -668,54 +668,31 @@ def index():
         presence_res = cursor.fetchone()
         presence_today = presence_res['total'] if presence_res else 0
         
-        # 4. Total Request Izin / Sakit Hari Ini (Eksklusif Izin & Sakit, cuti dipisah ke kartu khusus)
+        # 4. Total Request Izin / Sakit yang Perlu Diproses (Pending) Hari Ini / Akumulasi
         cursor.execute("""
             SELECT COUNT(*) AS total 
             FROM attendance 
-            WHERE DATE(timestamp) = CURDATE() 
-              AND (
+            WHERE (
                   (reason IS NOT NULL AND reason != '') 
                   OR type IN ('izin', 'sakit', 'sick_leave', 'necessity_leave', 'izin_sakit', 'izin_keperluan') 
                   OR (type LIKE 'izin_%' AND type NOT LIKE '%cuti%')
               )
               AND type NOT IN ('clock_in', 'clock_out', 'hadir', 'cuti', 'izin_cuti')
               AND type NOT LIKE '%cuti%'
+              AND (COALESCE(status, 'Pending') = 'Pending' OR LOWER(COALESCE(status, '')) = 'pending')
         """)
         obs_res = cursor.fetchone()
         request_obs = obs_res['total'] if obs_res else 0
-        if request_obs == 0:
-            # Fallback jika hari ini 0: tampilkan akumulasi izin/sakit aktif di database
-            cursor.execute("""
-                SELECT COUNT(*) AS total 
-                FROM attendance 
-                WHERE (
-                    type IN ('izin', 'sakit', 'sick_leave', 'necessity_leave', 'izin_sakit', 'izin_keperluan') 
-                    OR (type LIKE 'izin_%' AND type NOT LIKE '%cuti%')
-                )
-                AND type NOT IN ('clock_in', 'clock_out', 'hadir', 'cuti', 'izin_cuti')
-                AND type NOT LIKE '%cuti%'
-            """)
-            fb_obs = cursor.fetchone()
-            request_obs = fb_obs['total'] if fb_obs else 0
 
-        # 4b. Total Request Cuti Hari Ini / Keseluruhan dari Database
+        # 4b. Total Request Cuti yang Perlu Diproses (Pending)
         cursor.execute("""
             SELECT COUNT(*) AS total 
             FROM attendance 
-            WHERE DATE(timestamp) = CURDATE() 
-              AND (type IN ('cuti', 'izin_cuti') OR type LIKE '%cuti%')
+            WHERE (type IN ('cuti', 'izin_cuti') OR type LIKE '%cuti%')
+              AND (COALESCE(status, 'Pending') = 'Pending' OR LOWER(COALESCE(status, '')) = 'pending')
         """)
         cuti_res = cursor.fetchone()
         cuti_obs = cuti_res['total'] if cuti_res else 0
-        if cuti_obs == 0:
-            # Fallback jika hari ini 0: tampilkan total data pengajuan cuti yang ada di database
-            cursor.execute("""
-                SELECT COUNT(*) AS total 
-                FROM attendance 
-                WHERE (type IN ('cuti', 'izin_cuti') OR type LIKE '%cuti%')
-            """)
-            fb_cuti = cursor.fetchone()
-            cuti_obs = fb_cuti['total'] if fb_cuti else 0
         
         # 5. Ketidakhadiran Hari Ini (karyawan yang belum clock_in hari ini)
         absence_today = max(0, total_employees - presence_today)
