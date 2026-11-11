@@ -25,10 +25,10 @@ services:
       - "--character-set-server=utf8mb4"
       - "--collation-server=utf8mb4_unicode_ci"
     environment:
-      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-${DB_PASSWORD:-your_password_here}}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-${DB_PASSWORD:-tunggalsahabatabadi}}
       MYSQL_DATABASE: ${DB_NAME:-absensi_wg}
       MYSQL_USER: ${DB_USER:-user_wg}
-      MYSQL_PASSWORD: ${DB_PASSWORD:-${DB_ROOT_PASSWORD:-your_password_here}}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-${DB_ROOT_PASSWORD:-tunggalsahabatabadi}}
       TZ: Asia/Jakarta
     volumes:
       - db_data:/var/lib/mysql
@@ -39,7 +39,7 @@ services:
       # Port 3306 dibuka ke host agar bisa diakses dari luar/DBeaver/Navicat
       - "3306:3306"
     healthcheck:
-      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD:-${DB_PASSWORD:-your_password_here}}" ]
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD:-${DB_PASSWORD:-tunggalsahabatabadi}}" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -67,7 +67,7 @@ services:
       - DB_HOST=db
       - DB_PORT=3306
       - DB_USER=root
-      - DB_PASSWORD=${DB_ROOT_PASSWORD:-${DB_PASSWORD:-your_password_here}}
+      - DB_PASSWORD=${DB_ROOT_PASSWORD:-${DB_PASSWORD:-tunggalsahabatabadi}}
       - DB_NAME=${DB_NAME:-absensi_wg}
       - FACE_TOLERANCE=${FACE_TOLERANCE:-0.55}
       - SIMILARITY_THRESHOLD=${SIMILARITY_THRESHOLD:-70.0}
@@ -102,7 +102,7 @@ services:
       - DB_HOST=db
       - DB_PORT=3306
       - DB_USER=root
-      - DB_PASSWORD=${DB_ROOT_PASSWORD:-${DB_PASSWORD:-your_password_here}}
+      - DB_PASSWORD=${DB_ROOT_PASSWORD:-${DB_PASSWORD:-tunggalsahabatabadi}}
       - DB_NAME=${DB_NAME:-absensi_wg}
       - AI_SERVICE_URL=http://ai_service:5001/api/verify
     volumes:
@@ -132,7 +132,7 @@ services:
       - DB_HOST=db
       - DB_PORT=3306
       - DB_USER=root
-      - DB_PASSWORD=${DB_ROOT_PASSWORD:-${DB_PASSWORD:-your_password_here}}
+      - DB_PASSWORD=${DB_ROOT_PASSWORD:-${DB_PASSWORD:-tunggalsahabatabadi}}
       - DB_NAME=${DB_NAME:-absensi_wg}
       - FLASK_DEBUG=${FLASK_DEBUG:-False}
       - SECRET_KEY=${SECRET_KEY:-projectwg_super_secret_production_key_2026}
