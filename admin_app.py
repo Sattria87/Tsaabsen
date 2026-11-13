@@ -2245,6 +2245,40 @@ def delete_request(id):
 # RUTE LAPORAN KEHADIRAN (REPORT)
 # FORMAT REKAPITULASI (TANPA NIP)
 # ==========================================
+def parse_location_info(reason_str, default_branch=''):
+    """
+    Menguraikan informasi nama tempat dan URL Google Maps dari string reason/lokasi presensi.
+    Mendukung format 'Other (Kategori) - Nama Tempat [GPS: Lat X | Long Y]' maupun kantor cabang biasa.
+    """
+    raw = str(reason_str or '').strip()
+    if not raw:
+        return default_branch or '-', None
+
+    # Cari koordinat GPS: Lat X | Long Y atau X, Y
+    gps_match = re.search(r'\[GPS:\s*Lat\s*([-\d.]+)\s*\|\s*Long\s*([-\d.]+)\]', raw, re.IGNORECASE)
+    if not gps_match:
+        gps_match = re.search(r'([-\d.]+)\s*,\s*([-\d.]+)', raw)
+
+    maps_url = None
+    if gps_match:
+        lat = gps_match.group(1).strip()
+        lon = gps_match.group(2).strip()
+        maps_url = f"https://maps.google.com/?q={lat},{lon}"
+
+    # Bersihkan tag [GPS: ...] dari teks tampilan
+    cleaned = re.sub(r'\[GPS:.*?\]', '', raw, flags=re.IGNORECASE).strip()
+
+    # Ekstrak nama tempat jika dari Other: Other (Kategori) - Nama Tempat
+    other_match = re.search(r'Other\s*\([^)]*\)\s*-\s*(.+)', cleaned, re.IGNORECASE)
+    if other_match:
+        place_name = other_match.group(1).strip()
+    elif cleaned.lower().startswith('other'):
+        place_name = re.sub(r'^other\s*[-–:]*\s*', '', cleaned, flags=re.IGNORECASE).strip() or 'Other'
+    else:
+        place_name = cleaned or default_branch or '-'
+
+    return place_name, maps_url
+
 def parse_record_dates(record_timestamp, reason_str, start_dt, end_dt):
     """
     Mengembalikan set tanggal (date objects) hari kerja (Senin-Jumat)
@@ -2413,6 +2447,9 @@ def get_rekap_report_data(start_date, end_date, branch='all', site='all'):
         cuti_dates = set()
         sakit_dates = set()
         izin_dates = set()
+        
+        # Simpan rekaman clock-in terakhir untuk mendapatkan info lokasi presensi
+        latest_clockin_record = None
 
         for rec in records:
             r_type = (rec.get('type') or '').lower().strip()
@@ -2448,6 +2485,15 @@ def get_rekap_report_data(start_date, end_date, branch='all', site='all'):
 
             # Klasifikasi jenis absensi sesuai filter site
             if r_type in ('clock_in', 'hadir', 'present'):
+                # Simpan rekaman clock_in terbaru untuk referensi lokasi presensi
+                if latest_clockin_record is None:
+                    latest_clockin_record = rec
+                else:
+                    cur_ts = rec.get('timestamp') or ''
+                    prev_ts = latest_clockin_record.get('timestamp') or ''
+                    if str(cur_ts) > str(prev_ts):
+                        latest_clockin_record = rec
+
                 if is_other_filter:
                     if rec_is_site:
                         hadir_dates.update(matched)
@@ -2513,6 +2559,10 @@ def get_rekap_report_data(start_date, end_date, branch='all', site='all'):
         if branch_name == 'Surabaya':
             branch_name = 'TUNGGAL SAHABAT ABADI'
 
+        # Tentukan info lokasi presensi terkini karyawan
+        latest_reason = latest_clockin_record.get('reason') if latest_clockin_record else ''
+        loc_place, loc_maps_url = parse_location_info(latest_reason, default_branch=branch_name)
+
         tot_hadir += hadir
         tot_cuti += cuti
         tot_izin_sakit += izin_sakit
@@ -2525,6 +2575,8 @@ def get_rekap_report_data(start_date, end_date, branch='all', site='all'):
             'email': email,
             'divisi': e.get('divisi') or 'Operasional',
             'branch': branch_name,
+            'lokasi_presensi': loc_place,
+            'lokasi_maps_url': loc_maps_url,
             'total_hari_kerja': total_hari_kerja,
             'jumlah_hadir': hadir,
             'jumlah_tepat_waktu': tepat_waktu,
@@ -2628,12 +2680,13 @@ def export_report():
         elements.append(Paragraph(f"Rentang Tanggal: {start_date} s/d {end_date} | Kantor Cabang: {branch_str} | Dicetak: {datetime.now().strftime('%d/%m/%Y %H:%M')}", sub_style))
         elements.append(Spacer(1, 14))
 
-        # 11 Kolom Sama Persis dengan Excel
+        # 12 Kolom (Tambahan Kolom Lokasi Presensi Terkini yang bisa di-klik ke Google Maps jika ada koordinat)
         table_headers = [
             Paragraph("<b>No</b>", th_center),
             Paragraph("<b>Nama Karyawan</b>", th_left),
             Paragraph("<b>Email</b>", th_left),
             Paragraph("<b>Divisi</b>", th_left),
+            Paragraph("<b>Lokasi<br/>Presensi</b>", th_left),
             Paragraph("<b>Total Hari<br/>Kerja</b>", th_center),
             Paragraph("<b>Jumlah<br/>Hadir</b>", th_center),
             Paragraph("<b>Izin<br/>Keperluan</b>", th_center),
@@ -2645,11 +2698,20 @@ def export_report():
         table_rows = [table_headers]
 
         for r in processed_data:
+            # Format teks lokasi: jika ada maps_url, jadikan tautan hyperlink yang bisa di-klik
+            loc_text = str(r.get('lokasi_presensi') or '-')
+            loc_url = r.get('lokasi_maps_url')
+            if loc_url:
+                loc_paragraph = Paragraph(f'<a href="{loc_url}" color="#0056B3"><u>{loc_text}</u></a>', td_left)
+            else:
+                loc_paragraph = Paragraph(loc_text, td_left)
+
             table_rows.append([
                 Paragraph(str(r['no']), td_center),
                 Paragraph(str(r['name']), td_left),
                 Paragraph(str(r['email']), td_left),
                 Paragraph(str(r['divisi']), td_left),
+                loc_paragraph,
                 Paragraph(str(r['total_hari_kerja']), td_center),
                 Paragraph(str(r['jumlah_hadir']), td_center),
                 Paragraph(str(r['jumlah_izin_keperluan']), td_center),
@@ -2659,7 +2721,7 @@ def export_report():
                 Paragraph(str(r['persentase']), td_center)
             ])
 
-        col_widths = [22, 115, 115, 75, 58, 50, 58, 50, 42, 58, 75]
+        col_widths = [20, 95, 95, 65, 85, 48, 42, 48, 42, 38, 48, 65]
         pdf_table = Table(table_rows, colWidths=col_widths, repeatRows=1)
         pdf_table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#131B3E')),
@@ -2692,15 +2754,15 @@ def export_report():
         ws = wb.active
         ws.title = "Rekap Kehadiran"
 
-        # Judul & Metadata Laporan (Sama dengan PDF)
+        # Judul & Metadata Laporan (Sama dengan PDF, merge A-L untuk 12 kolom)
         ws['A1'] = "LAPORAN REKAPITULASI KEHADIRAN KARYAWAN"
         ws['A1'].font = Font(name="Calibri", size=14, bold=True, color="131B3E")
-        ws.merge_cells('A1:K1')
+        ws.merge_cells('A1:L1')
         ws['A1'].alignment = Alignment(horizontal="left", vertical="center")
 
         ws['A2'] = f"Rentang Tanggal: {start_date} s/d {end_date} | Kantor Cabang: {branch_str} | Dicetak: {datetime.now().strftime('%d/%m/%Y %H:%M')}"
         ws['A2'].font = Font(name="Calibri", size=10, italic=True, color="4B5563")
-        ws.merge_cells('A2:K2')
+        ws.merge_cells('A2:L2')
         ws['A2'].alignment = Alignment(horizontal="left", vertical="center")
 
         headers = [
@@ -2708,6 +2770,7 @@ def export_report():
             "Nama Karyawan",
             "Email",
             "Divisi",
+            "Lokasi Presensi",
             "Total Hari Kerja",
             "Jumlah Hadir",
             "Izin Keperluan",
@@ -2735,16 +2798,20 @@ def export_report():
             cell = ws.cell(row=4, column=col_num)
             cell.font = header_font
             cell.fill = header_fill
-            cell.alignment = Alignment(horizontal="center" if col_num in [1, 5, 6, 7, 8, 9, 10, 11] else "left", vertical="center")
+            cell.alignment = Alignment(horizontal="center" if col_num in [1, 6, 7, 8, 9, 10, 11, 12] else "left", vertical="center")
             cell.border = thin_border
 
         # Isi data baris demi baris (Row 5+)
         for r in processed_data:
+            loc_name = r.get('lokasi_presensi') or '-'
+            loc_url = r.get('lokasi_maps_url')
+
             row_data = [
                 r['no'],
                 r['name'],
                 r['email'],
                 r['divisi'],
+                loc_name,
                 r['total_hari_kerja'],
                 r['jumlah_hadir'],
                 r['jumlah_izin_keperluan'],
@@ -2760,10 +2827,15 @@ def export_report():
                 c = ws.cell(row=current_row, column=col_idx)
                 c.border = thin_border
                 c.font = Font(name="Calibri", size=10)
-                if col_idx in [1, 5, 6, 7, 8, 9, 10, 11]:
+                if col_idx in [1, 6, 7, 8, 9, 10, 11, 12]:
                     c.alignment = Alignment(horizontal="center", vertical="center")
                 else:
                     c.alignment = Alignment(horizontal="left", vertical="center")
+
+                # Kolom 5: Lokasi Presensi - jika memiliki koordinat/maps_url, tambahkan hyperlink aktif
+                if col_idx == 5 and loc_url:
+                    c.hyperlink = loc_url
+                    c.font = Font(name="Calibri", size=10, color="0044CC", underline="single")
 
         # Auto lebar kolom (mengabaikan baris 1-3 agar tidak terpengaruh merge cells judul)
         for col in ws.columns:
