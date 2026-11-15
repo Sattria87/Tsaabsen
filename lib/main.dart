@@ -11,6 +11,7 @@ import 'package:workmanager/workmanager.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'utils/notification_helper.dart';
 import 'utils/mysql_helper.dart';
+import 'utils/offline_attendance_helper.dart';
 
 @pragma('vm:entry-point')
 void callbackDispatcher() {
@@ -18,6 +19,8 @@ void callbackDispatcher() {
     try {
       WidgetsFlutterBinding.ensureInitialized();
       await NotificationHelper.init();
+
+      // 1. Cek Pengumuman HRD Terbaru
       final anns = await MySQLHelper.getAnnouncements();
       if (anns.isNotEmpty) {
         final latest = anns.first;
@@ -38,6 +41,39 @@ void callbackDispatcher() {
           );
         }
       }
+
+      // 2. Cek Status Persetujuan Cuti / Izin Karyawan (Fitur 3: Notifikasi Otomatis HRD)
+      final user = await AuthService.getSavedUser();
+      if (user != null && user['username'] != null) {
+        final username = user['username'].toString();
+        final status = await MySQLHelper.getTodayAttendanceStatus(username);
+        if (status != null && status['hasPermission'] == true) {
+          final currentPermStatus = (status['permissionStatus'] ?? '').toString();
+          final pType = (status['permissionType'] ?? 'Pengajuan').toString();
+          final prefs = await SharedPreferences.getInstance();
+          final lastStatusKey = 'last_known_perm_status_$username';
+          final lastStatus = prefs.getString(lastStatusKey);
+
+          if (lastStatus != null &&
+              lastStatus.toLowerCase() == 'pending' &&
+              currentPermStatus.toLowerCase() != 'pending') {
+            await prefs.setString(lastStatusKey, currentPermStatus);
+            final isApproved = currentPermStatus.toLowerCase() == 'approved';
+            await NotificationHelper.showAttendanceReminderNotification(
+              id: 8888,
+              title: isApproved ? 'Pengajuan $pType Disetujui! ✅' : 'Pengajuan $pType Ditolak ❌',
+              body: isApproved
+                  ? 'Kabar baik! Pengajuan $pType Anda telah disetujui HRD.'
+                  : 'Pemberitahuan: Pengajuan $pType Anda telah ditolak HRD.',
+            );
+          } else {
+            await prefs.setString(lastStatusKey, currentPermStatus);
+          }
+        }
+      }
+
+      // 3. Sinkronisasi Antrean Presensi Offline secara Berkala di Background (Fitur 4)
+      await OfflineAttendanceHelper.syncPendingRecords();
     } catch (e) {
       debugPrint('[Background Fetch Error]: $e');
     }

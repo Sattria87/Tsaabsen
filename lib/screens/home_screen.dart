@@ -9,6 +9,7 @@ import '../utils/app_update_helper.dart';
 import '../widgets/employee_avatar.dart';
 import '../widgets/monthly_attendance_pie_chart.dart';
 import '../utils/notification_helper.dart';
+import '../utils/offline_attendance_helper.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'login_screen.dart';
 import 'location_verification_screen.dart';
@@ -106,6 +107,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _startPeriodicReminders();
     _startAnnouncementPolling();
 
+    // SINKRONISASI DATA PRESENSI OFFLINE KE SERVER SECARA OTOMATIS
+    _syncOfflineAttendanceIfAny();
+
     // Periksa ketersediaan auto-update aplikasi dari server backend
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
@@ -181,6 +185,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           }
 
           // Data status pengajuan izin
+          final String? prevPermStatus = _permissionStatus;
+          final String? newPermStatus = status['permissionStatus']?.toString();
+
           _hasPermission = status['hasPermission'] ?? false;
           _permissionType = status['permissionType'];
           _permissionStatus = status['permissionStatus'];
@@ -188,6 +195,22 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           _permissionTime = status['permissionTime'];
 
           _isLoading = false;
+
+          // Deteksi perubahan status izin / cuti untuk notifikasi push (Fitur 3)
+          if (prevPermStatus != null &&
+              prevPermStatus.toLowerCase() == 'pending' &&
+              newPermStatus != null &&
+              newPermStatus.toLowerCase() != 'pending') {
+            final isApproved = newPermStatus.toLowerCase() == 'approved';
+            final pType = status['permissionType'] ?? 'Pengajuan';
+            NotificationHelper.showAttendanceReminderNotification(
+              id: 9999,
+              title: isApproved ? 'Pengajuan $pType Disetujui! ✅' : 'Pengajuan $pType Ditolak ❌',
+              body: isApproved
+                  ? 'Kabar baik! Pengajuan $pType Anda telah disetujui oleh HRD.'
+                  : 'Pemberitahuan: Pengajuan $pType Anda telah ditolak oleh HRD.',
+            );
+          }
         });
 
         if ((_hasClockedIn && !_hasClockedOut) || _hasPermission) {
@@ -201,6 +224,43 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       if (mounted) {
         setState(() => _isLoading = false);
       }
+    }
+  }
+
+  // SINKRONISASI PRESENSI OFFLINE KE SERVER SECARA OTOMATIS (FITUR 4)
+  Future<void> _syncOfflineAttendanceIfAny() async {
+    try {
+      final count = await OfflineAttendanceHelper.getPendingQueueCount();
+      if (count > 0) {
+        debugPrint('[HomeScreen] Menemukan $count antrean presensi offline. Memulai sinkronisasi...');
+        final synced = await OfflineAttendanceHelper.syncPendingRecords();
+        if (synced > 0 && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              backgroundColor: const Color(0xFF16A34A),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              duration: const Duration(seconds: 4),
+              content: Row(
+                children: [
+                  const Icon(Icons.cloud_done_rounded, color: Colors.white, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Berhasil menyinkronkan $synced presensi offline ke server!',
+                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+          _checkAttendanceStatus();
+          _loadMonthlyAttendanceStats();
+        }
+      }
+    } catch (e) {
+      debugPrint('[HomeScreen] Gagal sinkronisasi presensi offline: $e');
     }
   }
 

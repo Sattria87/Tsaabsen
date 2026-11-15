@@ -342,6 +342,50 @@ class _LocationVerificationScreenState
         ),
       );
 
+      // ============================================================
+      // 1. FITUR ANTI-FRAUD: DETEKSI FAKE GPS / MOCK LOCATION
+      // ============================================================
+      if (userPosition.isMocked) {
+        if (!mounted) return;
+        setState(() {
+          _isCheckingLocation = false;
+          _isWithinRadius = false;
+          _statusMessage =
+              'Peringatan Keamanan: Terdeteksi penggunaan Fake GPS / Lokasi Tiruan (Mock Location). Matikan aplikasi Fake GPS untuk melanjutkan presensi!';
+        });
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (ctx) => AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: Row(
+              children: const [
+                Icon(Icons.warning_amber_rounded, color: Colors.red, size: 28),
+                SizedBox(width: 8),
+                Text(
+                  'Fake GPS Terdeteksi!',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.red),
+                ),
+              ],
+            ),
+            content: const Text(
+              'Sistem keamanan absensi mendeteksi bahwa perangkat Anda menggunakan aplikasi Fake GPS atau Mock Location.\n\nDemi menjaga keaslian data presensi, silakan matikan Fake GPS dan gunakan GPS perangkat asli.',
+              style: TextStyle(fontSize: 13, height: 1.4),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  _checkUserLocation();
+                },
+                child: const Text('Cek Ulang GPS', style: TextStyle(fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+        );
+        return;
+      }
+
       // Jika user sedang memilih Other, pertahankan pilihan Other dan update GPS realtime
       if (_isOtherMode) {
         if (!mounted) return;

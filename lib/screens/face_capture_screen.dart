@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 
 import '../utils/mysql_helper.dart';
+import '../utils/offline_attendance_helper.dart';
 import '../main.dart'; // Akses variabel list 'cameras' dari main.dart
 import 'clock_in_success_screen.dart';
 
@@ -38,9 +39,19 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
   double? _similarityScore; // Skor kemiripan AI (persen)
   bool? _isAiMatched; // Hasil kecocokan AI
 
+  // FITUR LIVENESS DETECTION (ANTI-FOTO/LAYAR HP)
+  final List<String> _livenessChallenges = [
+    'Kedipkan mata Anda 2 kali perlahan',
+    'Tolehkan kepala sedikit ke kiri lalu ke kanan',
+    'Tersenyumlah ke arah kamera depan',
+  ];
+  late String _currentLivenessInstruction;
+
   @override
   void initState() {
     super.initState();
+    _currentLivenessInstruction =
+        _livenessChallenges[DateTime.now().second % _livenessChallenges.length];
     _initCamera();
   }
 
@@ -94,8 +105,9 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
   Future<void> _takePicture() async {
     if (_controller == null ||
         !_controller!.value.isInitialized ||
-        _isCapturing)
+        _isCapturing) {
       return;
+    }
 
     setState(() => _isCapturing = true);
 
@@ -360,6 +372,51 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
           ),
         );
       } else {
+        // JIKA GAGAL JARINGAN / KONEKSI SERVER MATI -> SIMPAN KE OFFLINE QUEUE
+        final bool offlineSaved = await OfflineAttendanceHelper.saveOfflineRecord(
+          username: username,
+          type: 'clock_in',
+          reason: widget.locationName,
+          imageBase64: imageBase64,
+          evidenceImageBase64: evidenceBase64,
+        );
+
+        if (!mounted) return;
+
+        if (offlineSaved) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              backgroundColor: Color(0xFFD97706),
+              duration: Duration(seconds: 4),
+              content: Row(
+                children: [
+                  Icon(Icons.cloud_off_rounded, color: Colors.white, size: 20),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Sinyal Tidak Stabil: Presensi disimpan Offline dan akan otomatis tersinkron saat internet aktif.',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ClockInSuccessScreen(
+                userData: widget.userData,
+                locationName: '${widget.locationName} (Offline Saved)',
+                distance: widget.distance,
+                similarity: score,
+              ),
+            ),
+          );
+          return;
+        }
+
         final errorMsg =
             MySQLHelper.lastSaveError ??
             'Gagal menyimpan absensi ke server! Silakan coba lagi.';
@@ -785,43 +842,97 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
                               ),
                             ],
                           )
-                        // SEBELUM SELFIE: TOMBOL AMBIL FOTO
-                        : SizedBox(
-                            width: double.infinity,
-                            height: 55,
-                            child: ElevatedButton.icon(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF007AFF),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(30),
+                        // SEBELUM SELFIE: INSTRUKSI LIVENESS & TOMBOL AMBIL FOTO
+                        : Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              // KARTU TANTANGAN LIVENESS DETECTION (ANTI-FOTO LAYAR)
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                margin: const EdgeInsets.only(bottom: 12),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFEFF6FF),
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(color: const Color(0xFF93C5FD)),
                                 ),
-                                elevation: 0,
-                              ),
-                              onPressed: _isCapturing ? null : _takePicture,
-                              icon: _isCapturing
-                                  ? const SizedBox(
-                                      width: 20,
-                                      height: 20,
-                                      child: CircularProgressIndicator(
-                                        color: Colors.white,
-                                        strokeWidth: 2,
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(6),
+                                      decoration: const BoxDecoration(
+                                        color: Color(0xFF007AFF),
+                                        shape: BoxShape.circle,
                                       ),
-                                    )
-                                  : const Icon(
-                                      Icons.camera_alt,
+                                      child: const Icon(Icons.security_rounded, color: Colors.white, size: 16),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          const Text(
+                                            'Verifikasi Keaslian Wajah (Liveness):',
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.bold,
+                                              color: Color(0xFF1E3A8A),
+                                            ),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            _currentLivenessInstruction,
+                                            style: const TextStyle(
+                                              fontSize: 12.5,
+                                              fontWeight: FontWeight.w700,
+                                              color: Color(0xFF1D4ED8),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+
+                              SizedBox(
+                                width: double.infinity,
+                                height: 52,
+                                child: ElevatedButton.icon(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF007AFF),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(30),
+                                    ),
+                                    elevation: 0,
+                                  ),
+                                  onPressed: _isCapturing ? null : _takePicture,
+                                  icon: _isCapturing
+                                      ? const SizedBox(
+                                          width: 20,
+                                          height: 20,
+                                          child: CircularProgressIndicator(
+                                            color: Colors.white,
+                                            strokeWidth: 2,
+                                          ),
+                                        )
+                                      : const Icon(
+                                          Icons.camera_alt,
+                                          color: Colors.white,
+                                        ),
+                                  label: Text(
+                                    _isCapturing
+                                        ? 'Mengambil Foto...'
+                                        : 'Ambil Foto Selfie',
+                                    style: const TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.bold,
                                       color: Colors.white,
                                     ),
-                              label: Text(
-                                _isCapturing
-                                    ? 'Mengambil Foto...'
-                                    : 'Ambil Foto',
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
+                                  ),
                                 ),
                               ),
-                            ),
+                            ],
                           ),
                   ),
                 ],
