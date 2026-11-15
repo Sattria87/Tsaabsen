@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:convert';
+import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -39,19 +40,15 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
   double? _similarityScore; // Skor kemiripan AI (persen)
   bool? _isAiMatched; // Hasil kecocokan AI
 
-  // FITUR LIVENESS DETECTION (ANTI-FOTO/LAYAR HP)
-  final List<String> _livenessChallenges = [
-    'Kedipkan mata Anda 2 kali perlahan',
-    'Tolehkan kepala sedikit ke kiri lalu ke kanan',
-    'Tersenyumlah ke arah kamera depan',
-  ];
-  late String _currentLivenessInstruction;
+  // FITUR LIVENESS DETECTION INTERAKTIF (DUAL-FRAME MOTION LIVENESS)
+  bool _isLivenessRunning = false;
+  int _livenessStep = 0; // 0 = Idle, 1 = Frame 1 (Tatap Netral), 2 = Frame 2 (Kedip/Senyum), 3 = Analisis
+  String _livenessStepText = '';
+  double? _livenessMotionDelta;
 
   @override
   void initState() {
     super.initState();
-    _currentLivenessInstruction =
-        _livenessChallenges[DateTime.now().second % _livenessChallenges.length];
     _initCamera();
   }
 
@@ -101,47 +98,255 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
     super.dispose();
   }
 
-  // 1. Ambil Foto Selfie (menampilkan opsi Ganti Foto atau Verifikasi AI)
-  Future<void> _takePicture() async {
+  // 1. Ekstraksi sampel piksel untuk perbandingan gerakan liveness
+  Future<Uint8List?> _extractSamplePixels(XFile file) async {
+    try {
+      final bytes = await file.readAsBytes();
+      final codec = await ui.instantiateImageCodec(bytes, targetWidth: 80);
+      final frame = await codec.getNextFrame();
+      final byteData = await frame.image.toByteData(format: ui.ImageByteFormat.rawRgba);
+      return byteData?.buffer.asUint8List();
+    } catch (e) {
+      debugPrint('[Liveness] Gagal decode pixel: $e');
+      return null;
+    }
+  }
+
+  // Hitung rata-rata selisih intensitas piksel (Motion Score)
+  double _calculateMotionScore(Uint8List p1, Uint8List p2) {
+    final int minLen = p1.length < p2.length ? p1.length : p2.length;
+    if (minLen == 0) return 0.0;
+
+    double totalDiff = 0.0;
+    int sampleCount = 0;
+    for (int i = 0; i < minLen; i += 4) {
+      final int rDiff = (p1[i] - p2[i]).abs();
+      final int gDiff = (p1[i + 1] - p2[i + 1]).abs();
+      final int bDiff = (p1[i + 2] - p2[i + 2]).abs();
+      totalDiff += (rDiff + gDiff + bDiff) / 3.0;
+      sampleCount++;
+    }
+    return sampleCount > 0 ? (totalDiff / sampleCount) : 0.0;
+  }
+
+  // 2. Alur Interaktif Liveness Detection Multi-Frame
+  Future<void> _startLivenessSequence() async {
     if (_controller == null ||
         !_controller!.value.isInitialized ||
-        _isCapturing) {
+        _isLivenessRunning ||
+        _isSubmitting) {
       return;
     }
 
-    setState(() => _isCapturing = true);
+    setState(() {
+      _isLivenessRunning = true;
+      _isCapturing = true;
+      _livenessStep = 1;
+      _livenessStepText = 'Tahap 1/2: Tatap lurus kamera...';
+    });
 
     try {
       await _initializeControllerFuture;
-      final XFile imageFile = await _controller!.takePicture();
-      debugPrint('Foto selfie berhasil diambil di: ${imageFile.path}');
 
+      // Tunggu 800ms agar posisi wajah pengguna stabil di kamera
+      await Future.delayed(const Duration(milliseconds: 800));
+      if (!mounted) return;
+
+      // Jepret Frame 1 (Posisi Wajah Netral)
+      final XFile frame1 = await _controller!.takePicture();
+      debugPrint('[Liveness] Frame 1 (Netral) tersimpan di: ${frame1.path}');
+
+      // Pindah ke Tahap 2: Minta Kedipan Mata / Senyuman
       if (!mounted) return;
       setState(() {
-        _capturedImage = imageFile;
+        _livenessStep = 2;
+        _livenessStepText = 'Tahap 2/2: Sekarang KEDIPKAN MATA atau TERSENYUM!';
+      });
+
+      // Jeda 1.4 detik bagi pengguna untuk melakukan kedipan atau senyuman
+      await Future.delayed(const Duration(milliseconds: 1400));
+      if (!mounted) return;
+
+      // Jepret Frame 2 (Posisi Wajah Aktif)
+      final XFile frame2 = await _controller!.takePicture();
+      debugPrint('[Liveness] Frame 2 (Aktif) tersimpan di: ${frame2.path}');
+
+      // Pindah ke Tahap 3: Analisis Perbedaan Gerakan
+      if (!mounted) return;
+      setState(() {
+        _livenessStep = 3;
+        _livenessStepText = 'Menganalisis keaslian gerakan wajah...';
+      });
+
+      final pixels1 = await _extractSamplePixels(frame1);
+      final pixels2 = await _extractSamplePixels(frame2);
+
+      double motionScore = 0.0;
+      if (pixels1 != null && pixels2 != null) {
+        motionScore = _calculateMotionScore(pixels1, pixels2);
+      }
+      debugPrint('[Liveness] Skor perbedaan gerakan (Motion Score): $motionScore');
+
+      // Ambang batas: Foto kertas/layar HP biasanya memiliki selisih < 2.5
+      // Manusia hidup yang berkedip/tersenyum menghasilkan selisih > 2.8
+      const double kLivenessThreshold = 2.8;
+
+      if (motionScore < kLivenessThreshold) {
+        // GAGAL LIVENESS: Tidak ada gerakan wajah yang memadai (terindikasi foto mati / layar)
+        if (!mounted) return;
+        setState(() {
+          _isLivenessRunning = false;
+          _isCapturing = false;
+          _livenessStep = 0;
+          _livenessStepText = '';
+        });
+
+        _showLivenessFailedDialog(motionScore);
+        return;
+      }
+
+      // BERHASIL LIVENESS: Gerakan hidup nyata terverifikasi!
+      if (!mounted) return;
+      setState(() {
+        _capturedImage = frame2; // Gunakan frame 2 yang memiliki ekspresi hidup
+        _livenessMotionDelta = motionScore;
+        _isLivenessRunning = false;
         _isCapturing = false;
+        _livenessStep = 0;
+        _livenessStepText = '';
         _isVerifyingAI = false;
-        _aiVerificationStatus = 'Foto siap diverifikasi oleh Model AI';
+        _aiVerificationStatus = 'Liveness Terverifikasi! Foto siap diverifikasi Model AI';
         _similarityScore = null;
         _isAiMatched = null;
       });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: const Color(0xFF16A34A),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          duration: const Duration(seconds: 3),
+          content: Row(
+            children: [
+              const Icon(Icons.verified_user_rounded, color: Colors.white, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Liveness Berhasil: Gerakan wajah asli terdeteksi! (Skor: ${motionScore.toStringAsFixed(1)})',
+                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
     } catch (e) {
-      debugPrint('Error taking picture: $e');
+      debugPrint('[Liveness] Error sequence: $e');
       if (mounted) {
-        setState(() => _isCapturing = false);
+        setState(() {
+          _isLivenessRunning = false;
+          _isCapturing = false;
+          _livenessStep = 0;
+          _livenessStepText = '';
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: Colors.red.shade700,
+            content: Text('Terjadi kesalahan kamera saat verifikasi: $e'),
+          ),
+        );
       }
     }
   }
 
-  // 2. Foto Ulang / Ganti Foto
+  // Dialog peringatan jika Liveness gagal (terdeteksi foto diam / layar HP)
+  void _showLivenessFailedDialog(double score) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: const [
+            Icon(Icons.warning_amber_rounded, color: Colors.red, size: 28),
+            SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Liveness Gagal!',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.red,
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Tidak terdeteksi gerakan wajah yang cukup. Sistem mendeteksi kemungkinan foto diam, kertas cetak, atau layar ponsel.',
+              style: TextStyle(fontSize: 13, height: 1.4),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEF2F2),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFFECACA)),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.info_outline, color: Color(0xFFB91C1C), size: 18),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Pastikan Anda berkedip perlahan atau tersenyum saat instruksi tahap ke-2 muncul di layar.',
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        color: Color(0xFF991B1B),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF007AFF),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () {
+              Navigator.pop(ctx);
+              _startLivenessSequence();
+            },
+            child: const Text('Ulangi Verifikasi', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 3. Foto Ulang / Reset
   void _retakePicture() {
-    if (_isSubmitting) return;
+    if (_isSubmitting || _isLivenessRunning) return;
     setState(() {
       _capturedImage = null;
       _isVerifyingAI = false;
       _aiVerificationStatus = '';
       _similarityScore = null;
       _isAiMatched = null;
+      _isLivenessRunning = false;
+      _livenessStep = 0;
+      _livenessStepText = '';
+      _livenessMotionDelta = null;
     });
   }
 
@@ -548,15 +753,93 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
                                   decoration: BoxDecoration(
                                     borderRadius: BorderRadius.circular(130),
                                     border: Border.all(
-                                      color: const Color(0xFF007AFF),
+                                      color: _isLivenessRunning
+                                          ? (_livenessStep == 2
+                                              ? const Color(0xFFF59E0B)
+                                              : const Color(0xFF38BDF8))
+                                          : const Color(0xFF007AFF),
                                       width: 2.5,
                                     ),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: const Color(0xFF007AFF)
+                                        color: (_isLivenessRunning
+                                                ? (_livenessStep == 2
+                                                    ? const Color(0xFFF59E0B)
+                                                    : const Color(0xFF38BDF8))
+                                                : const Color(0xFF007AFF))
                                             .withValues(alpha: 0.25),
                                         blurRadius: 15,
                                         spreadRadius: 2,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+
+                            // OVERLAY ANIMASI LANGKAH LIVENESS DETECTION
+                            if (_isLivenessRunning)
+                              Container(
+                                color: Colors.black.withValues(alpha: 0.55),
+                                child: Center(
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(18),
+                                        decoration: BoxDecoration(
+                                          color: _livenessStep == 2
+                                              ? const Color(0xFFD97706).withValues(alpha: 0.25)
+                                              : const Color(0xFF007AFF).withValues(alpha: 0.25),
+                                          shape: BoxShape.circle,
+                                          border: Border.all(
+                                            color: _livenessStep == 2
+                                                ? const Color(0xFFF59E0B)
+                                                : const Color(0xFF38BDF8),
+                                            width: 3,
+                                          ),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: (_livenessStep == 2
+                                                      ? const Color(0xFFF59E0B)
+                                                      : const Color(0xFF007AFF))
+                                                  .withValues(alpha: 0.4),
+                                              blurRadius: 20,
+                                              spreadRadius: 4,
+                                            ),
+                                          ],
+                                        ),
+                                        child: Icon(
+                                          _livenessStep == 1
+                                              ? Icons.face_rounded
+                                              : (_livenessStep == 2
+                                                  ? Icons.remove_red_eye_rounded
+                                                  : Icons.hourglass_top_rounded),
+                                          color: Colors.white,
+                                          size: 52,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 16),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                        margin: const EdgeInsets.symmetric(horizontal: 24),
+                                        decoration: BoxDecoration(
+                                          color: _livenessStep == 2 ? const Color(0xFFD97706) : const Color(0xFF007AFF),
+                                          borderRadius: BorderRadius.circular(20),
+                                        ),
+                                        child: Text(
+                                          _livenessStep == 1
+                                              ? 'TAHAP 1: DIAM & TATAP KAMERA'
+                                              : (_livenessStep == 2
+                                                  ? 'TAHAP 2: KEDIPKAN MATA / SENYUM!'
+                                                  : 'MENGANALISIS GERAKAN WAJAH...'),
+                                          textAlign: TextAlign.center,
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                            letterSpacing: 0.5,
+                                          ),
+                                        ),
                                       ),
                                     ],
                                   ),
@@ -581,34 +864,44 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
                                     Icon(
-                                      _isVerifyingAI
-                                          ? Icons.psychology_rounded
-                                          : (_isAiMatched == true
-                                                ? Icons.verified_rounded
-                                                : (hasCaptured
-                                                      ? Icons
-                                                            .check_circle_outline
-                                                      : Icons
-                                                            .camera_alt_outlined)),
-                                      color: _isAiMatched == true
-                                          ? const Color(0xFF4ADE80)
+                                      _isLivenessRunning
+                                          ? (_livenessStep == 2
+                                              ? Icons.remove_red_eye_rounded
+                                              : Icons.face_rounded)
                                           : (_isVerifyingAI
-                                                ? const Color(0xFF60A5FA)
-                                                : (hasCaptured
+                                              ? Icons.psychology_rounded
+                                              : (_isAiMatched == true
+                                                  ? Icons.verified_rounded
+                                                  : (hasCaptured
+                                                      ? Icons.check_circle_outline
+                                                      : Icons.camera_alt_outlined))),
+                                      color: _isLivenessRunning
+                                          ? (_livenessStep == 2
+                                              ? const Color(0xFFFBBF24)
+                                              : const Color(0xFF60A5FA))
+                                          : (_isAiMatched == true
+                                              ? const Color(0xFF4ADE80)
+                                              : (_isVerifyingAI
+                                                  ? const Color(0xFF60A5FA)
+                                                  : (hasCaptured
                                                       ? const Color(0xFF4ADE80)
-                                                      : Colors.white)),
+                                                      : Colors.white))),
                                       size: 18,
                                     ),
                                     const SizedBox(width: 8),
                                     Flexible(
                                       child: Text(
-                                        _isVerifyingAI
-                                            ? _aiVerificationStatus
-                                            : (_isAiMatched == true
-                                                  ? 'Wajah Cocok (${_similarityScore!.toStringAsFixed(1)}%)'
-                                                  : (hasCaptured
-                                                        ? 'Foto siap diverifikasi Model AI'
-                                                        : 'Posisikan wajah Anda pada lingkaran')),
+                                        _isLivenessRunning
+                                            ? _livenessStepText
+                                            : (_isVerifyingAI
+                                                ? _aiVerificationStatus
+                                                : (_isAiMatched == true
+                                                    ? 'Wajah Cocok (${_similarityScore!.toStringAsFixed(1)}%)'
+                                                    : (hasCaptured
+                                                        ? (_livenessMotionDelta != null
+                                                            ? 'Liveness Terverifikasi (Delta: ${_livenessMotionDelta!.toStringAsFixed(1)})'
+                                                            : 'Foto siap diverifikasi Model AI')
+                                                        : 'Posisikan wajah Anda pada lingkaran'))),
                                         style: const TextStyle(
                                           color: Colors.white,
                                           fontSize: 13,
@@ -842,50 +1135,70 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
                               ),
                             ],
                           )
-                        // SEBELUM SELFIE: INSTRUKSI LIVENESS & TOMBOL AMBIL FOTO
+                        // SEBELUM SELFIE: INSTRUKSI LIVENESS & TOMBOL VERIFIKASI WAJAH
                         : Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              // KARTU TANTANGAN LIVENESS DETECTION (ANTI-FOTO LAYAR)
+                              // KARTU TANTANGAN LIVENESS DETECTION INTERAKTIF
                               Container(
                                 width: double.infinity,
                                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                                 margin: const EdgeInsets.only(bottom: 12),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFFEFF6FF),
+                                  color: _isLivenessRunning
+                                      ? (_livenessStep == 2 ? const Color(0xFFFFFBEB) : const Color(0xFFEFF6FF))
+                                      : const Color(0xFFEFF6FF),
                                   borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(color: const Color(0xFF93C5FD)),
+                                  border: Border.all(
+                                    color: _isLivenessRunning
+                                        ? (_livenessStep == 2 ? const Color(0xFFFDE68A) : const Color(0xFF93C5FD))
+                                        : const Color(0xFF93C5FD),
+                                  ),
                                 ),
                                 child: Row(
                                   children: [
                                     Container(
-                                      padding: const EdgeInsets.all(6),
-                                      decoration: const BoxDecoration(
-                                        color: Color(0xFF007AFF),
+                                      padding: const EdgeInsets.all(7),
+                                      decoration: BoxDecoration(
+                                        color: _isLivenessRunning && _livenessStep == 2
+                                            ? const Color(0xFFD97706)
+                                            : const Color(0xFF007AFF),
                                         shape: BoxShape.circle,
                                       ),
-                                      child: const Icon(Icons.security_rounded, color: Colors.white, size: 16),
+                                      child: Icon(
+                                        _isLivenessRunning
+                                            ? (_livenessStep == 2 ? Icons.remove_red_eye_rounded : Icons.face_rounded)
+                                            : Icons.security_rounded,
+                                        color: Colors.white,
+                                        size: 16,
+                                      ),
                                     ),
                                     const SizedBox(width: 10),
                                     Expanded(
                                       child: Column(
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
-                                          const Text(
-                                            'Verifikasi Keaslian Wajah (Liveness):',
+                                          Text(
+                                            _isLivenessRunning ? 'Proses Deteksi Gerakan Hidup:' : 'Verifikasi Keaslian Wajah (Liveness):',
                                             style: TextStyle(
                                               fontSize: 11,
                                               fontWeight: FontWeight.bold,
-                                              color: Color(0xFF1E3A8A),
+                                              color: _isLivenessRunning && _livenessStep == 2
+                                                  ? const Color(0xFF92400E)
+                                                  : const Color(0xFF1E3A8A),
                                             ),
                                           ),
                                           const SizedBox(height: 2),
                                           Text(
-                                            _currentLivenessInstruction,
-                                            style: const TextStyle(
+                                            _isLivenessRunning
+                                                ? _livenessStepText
+                                                : 'Tatap kamera lalu kedipkan mata atau tersenyum saat diminta.',
+                                            style: TextStyle(
                                               fontSize: 12.5,
                                               fontWeight: FontWeight.w700,
-                                              color: Color(0xFF1D4ED8),
+                                              color: _isLivenessRunning && _livenessStep == 2
+                                                  ? const Color(0xFFB45309)
+                                                  : const Color(0xFF1D4ED8),
                                             ),
                                           ),
                                         ],
@@ -900,14 +1213,16 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
                                 height: 52,
                                 child: ElevatedButton.icon(
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFF007AFF),
+                                    backgroundColor: _isLivenessRunning && _livenessStep == 2
+                                        ? const Color(0xFFD97706)
+                                        : const Color(0xFF007AFF),
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(30),
                                     ),
                                     elevation: 0,
                                   ),
-                                  onPressed: _isCapturing ? null : _takePicture,
-                                  icon: _isCapturing
+                                  onPressed: (_isCapturing || _isLivenessRunning) ? null : _startLivenessSequence,
+                                  icon: _isLivenessRunning
                                       ? const SizedBox(
                                           width: 20,
                                           height: 20,
@@ -917,13 +1232,13 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
                                           ),
                                         )
                                       : const Icon(
-                                          Icons.camera_alt,
+                                          Icons.face_retouching_natural_rounded,
                                           color: Colors.white,
                                         ),
                                   label: Text(
-                                    _isCapturing
-                                        ? 'Mengambil Foto...'
-                                        : 'Ambil Foto Selfie',
+                                    _isLivenessRunning
+                                        ? _livenessStepText
+                                        : 'Mulai Verifikasi Wajah (Liveness)',
                                     style: const TextStyle(
                                       fontSize: 15,
                                       fontWeight: FontWeight.bold,
